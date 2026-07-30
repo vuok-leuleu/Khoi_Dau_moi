@@ -101,3 +101,8 @@ Assets/_Data/Scenes/Gameplay.unity
 Assets/_Data/Scenes/TienAI_NgayDem.unity
 Assets/_Data/Scenes/NewGame.unity
 Assets/_Data/Scenes/NewGame.unity.meta
+
+# QLDATN Tracker ignores
+.qldatn-tracker/
+Assets/Editor/QLDATNSceneTracker.cs
+Assets/Editor/QLDATNSceneTracker.cs.meta
