@@ -106,3 +106,6 @@ Assets/_Data/Scenes/NewGame.unity.meta
 .qldatn-tracker/
 Assets/Editor/QLDATNSceneTracker.cs
 Assets/Editor/QLDATNSceneTracker.cs.meta
+Assets/Editor/QLDATNTracker_*.cs
+Assets/Editor/QLDATNTracker_*.cs.meta
+Assets/Editor/QLDATNSceneTracker.cs.download
