@@ -91,7 +91,7 @@ public class WorkerFindStone : MonoBehaviour
         wasResting = false;
         isHeadingToDeposit = false;
 
-        if (targetStone == null || !targetStone.gameObject.activeInHierarchy)
+        if (targetStone == null || !targetStone.gameObject.activeInHierarchy || targetStone.GetCurrentHealth() <= 0)
         {
             if (targetStone != null) ReleaseCurrentStone();
             
@@ -216,7 +216,7 @@ public class WorkerFindStone : MonoBehaviour
         for (int i = Registry.Count - 1; i >= 0; i--)
         {
             Stone stone = Registry[i];
-            if (stone == null || !stone.gameObject.activeInHierarchy) { Registry.RemoveAt(i); continue; }
+            if (stone == null || !stone.gameObject.activeInHierarchy || stone.GetCurrentHealth() <= 0) { Registry.RemoveAt(i); continue; }
             if (!stone.TryClaim()) continue;
 
             float dist = Vector3.Distance(transform.position, stone.transform.position);
@@ -229,7 +229,8 @@ public class WorkerFindStone : MonoBehaviour
             Stone[] stones = GameObject.FindObjectsOfType<Stone>();
             foreach (var stone in stones)
             {
-                if (!stone.gameObject.activeInHierarchy || !stone.TryClaim()) continue;
+                if (stone == null || !stone.gameObject.activeInHierarchy || stone.GetCurrentHealth() <= 0) continue;
+                if (!stone.TryClaim()) continue;
                 float dist = Vector3.Distance(transform.position, stone.transform.position);
                 if (dist < minDist) { if (best != null) best.Release(); minDist = dist; best = stone; }
                 else stone.Release();

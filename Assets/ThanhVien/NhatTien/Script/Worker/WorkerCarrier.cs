@@ -15,7 +15,7 @@ public class WorkerCarrier : MonoBehaviour
     [Header("References")]
     public NavMeshAgent agent;
     public Transform    handPoint;
-    public Transform    warehousePoint; // Fallback thủ công nếu không tìm được theo Tag
+    public Transform    warehousePoint; // Không còn dùng — giữ lại để tránh lỗi Inspector cũ
 
     [Header("Resource Pools")]
     public ObjectPool woodPool;
@@ -88,8 +88,8 @@ public class WorkerCarrier : MonoBehaviour
     private object        targetStorageComponent; // WoodStorage/RiceStorage/StoneStorage tương ứng, dùng object vì 3 kiểu khác nhau
     private ResourceType targetResourceType = ResourceType.None;
 
-    private Transform         targetWarehousePoint;   // = DeliveryPoint của warehouse đã chọn
-    private WarehouseStorage  targetWarehouseStorage;
+    // Không còn WarehouseStorage — Carrier nộp thẳng vào JsonDataManager
+    private Transform    targetWarehousePoint;
 
     void Start()
     {
@@ -379,56 +379,80 @@ public class WorkerCarrier : MonoBehaviour
 
     void EnterMoveToWarehouse()
     {
-        var (wh, point) = FindNearestNonEmptyStorage<WarehouseStorage>("Warehouse", warehousePoint,
-            s => true, s => 0); // Warehouse luôn hợp lệ để nộp hàng, không cần điều kiện rỗng/đầy ở đây
+        // Không còn Warehouse riêng — tìm điểm giao hàng gần nhất.
+        // Dùng lại warehousePoint nếu có, nếu không thì đứng tại chỗ nộp luôn.
+        targetWarehousePoint = warehousePoint;
 
-        targetWarehouseStorage = wh;
-        targetWarehousePoint   = point;
+        // Nếu không có điểm nộp thì nộp tại chỗ luôn (fallback an toàn)
+        if (targetWarehousePoint == null)
+        {
+            DepositToManager();
+            ReturnVisualToPool();
+            ResetCarry();
+            if (stamina != null) stamina.OnResourcesDeposited();
+            if (stamina == null || stamina.CanWork())
+            {
+                if (TrySelectStorageToClear()) EnterMoveToStorage();
+                else EnterWander();
+            }
+            return;
+        }
 
-        if (targetWarehousePoint == null || !agent.isOnNavMesh)
+        if (!agent.isOnNavMesh)
         {
             ReturnResourcesToStorage();
             EnterWander();
             return;
         }
+
         currentState    = State.MoveToWarehouse;
         agent.isStopped = false;
         agent.SetDestination(targetWarehousePoint.position);
-
-        stamina?.SetDraining(true); 
+        stamina?.SetDraining(true);
     }
 
     void HandleMoveToWarehouse()
     {
-        CheckStuck(); // Cần kiểm tra kẹt khi đang nộp hàng
+        CheckStuck();
 
         if (!HasArrived()) return;
 
         agent.isStopped = true;
 
-        if (targetWarehouseStorage != null)
-        {
-            switch (carriedType)
-            {
-                case ResourceType.Wood:  targetWarehouseStorage.AddWood(carriedAmount);  break;
-                case ResourceType.Rice:  targetWarehouseStorage.AddRice(carriedAmount);  break;
-                case ResourceType.Stone: targetWarehouseStorage.AddStone(carriedAmount); break;
-            }
-        }
+        // Nộp thẳng vào JsonDataManager (không cần WarehouseStorage nữa)
+        DepositToManager();
 
         ReturnVisualToPool();
         ResetCarry();
 
-        // Báo cho Stamina biết đã nộp hàng xong. 
-        // Nếu trời đang đêm, Stamina sẽ ngay lập tức chiếm quyền dắt nó về nhà ngủ!
         if (stamina != null) stamina.OnResourcesDeposited();
 
-        // Chỉ khi Stamina cho phép làm việc tiếp thì mới đi tìm kho để dọn, nếu không thì đứng chờ Stamina ra lệnh
         if (stamina == null || stamina.CanWork())
         {
             if (TrySelectStorageToClear()) EnterMoveToStorage();
             else EnterWander();
         }
+    }
+
+    /// <summary>
+    /// Ghi tài nguyên đang cầm thẳng vào JsonDataManager — thay thế vai trò của WarehouseStorage.
+    /// </summary>
+    void DepositToManager()
+    {
+        if (JsonDataManager.Ins == null)
+        {
+            Debug.LogError("[WorkerCarrier] Không tìm thấy JsonDataManager.Ins!");
+            return;
+        }
+
+        switch (carriedType)
+        {
+            case ResourceType.Wood:  JsonDataManager.Ins.AddWood(carriedAmount);  break;
+            case ResourceType.Rice:  JsonDataManager.Ins.AddFood(carriedAmount);  break;
+            case ResourceType.Stone: JsonDataManager.Ins.AddStone(carriedAmount); break;
+        }
+
+        Debug.Log($"[WorkerCarrier] Nộp thẳng vào JsonDataManager: +{carriedAmount} {carriedType}");
     }
 
     bool HasArrived()

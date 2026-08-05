@@ -42,14 +42,10 @@ public class GameSaveData
 [Serializable]
 public class WorkerState
 {
-    public string workerType; // "Tree", "Stone", "Rice", "Carrier"
+    public string workerType; // "Tree", "Stone", "Rice"
     public SerializableVector3 position;
     public SerializableVector3 rotation;
     public bool isCarryingItem; 
-    
-    // Riêng cho Carrier
-    public string carrierResourceType; 
-    public int carrierAmount;
 }
 
 [Serializable]

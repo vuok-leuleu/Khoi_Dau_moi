@@ -31,13 +31,12 @@ public class WorkerSpawner : MonoBehaviour
 {
     public static WorkerSpawner Instance { get; private set; }
 
-    public enum WorkerType { Tree, Rice, Stone, Carrier }
+    public enum WorkerType { Tree, Rice, Stone }
 
     [Header("Prefabs theo loại tài nguyên")]
     public GameObject treeWorkerPrefab;
     public GameObject riceWorkerPrefab;
     public GameObject stoneWorkerPrefab;
-    public GameObject carrierWorkerPrefab;
 
     [Header("Auto-Setup Options")]
     [Tooltip("Tên child Transform dùng làm điểm cầm đồ trên tay. Phải khớp tên trong prefab.")]
@@ -101,10 +100,9 @@ public class WorkerSpawner : MonoBehaviour
     {
         switch (type)
         {
-            case WorkerType.Tree: return treeWorkerPrefab;
-            case WorkerType.Rice: return riceWorkerPrefab;
+            case WorkerType.Tree:  return treeWorkerPrefab;
+            case WorkerType.Rice:  return riceWorkerPrefab;
             case WorkerType.Stone: return stoneWorkerPrefab;
-            case WorkerType.Carrier: return carrierWorkerPrefab;
             default: return null;
         }
     }
@@ -216,22 +214,6 @@ public class WorkerSpawner : MonoBehaviour
             findStone.stamina     = stamina;
         }
 
-        // =====================================================================
-        // WORKER CARRIER
-        // =====================================================================
-        WorkerCarrier carrier = worker.GetComponent<WorkerCarrier>();
-        if (carrier == null && type == WorkerType.Carrier) 
-        {
-            carrier = worker.AddComponent<WorkerCarrier>();
-        }
-        
-        if (carrier != null)
-        {
-            if (carrier.handPoint == null) carrier.handPoint = handPoint;
-            carrier.agent = agent;
-            carrier.animator = animator;
-        }
-
         // --- WorkerEnemyFlee (tùy chọn) ---
         if (addEnemyFlee)
         {
@@ -263,14 +245,12 @@ public class WorkerSpawner : MonoBehaviour
 
     House FindNearestHouse(Vector3 fromPosition)
     {
-        GameObject[] houses = GameObject.FindGameObjectsWithTag("House");
+        House[] houses = FindObjectsByType<House>(FindObjectsSortMode.None);
         House best = null;
         float bestDist = Mathf.Infinity;
-        foreach (var obj in houses)
+        foreach (var h in houses)
         {
-            House h = obj.GetComponent<House>();
-            if (h == null) continue;
-            float d = Vector3.Distance(fromPosition, obj.transform.position);
+            float d = Vector3.Distance(fromPosition, h.transform.position);
             if (d < bestDist) { bestDist = d; best = h; }
         }
         return best;
@@ -278,14 +258,12 @@ public class WorkerSpawner : MonoBehaviour
 
     Kitchen FindNearestKitchen(Vector3 fromPosition)
     {
-        GameObject[] kitchens = GameObject.FindGameObjectsWithTag("Kitchen");
+        Kitchen[] kitchens = FindObjectsByType<Kitchen>(FindObjectsSortMode.None);
         Kitchen best = null;
         float bestDist = Mathf.Infinity;
-        foreach (var obj in kitchens)
+        foreach (var k in kitchens)
         {
-            Kitchen k = obj.GetComponent<Kitchen>();
-            if (k == null) continue;
-            float d = Vector3.Distance(fromPosition, obj.transform.position);
+            float d = Vector3.Distance(fromPosition, k.transform.position);
             if (d < bestDist) { bestDist = d; best = k; }
         }
         return best;

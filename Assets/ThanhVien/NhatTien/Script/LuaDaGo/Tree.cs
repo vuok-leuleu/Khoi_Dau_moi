@@ -59,7 +59,7 @@ public class Tree : MonoBehaviour
 
     public bool TryClaim()
     {
-        if (isOccupied) return false;
+        if (isOccupied || isFalling || currentHealth <= 0) return false;
         isOccupied = true;
         return true;
     }

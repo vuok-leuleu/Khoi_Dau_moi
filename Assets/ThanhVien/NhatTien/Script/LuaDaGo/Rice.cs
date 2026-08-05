@@ -43,7 +43,7 @@ public class Rice : MonoBehaviour
 
     public bool TryClaim()
     {
-        if (isOccupied) return false;
+        if (isOccupied || currentHealth <= 0) return false;
         isOccupied = true;
         return true;
     }

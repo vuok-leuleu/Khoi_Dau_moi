@@ -40,65 +40,83 @@ public class WorkerCarryRice : MonoBehaviour
     }
 
     /// <summary>
-    /// Quét tất cả GameObject có Tag "RiceStorage", chọn kho GẦN NHẤT còn chỗ (chưa IsFull).
+    /// Quét tất cả RiceStorage bằng Component (không dùng Tag), chọn kho GẦN NHẤT còn chỗ.
     /// Nếu tất cả đều đầy, trả về kho gần nhất (dù đầy) để không bị null.
     /// </summary>
     RiceStorage FindNearestRiceStorage(out Transform chosenPoint)
     {
         chosenPoint = null;
 
-        GameObject[] candidates = GameObject.FindGameObjectsWithTag("RiceStorage");
+        RiceStorage[] candidates = FindObjectsByType<RiceStorage>(FindObjectsSortMode.None);
+
         if (candidates == null || candidates.Length == 0)
         {
+            // Fallback: dùng điểm được gán thủ công trong Inspector
             if (riceStoragePoint != null)
             {
-                RiceStorage rs = riceStoragePoint.GetComponent<RiceStorage>() ?? riceStoragePoint.GetComponentInParent<RiceStorage>() ?? riceStoragePoint.GetComponentInChildren<RiceStorage>();
+                RiceStorage rs = riceStoragePoint.GetComponent<RiceStorage>()
+                              ?? riceStoragePoint.GetComponentInParent<RiceStorage>()
+                              ?? riceStoragePoint.GetComponentInChildren<RiceStorage>();
                 if (rs != null) { chosenPoint = riceStoragePoint; return rs; }
             }
-            RiceStorage fallback = FindObjectOfType<RiceStorage>();
-            if (fallback != null) { chosenPoint = FindDeliveryPoint(fallback.transform); return fallback; }
             return null;
         }
 
-        List<(RiceStorage storage, Transform point, float dist)> found = new List<(RiceStorage, Transform, float)>();
-        foreach (GameObject obj in candidates)
-        {
-            RiceStorage rs = obj.GetComponent<RiceStorage>() ?? obj.GetComponentInChildren<RiceStorage>();
-            if (rs == null) continue;
+        RiceStorage bestNotFull = null;
+        Transform   bestNotFullPoint = null;
+        float       bestNotFullDist  = Mathf.Infinity;
 
-            // Dùng cửa kho (child "DeliveryPoint") làm điểm đến thay vì tâm kho
-            Transform deliveryPoint = FindDeliveryPoint(obj.transform);
-            float d = Vector3.Distance(transform.position, deliveryPoint.position);
-            found.Add((rs, deliveryPoint, d));
+        RiceStorage fallback = null;
+        Transform   fallbackPoint = null;
+        float       fallbackDist  = Mathf.Infinity;
+
+        foreach (RiceStorage rs in candidates)
+        {
+            Transform dp = FindDeliveryPoint(rs.transform);
+            float d = Vector3.Distance(transform.position, dp.position);
+
+            if (!rs.IsFull && d < bestNotFullDist)
+            {
+                bestNotFull      = rs;
+                bestNotFullPoint = dp;
+                bestNotFullDist  = d;
+            }
+            if (d < fallbackDist)
+            {
+                fallback      = rs;
+                fallbackPoint = dp;
+                fallbackDist  = d;
+            }
         }
 
-        if (found.Count == 0) return null;
-
-        var ordered = found.OrderBy(f => f.dist).ToList();
-
-        var notFull = ordered.FirstOrDefault(f => !f.storage.IsFull);
-        if (notFull.storage != null)
-        {
-            chosenPoint = notFull.point;
-            return notFull.storage;
-        }
-
-        chosenPoint = ordered[0].point;
-        return ordered[0].storage;
+        if (bestNotFull != null) { chosenPoint = bestNotFullPoint; return bestNotFull; }
+        chosenPoint = fallbackPoint;
+        return fallback;
     }
 
     /// <summary>
     /// Tìm child Transform tên "DeliveryPoint" bên trong kho (cửa kho, nơi worker thực sự đi tới).
-    /// Nếu không có, fallback về chính transform của kho để không bị null.
+    /// Quét từ kho hiện tại cho tới root cha để đảm bảo không bị sót DeliveryPoint.
     /// </summary>
     Transform FindDeliveryPoint(Transform storageRoot)
     {
+        if (storageRoot == null) return null;
+
         Transform dp = storageRoot.Find("DeliveryPoint");
         if (dp != null) return dp;
 
-        foreach (Transform child in storageRoot.GetComponentsInChildren<Transform>())
+        foreach (Transform child in storageRoot.GetComponentsInChildren<Transform>(true))
         {
             if (child.name == "DeliveryPoint") return child;
+        }
+
+        // Quét ngược lên root cây phân cấp phòng trường hợp DeliveryPoint ở nhánh khác
+        if (storageRoot.root != null)
+        {
+            foreach (Transform child in storageRoot.root.GetComponentsInChildren<Transform>(true))
+            {
+                if (child.name == "DeliveryPoint") return child;
+            }
         }
 
         return storageRoot;

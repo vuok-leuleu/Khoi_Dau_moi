@@ -60,16 +60,6 @@ public class WorkerManager : Singleton<WorkerManager>
                 var carry = w.workerObj.GetComponent<WorkerCarryStone>();
                 state.isCarryingItem = (carry != null && carry.IsCarrying());
             }
-            else if (w.type == "Carrier")
-            {
-                var carrier = w.workerObj.GetComponent<WorkerCarrier>();
-                state.isCarryingItem = (carrier != null && carrier.IsCarrying());
-                if (state.isCarryingItem)
-                {
-                    state.carrierResourceType = carrier.GetCarriedType().ToString();
-                    state.carrierAmount = carrier.GetCarriedAmount();
-                }
-            }
 
             states.Add(state);
         }
@@ -99,7 +89,6 @@ public class WorkerManager : Singleton<WorkerManager>
             if (state.workerType == "Tree") type = WorkerSpawner.WorkerType.Tree;
             else if (state.workerType == "Rice") type = WorkerSpawner.WorkerType.Rice;
             else if (state.workerType == "Stone") type = WorkerSpawner.WorkerType.Stone;
-            else if (state.workerType == "Carrier") type = WorkerSpawner.WorkerType.Carrier;
             else continue;
 
             // Spawn worker tại vị trí đã lưu, không cần scatter radius
@@ -127,17 +116,6 @@ public class WorkerManager : Singleton<WorkerManager>
                     {
                         var carry = newWorker.GetComponent<WorkerCarryStone>();
                         if (carry != null) carry.PickUpFakeItemForLoad();
-                    }
-                    else if (type == WorkerSpawner.WorkerType.Carrier)
-                    {
-                        var carrier = newWorker.GetComponent<WorkerCarrier>();
-                        if (carrier != null && !string.IsNullOrEmpty(state.carrierResourceType))
-                        {
-                            if (System.Enum.TryParse(state.carrierResourceType, out WorkerCarrier.ResourceType resType))
-                            {
-                                carrier.PickUpFakeItemForLoad(resType, state.carrierAmount);
-                            }
-                        }
                     }
                 }
             }

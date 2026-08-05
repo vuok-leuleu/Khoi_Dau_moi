@@ -226,50 +226,52 @@ public class WorkerStamina : MonoBehaviour
 
     private void FindKitchen()
     {
-        // Nếu đã gắn sẵn trong Inspector thì dùng luôn, không tự tìm
         if (kitchen != null) return;
 
-        GameObject[] kitchens = GameObject.FindGameObjectsWithTag("Kitchen");
+        Kitchen[] kitchens = FindObjectsByType<Kitchen>(FindObjectsSortMode.None);
         float closestDist = Mathf.Infinity;
         Kitchen best = null;
-        foreach (var obj in kitchens)
+        Kitchen fallback = null;
+        foreach (var k in kitchens)
         {
-            Kitchen k = obj.GetComponent<Kitchen>();
-            if (k != null && !k.IsFull)
+            if (fallback == null) fallback = k;
+            if (!k.IsFull)
             {
-                float d = Vector3.Distance(transform.position, obj.transform.position);
+                float d = Vector3.Distance(transform.position, k.transform.position);
                 if (d < closestDist) { closestDist = d; best = k; }
             }
         }
-        kitchen = best != null ? best : (kitchens.Length > 0 ? kitchens[0].GetComponent<Kitchen>() : null);
+        kitchen = best != null ? best : fallback;
     }
 
     private void FindHouse()
     {
-        // Nếu đã gắn sẵn trong Inspector thì dùng luôn, không tự tìm.
-        // House giờ chỉ phục vụ spawn/trú ẩn (WorkerEnemyFlee), không còn dùng để nghỉ ngơi.
         if (house != null) return;
 
-        GameObject[] houses = GameObject.FindGameObjectsWithTag("House");
+        House[] houses = FindObjectsByType<House>(FindObjectsSortMode.None);
         float closestDist = Mathf.Infinity;
         House best = null;
-        foreach (var obj in houses)
+        House fallback = null;
+        foreach (var h in houses)
         {
-            House h = obj.GetComponent<House>();
-            if (h != null && !h.IsFull)
+            if (fallback == null) fallback = h;
+            if (!h.IsFull)
             {
-                float d = Vector3.Distance(transform.position, obj.transform.position);
+                float d = Vector3.Distance(transform.position, h.transform.position);
                 if (d < closestDist) { closestDist = d; best = h; }
             }
         }
-        house = best != null ? best : (houses.Length > 0 ? houses[0].GetComponent<House>() : null);
+        house = best != null ? best : fallback;
     }
 
     private void FindRestSpot()
     {
         if (restSpot != null) return;
-        GameObject obj = GameObject.FindWithTag("RestSpot");
-        if (obj != null) restSpot = obj.transform;
+        // Tìm Kitchen gần nhất và dùng EntrancePosition làm điểm nghỉ
+        FindKitchen();
+        if (kitchen != null) restSpot = kitchen.entrancePoint != null
+            ? kitchen.entrancePoint
+            : kitchen.transform;
     }
 
     private void MoveToWaitingArea(Vector3 center)
