@@ -13,6 +13,8 @@ GameObject:
   - component: {fileID: 2390762}
   - component: {fileID: 64477923331310068}
   - component: {fileID: 64365041851314618}
+  - component: {fileID: 4252563091654727523}
+  - component: {fileID: -7184815331980557277}
   m_Layer: 9
   m_Name: Fence
   m_TagString: Untagged
@@ -30,7 +32,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 7, y: 1.5, z: 7}
+  m_LocalScale: {x: 5, y: 1.5, z: 7}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -136,3 +138,37 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 43906500889732560, guid: 2d25ca549d50b984a99cf17c168ac395, type: 2}
+--- !u!208 &4252563091654727523
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 130724}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 0.814, y: 0.623, z: 0.1}
+  m_MoveThreshold: 0.1
+  m_Carve: 0
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 0, y: 0.623, z: 0}
+  m_TimeToStationary: 0.5
+--- !u!114 &-7184815331980557277
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 130724}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ce1a42ebe0ab4641a8c30ac2b6cc529, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BuildingNavMeshObstacle
+  overrideSize: 0
+  manualSize: {x: 4, y: 3, z: 4}
+  manualCenter: {x: 0, y: 0, z: 0}
+  carve: 1
+  carveOnlyStationary: 0.5
+  movementThreshold: 0.1

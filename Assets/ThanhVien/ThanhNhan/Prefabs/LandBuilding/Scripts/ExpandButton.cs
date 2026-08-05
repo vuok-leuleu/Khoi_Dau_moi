@@ -9,7 +9,7 @@ public class ExpandButton : MonoBehaviour, IPointerClickHandler
     {
         if (LandGridManager.Ins != null)
         {
-            LandGridManager.Ins.ExpandGrid(direction);
+            LandGridManager.Ins.RequestExpandGrid(direction);
         }
     }
 }

@@ -9,6 +9,10 @@ public class DayNightSystem : Singleton<DayNightSystem>
     [SerializeField] private Gradient ambientColor;
     [SerializeField] private AnimationCurve ambientIntensity;
 
+    [Header("Wave / Day Lighting")]
+    [Tooltip("Nếu tắt, hệ thống không tự tiến thời gian ban ngày/ban đêm dựa trên fullDayDuration.")]
+    public bool enableTimeOfDay = false;
+
     [Header("Time Settings")]
     [SerializeField] private float fullDayDuration = 180f; // Full cycle duration (in seconds)
     private float timeOfDay; // 0 - 1 (Day)
@@ -27,6 +31,9 @@ public class DayNightSystem : Singleton<DayNightSystem>
 
     private void Update()
     {
+        if (!enableTimeOfDay)
+            return;
+
         timeOfDay += Time.deltaTime / fullDayDuration;
 
         if (timeOfDay >= 1f)

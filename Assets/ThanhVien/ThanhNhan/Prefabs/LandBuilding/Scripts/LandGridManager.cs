@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public enum ExpandDirection
 {
@@ -63,6 +65,15 @@ public class LandGridManager : MonoBehaviour
     private GameObject generatedGridOverlay;
     private MeshFilter gridMeshFilter;
     private MeshRenderer gridMeshRenderer;
+
+    private int expandCount = 0;
+    private GameObject expandConfirmPanel;
+    private Button expandConfirmYesButton;
+    private Button expandConfirmNoButton;
+    private TextMeshProUGUI expandConfirmText;
+    private ExpandDirection? pendingExpandDirection = null;
+
+    private readonly int[] expandCostSequence = new int[] { 100, 150, 300, 600, 1500 };
 
     private void Awake()
     {
@@ -193,8 +204,40 @@ public class LandGridManager : MonoBehaviour
     /// <summary>
     /// 🔥 MỞ RỘNG KHU VỰC XÂY DỰNG KHI BẤM NÚT (+)
     /// </summary>
-    public void ExpandGrid(ExpandDirection direction)
+    private float pendingExpandConfirmTime = 0f;
+    private const float ExpandConfirmTimeout = 4f;
+    [Header("Expand Cost")]
+    [SerializeField] private int baseExpandGoldCost = 100;
+    [SerializeField] private int expandGoldCostPerRow = 50;
+
+    public void RequestExpandGrid(ExpandDirection direction)
     {
+        pendingExpandDirection = direction;
+        int cost = GetExpandGoldCost(direction);
+        ShowExpandConfirmationUI(direction, cost);
+    }
+
+    public int GetExpandGoldCost(ExpandDirection direction)
+    {
+        int index = Mathf.Clamp(expandCount, 0, expandCostSequence.Length - 1);
+        if (expandCount < expandCostSequence.Length)
+            return expandCostSequence[expandCount];
+
+        int extra = expandCostSequence[expandCostSequence.Length - 1] * (1 << (expandCount - expandCostSequence.Length + 1));
+        return extra;
+    }
+
+    private void PerformExpandGrid(ExpandDirection direction)
+    {
+        int cost = GetExpandGoldCost(direction);
+        if (JsonDataManager.Ins != null && !JsonDataManager.Ins.TrySpendGold(cost))
+        {
+            UIManager.Ins?.ShowWarning("Không đủ vàng để mở rộng đất.");
+            pendingExpandDirection = null;
+            pendingExpandConfirmTime = 0f;
+            return;
+        }
+
         GetGridBounds(out int minX, out int maxX, out int minZ, out int maxZ);
 
         switch (direction)
@@ -213,16 +256,141 @@ public class LandGridManager : MonoBehaviour
                 break;
         }
 
-        // Cập nhật lại giao diện sau khi mở rộng
+        expandCount++;
         RebuildFences();
         UpdateExpandButtonsPosition();
         CreateOrUpdateGridMesh();
 
-        // Thông báo cho Tutorial Manager
+        HideExpandConfirmationUI();
+        UIManager.Ins?.ShowWarning($"Mở rộng đất thành công. Đã trừ {cost} vàng.");
+
         if (CampaignTutorialManager.Ins != null)
         {
             CampaignTutorialManager.Ins.OnLandExpanded();
         }
+    }
+
+    private void Update()
+    {
+    }
+
+    private void ShowExpandConfirmationUI(ExpandDirection direction, int cost)
+    {
+        if (expandConfirmPanel == null)
+            CreateExpandConfirmationUI();
+
+        if (expandConfirmText != null)
+        {
+            expandConfirmText.text = $"Xác nhận mở rộng đất {direction} với chi phí {cost} vàng?";
+        }
+
+        if (expandConfirmPanel != null)
+            expandConfirmPanel.SetActive(true);
+
+        if (expandConfirmYesButton != null)
+        {
+            expandConfirmYesButton.onClick.RemoveAllListeners();
+            expandConfirmYesButton.onClick.AddListener(() => {
+                if (pendingExpandDirection.HasValue)
+                    PerformExpandGrid(pendingExpandDirection.Value);
+            });
+        }
+
+        if (expandConfirmNoButton != null)
+        {
+            expandConfirmNoButton.onClick.RemoveAllListeners();
+            expandConfirmNoButton.onClick.AddListener(HideExpandConfirmationUI);
+        }
+    }
+
+    private void HideExpandConfirmationUI()
+    {
+        if (expandConfirmPanel != null)
+            expandConfirmPanel.SetActive(false);
+        pendingExpandDirection = null;
+    }
+
+    [Header("UI References")]
+    [SerializeField] private Canvas uiCanvas;
+
+    private void CreateExpandConfirmationUI()
+    {
+        Canvas canvas = uiCanvas != null ? uiCanvas : GetComponentInChildren<Canvas>();
+        if (canvas == null)
+            canvas = Object.FindFirstObjectByType<Canvas>();
+        if (canvas == null) return;
+
+        expandConfirmPanel = new GameObject("ExpandConfirmPanel", typeof(RectTransform), typeof(Image));
+        expandConfirmPanel.transform.SetParent(canvas.transform, false);
+        var panelImage = expandConfirmPanel.GetComponent<Image>();
+        panelImage.color = new Color(0f, 0f, 0f, 0.8f);
+
+        RectTransform panelRect = expandConfirmPanel.GetComponent<RectTransform>();
+        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+        panelRect.pivot = new Vector2(0.5f, 0.5f);
+        panelRect.sizeDelta = new Vector2(360f, 180f);
+        panelRect.anchoredPosition = Vector2.zero;
+
+        GameObject textGO = new GameObject("ExpandConfirmText", typeof(RectTransform));
+        textGO.transform.SetParent(expandConfirmPanel.transform, false);
+        RectTransform textRect = textGO.GetComponent<RectTransform>();
+        textRect.anchorMin = new Vector2(0.1f, 0.6f);
+        textRect.anchorMax = new Vector2(0.9f, 0.9f);
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+
+        expandConfirmText = textGO.AddComponent<TextMeshProUGUI>();
+        expandConfirmText.font = TMP_Settings.defaultFontAsset;
+        expandConfirmText.alignment = TextAlignmentOptions.Center;
+        expandConfirmText.fontSize = 20;
+        expandConfirmText.color = Color.white;
+        expandConfirmText.enableWordWrapping = true;
+
+        GameObject yesButtonGO = CreateSimpleButton("YesButton", "Đồng ý", new Vector2(0.25f, 0.2f));
+        yesButtonGO.transform.SetParent(expandConfirmPanel.transform, false);
+        expandConfirmYesButton = yesButtonGO.GetComponent<Button>();
+
+        GameObject noButtonGO = CreateSimpleButton("NoButton", "Hủy", new Vector2(0.75f, 0.2f));
+        noButtonGO.transform.SetParent(expandConfirmPanel.transform, false);
+        expandConfirmNoButton = noButtonGO.GetComponent<Button>();
+
+        expandConfirmPanel.SetActive(false);
+    }
+
+    private GameObject CreateSimpleButton(string name, string textLabel, Vector2 anchorPos)
+    {
+        GameObject buttonGO = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+        RectTransform buttonRect = buttonGO.GetComponent<RectTransform>();
+        buttonRect.anchorMin = new Vector2(anchorPos.x - 0.2f, anchorPos.y - 0.1f);
+        buttonRect.anchorMax = new Vector2(anchorPos.x + 0.2f, anchorPos.y + 0.1f);
+        buttonRect.pivot = new Vector2(0.5f, 0.5f);
+        buttonRect.offsetMin = Vector2.zero;
+        buttonRect.offsetMax = Vector2.zero;
+        buttonRect.sizeDelta = Vector2.zero;
+
+        var image = buttonGO.GetComponent<Image>();
+        image.color = new Color(0.2f, 0.5f, 0.85f, 1f);
+
+        var button = buttonGO.GetComponent<Button>();
+        button.targetGraphic = image;
+
+        GameObject labelGO = new GameObject("Text", typeof(RectTransform));
+        labelGO.transform.SetParent(buttonGO.transform, false);
+        RectTransform labelRect = labelGO.GetComponent<RectTransform>();
+        labelRect.anchorMin = Vector2.zero;
+        labelRect.anchorMax = Vector2.one;
+        labelRect.offsetMin = Vector2.zero;
+        labelRect.offsetMax = Vector2.zero;
+
+        var labelText = labelGO.AddComponent<TextMeshProUGUI>();
+        labelText.font = TMP_Settings.defaultFontAsset;
+        labelText.text = textLabel;
+        labelText.alignment = TextAlignmentOptions.Center;
+        labelText.fontSize = 18;
+        labelText.color = Color.white;
+
+        return buttonGO;
     }
 
     /// <summary>

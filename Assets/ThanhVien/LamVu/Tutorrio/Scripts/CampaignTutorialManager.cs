@@ -23,6 +23,15 @@ public class CampaignTutorialManager : MonoBehaviour
     [Header("=== TRẠNG THÁI HIỆN TẠI ===")]
     public TutorialStage currentStage = TutorialStage.None;
 
+    public bool IsTutorialActive => currentStage != TutorialStage.None && currentStage != TutorialStage.Stage7_Complete;
+    public bool IsTutorialComplete => currentStage == TutorialStage.Stage7_Complete;
+
+    public bool CanOpenBuildMenu()
+    {
+        if (!IsTutorialActive) return true;
+        return currentStage == TutorialStage.Stage2_CivilBuildings || currentStage == TutorialStage.Stage5_BuildDefenseTowers;
+    }
+
     [Header("=== UI HIGHLIGHT & WARNING ===")]
     [SerializeField] private GameObject overlayDim;         
     [SerializeField] private GameObject handPointer;        
@@ -736,6 +745,21 @@ public class CampaignTutorialManager : MonoBehaviour
         isPlacingBuilding = true;
         HidePointer();
         UpdateHint(" Bước 2: Hãy chọn vị trí thích hợp trên bản đồ để **Đặt Công Trình**.");
+    }
+
+    public bool CanPlaceBuilding(BuildingType type)
+    {
+        if (!IsTutorialActive) return true;
+
+        switch (currentStage)
+        {
+            case TutorialStage.Stage2_CivilBuildings:
+                return type == BuildingType.WoodCutter || type == BuildingType.StoneStorage;
+            case TutorialStage.Stage5_BuildDefenseTowers:
+                return type == BuildingType.WatchTower || type == BuildingType.ArcherTower;
+            default:
+                return false;
+        }
     }
 
     public void OnCancelPlacement()

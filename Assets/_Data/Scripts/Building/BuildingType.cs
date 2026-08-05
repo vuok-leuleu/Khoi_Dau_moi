@@ -39,4 +39,10 @@ public enum BuildingType
     BarracksMelee,      // Doanh Trại Lính Cận Chiến
     BarracksArcher,     // Doanh Trại Lính Cung
     BarracksSpear,      // Doanh Trại Lính Giáo
+
+    // ── DỤNG THÊM (ĐẶT Ở CUỐI ĐỂ KHÔNG LÀM LỖI SERIALIZED) ──
+    MainHouse,          // Nhà chính / Town Hall
+    FarmPlot,           // Ruộng Lúa – worker đi cấy hái lúa
+    WoodTree,           // Cây gỗ để thu hoạch
+    StoneBoulder,       // Cục đá để khai thác
 }

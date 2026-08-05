@@ -147,8 +147,14 @@ public class GhostBuilding : MonoBehaviour
 
     private void ConfirmPlace()
     {
-        ConstructionManager.Ins.PlaceBuilding(buildingType, transform.position, Quaternion.Euler(0f, currentYRot, 0f));
-        BuildingSystem.Ins.OnPlacingCompleted(false);
+        BuildingCtrl placedBuilding = ConstructionManager.Ins.PlaceBuilding(buildingType, transform.position, Quaternion.Euler(0f, currentYRot, 0f));
+        if (placedBuilding == null)
+        {
+            return;
+        }
+
+        BuildingSystem.Ins?.RecordSuccessfulPlacement(buildingType);
+        BuildingSystem.Ins?.OnPlacingCompleted(false);
         Destroy(gameObject);
     }
 

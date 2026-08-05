@@ -29,14 +29,38 @@ public class BuildingSystem : Singleton<BuildingSystem>
     public GameObject ghostBarracksArcherPrefab;
     public GameObject ghostBarracksSpearPrefab;
 
+    [Header("Ghost Prefabs – Phát triển sau này")]
+    public GameObject ghostMainHousePrefab;
+    public GameObject ghostFarmPlotPrefab;
+    public GameObject ghostWoodTreePrefab;
+    public GameObject ghostStoneBoulderPrefab;
+
     private GhostBuilding currentGhost;
     private bool isPlacing = false;
+
+    [Header("Daily Build Limit")]
+    [SerializeField] private int baseDailyBuildLimit = 1;
+    private int dailyBuildingsPlaced = 0;
+    private readonly System.Collections.Generic.List<string> todaysBuiltBuildingNames = new System.Collections.Generic.List<string>();
 
     private UpgradeableBuilding _movingBuilding = null; 
     private bool _isMovingMode = false;
 
     public bool IsPlacing => isPlacing;
     public bool IsMovingMode => _isMovingMode;
+
+    private void Start()
+    {
+        ResetDailyBuildCount();
+        if (DayNightManager.Ins != null)
+            DayNightManager.Ins.OnDayStart += ResetDailyBuildCount;
+    }
+
+    private void OnDestroy()
+    {
+        if (DayNightManager.Ins != null)
+            DayNightManager.Ins.OnDayStart -= ResetDailyBuildCount;
+    }
 
     private void Update()
     {
@@ -49,6 +73,8 @@ public class BuildingSystem : Singleton<BuildingSystem>
     public void StartPlacing(BuildingType type)
     {
         if (type == BuildingType.None) return;
+
+        if (!CanStartPlacing(type)) return;
 
         if (_isMovingMode) CancelMoving();
         else CancelPlacing();
@@ -67,6 +93,7 @@ public class BuildingSystem : Singleton<BuildingSystem>
 
         currentGhost.buildingType = type;
         currentGhost.InstantSnapToMouse();
+        isPlacing = true;
 
         LandGridManager.Ins?.SetGridVisualActive(true);
 
@@ -90,6 +117,7 @@ public class BuildingSystem : Singleton<BuildingSystem>
             currentGhost = null;
         }
 
+        isPlacing = false;
         LandGridManager.Ins?.SetGridVisualActive(false);
 
         // 🔥 CẬP NHẬT TUTORIAL: Báo cho Tutorial Manager khi hủy đặt nhà
@@ -107,12 +135,86 @@ public class BuildingSystem : Singleton<BuildingSystem>
     public void OnPlacingCompleted(bool shouldReopenMenu)
     {
         currentGhost = null;
+        isPlacing = false;
         LandGridManager.Ins?.SetGridVisualActive(false);
 
         if (UIManager.Ins != null)
         {
             UIManager.Ins.ExitPlacementMode(shouldReopenMenu);
         }
+    }
+
+    private bool CanStartPlacing(BuildingType type)
+    {
+        if (CampaignTutorialManager.Ins != null && CampaignTutorialManager.Ins.IsTutorialActive && !CampaignTutorialManager.Ins.CanPlaceBuilding(type))
+        {
+            UIManager.Ins?.ShowWarning("Chưa thể xây loại công trình này ở giai đoạn hiện tại.");
+            return false;
+        }
+
+        if (!CanPlaceMoreBuildingsToday())
+        {
+            int limit = GetDailyBuildLimit();
+            UIManager.Ins?.ShowWarning($"Đã đạt giới hạn xây dựng ngày hôm nay ({limit}). Kết thúc ngày để tiếp tục.");
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool CanPlaceMoreBuildingsToday()
+    {
+        if (CampaignTutorialManager.Ins != null && !CampaignTutorialManager.Ins.IsTutorialComplete)
+            return true;
+
+        return dailyBuildingsPlaced < GetDailyBuildLimit();
+    }
+
+    private int GetDailyBuildLimit()
+    {
+        int mainHouseLevel = GetMainHouseLevel();
+        return Mathf.Max(baseDailyBuildLimit, mainHouseLevel);
+    }
+
+    private int GetMainHouseLevel()
+    {
+        var upgradeables = FindObjectsOfType<UpgradeableBuilding>();
+        foreach (var upgradeable in upgradeables)
+        {
+            if (upgradeable == null) continue;
+            if (upgradeable.buildingType == BuildingType.MainHouse)
+                return upgradeable.CurrentLevel;
+        }
+        return 0;
+    }
+
+    private void ResetDailyBuildCount()
+    {
+        dailyBuildingsPlaced = 0;
+        todaysBuiltBuildingNames.Clear();
+    }
+
+    public void RecordSuccessfulPlacement(BuildingType type)
+    {
+        dailyBuildingsPlaced++;
+        todaysBuiltBuildingNames.Add(type.ToString());
+
+        UIManager.Ins?.ShowActionMessage($"Đã đặt công trình {type}.");
+
+        int remaining = Mathf.Max(0, GetDailyBuildLimit() - dailyBuildingsPlaced);
+        if (remaining > 0)
+        {
+            UIManager.Ins?.ShowWarning($"Bạn còn {remaining} lượt xây trong ngày.");
+        }
+        else
+        {
+            UIManager.Ins?.ShowWarning("Đã đạt giới hạn xây dựng trong ngày. Kết thúc ngày để tiếp tục.");
+        }
+    }
+
+    public System.Collections.Generic.List<string> GetDailyPlacedBuildingNames()
+    {
+        return new System.Collections.Generic.List<string>(todaysBuiltBuildingNames);
     }
 
     public void StartMoving(UpgradeableBuilding building)
@@ -266,8 +368,12 @@ public class BuildingSystem : Singleton<BuildingSystem>
         switch (type)
         {
             case BuildingType.House: return ghostHousePrefab;
+            case BuildingType.MainHouse: return ghostMainHousePrefab;
             case BuildingType.WoodCutter: return ghostWoodCutterPrefab;
             case BuildingType.StoneMine: return ghostStoneMinePrefab;
+            case BuildingType.FarmPlot: return ghostFarmPlotPrefab;
+            case BuildingType.WoodTree: return ghostWoodTreePrefab;
+            case BuildingType.StoneBoulder: return ghostStoneBoulderPrefab;
             case BuildingType.Kitchen: return ghostKitchenPrefab;
             case BuildingType.FoodStorage: return ghostFoodStoragePrefab;
             case BuildingType.StoneStorage: return ghostStoneStoragePrefab;

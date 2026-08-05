@@ -30,6 +30,9 @@ public class UIManager : Singleton<UIManager>
     [SerializeField] private GameObject settingUI;
 
     private Coroutine _fadeWarningCoroutine;
+    private Coroutine _hideActionCoroutine;
+    private GameObject actionMessageUI;
+    private TMP_Text actionMessageText;
 
     [Header("Upgrade & Move Panel")]
     [SerializeField] private GameObject upgradePanel;
@@ -73,10 +76,14 @@ public class UIManager : Singleton<UIManager>
     [SerializeField] private TMP_Text stoneCostText;
     [SerializeField] private TMP_Text foodCostText;
 
+    [Header("Action Notifications")]
+    [SerializeField] private TMP_Text warningMessageText;
+
     private UpgradeableBuilding selectedBuilding;
 
     // --- BIẾN ĐẾM SỐ LẦN ẤN NÚT NÂNG CẤP ĐƯỢC THÊM VÀO ---
     private int upgradeClickCount = 0;
+    private Coroutine _hideWarningCoroutine;
 
     void Start()
     {
@@ -92,6 +99,102 @@ public class UIManager : Singleton<UIManager>
 
         if (upgradeButton != null) upgradeButton.onClick.AddListener(OnClickUpgradeButton);
         if (moveButton != null) moveButton.onClick.AddListener(OnClickMoveButton);
+
+        CreateDefaultActionMessageUI();
+    }
+
+    private void CreateDefaultActionMessageUI()
+    {
+        if (actionMessageUI != null) return;
+
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas == null)
+        {
+            canvas = Object.FindFirstObjectByType<Canvas>();
+        }
+        if (canvas == null) return;
+
+        GameObject panelGO = new GameObject("ActionMessagePanel", typeof(RectTransform), typeof(Image));
+        panelGO.transform.SetParent(canvas.transform, false);
+
+        var panelImage = panelGO.GetComponent<Image>();
+        panelImage.color = new Color(0f, 0f, 0f, 0.65f);
+
+        RectTransform panelRect = panelGO.GetComponent<RectTransform>();
+        panelRect.anchorMin = new Vector2(0.5f, 0.9f);
+        panelRect.anchorMax = new Vector2(0.5f, 0.9f);
+        panelRect.pivot = new Vector2(0.5f, 0.5f);
+        panelRect.sizeDelta = new Vector2(420f, 40f);
+        panelRect.anchoredPosition = Vector2.zero;
+
+        GameObject textGO = new GameObject("ActionMessageText", typeof(RectTransform));
+        textGO.transform.SetParent(panelGO.transform, false);
+        RectTransform textRect = textGO.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = new Vector2(10f, 5f);
+        textRect.offsetMax = new Vector2(-10f, -5f);
+
+        var text = textGO.AddComponent<TextMeshProUGUI>();
+        text.font = TMP_Settings.defaultFontAsset;
+        text.alignment = TextAlignmentOptions.Center;
+        text.fontSize = 18;
+        text.color = Color.white;
+        text.enableWordWrapping = true;
+        text.text = "";
+
+        actionMessageUI = panelGO;
+        actionMessageText = text;
+        actionMessageUI.SetActive(false);
+    }
+
+    public void ShowActionMessage(string message, float duration = 2f)
+    {
+        if (actionMessageUI == null)
+        {
+            CreateDefaultActionMessageUI();
+        }
+
+        if (actionMessageText == null && actionMessageUI != null)
+        {
+            actionMessageText = actionMessageUI.GetComponentInChildren<TMP_Text>(true);
+        }
+
+        if (actionMessageText != null)
+        {
+            actionMessageText.text = message;
+        }
+
+        if (actionMessageUI != null)
+        {
+            actionMessageUI.SetActive(true);
+        }
+
+        if (_hideActionCoroutine != null)
+        {
+            StopCoroutine(_hideActionCoroutine);
+        }
+        _hideActionCoroutine = StartCoroutine(HideActionAfter(duration));
+    }
+
+    public void HideActionMessage()
+    {
+        if (actionMessageUI != null)
+        {
+            actionMessageUI.SetActive(false);
+        }
+
+        if (_hideActionCoroutine != null)
+        {
+            StopCoroutine(_hideActionCoroutine);
+            _hideActionCoroutine = null;
+        }
+    }
+
+    private IEnumerator HideActionAfter(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        HideActionMessage();
     }
 
     // ================= BOTTOM TOOLBAR LOGIC =================
@@ -149,21 +252,51 @@ public class UIManager : Singleton<UIManager>
 
     // ================= WARNING UI LOGIC =================
 
-    public void ShowWarning(string message)
+    public void ShowWarning(string message, float duration = 2f)
     {
-        if (warningUI != null) warningUI.SetActive(true);
+        if (warningUI == null) return;
+
+        if (warningMessageText == null)
+            warningMessageText = warningUI.GetComponentInChildren<TMP_Text>(true);
+
+        if (warningMessageText != null)
+            warningMessageText.text = message;
+
+        warningUI.SetActive(true);
+
+        if (_hideWarningCoroutine != null)
+            StopCoroutine(_hideWarningCoroutine);
+
+        _hideWarningCoroutine = StartCoroutine(HideWarningAfter(duration));
     }
 
     public void HideWarning()
     {
-        if (warningUI != null) warningUI.SetActive(false);
+        if (warningUI != null)
+            warningUI.SetActive(false);
+
+        if (_hideWarningCoroutine != null)
+        {
+            StopCoroutine(_hideWarningCoroutine);
+            _hideWarningCoroutine = null;
+        }
+    }
+
+    private IEnumerator HideWarningAfter(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        HideWarning();
     }
 
     // ================= ON CLICK BUTTONS =================
 
     public void OnClickHouseButton() => BuildingSystem.Ins.StartPlacing(BuildingType.House);
+    public void OnClickMainHouseButton() => BuildingSystem.Ins.StartPlacing(BuildingType.MainHouse);
     public void OnClickWoodCutterButton() => BuildingSystem.Ins.StartPlacing(BuildingType.WoodCutter);
     public void OnClickStoneMineButton() => BuildingSystem.Ins.StartPlacing(BuildingType.StoneMine);
+    public void OnClickFarmPlotButton() => BuildingSystem.Ins.StartPlacing(BuildingType.FarmPlot);
+    public void OnClickWoodTreeButton() => BuildingSystem.Ins.StartPlacing(BuildingType.WoodTree);
+    public void OnClickStoneBoulderButton() => BuildingSystem.Ins.StartPlacing(BuildingType.StoneBoulder);
     public void OnClickKitchenButton() => BuildingSystem.Ins.StartPlacing(BuildingType.Kitchen);
     public void OnClickFoodStorageButton() => BuildingSystem.Ins.StartPlacing(BuildingType.FoodStorage);
     public void OnClickStoneStorageButton() => BuildingSystem.Ins.StartPlacing(BuildingType.StoneStorage);

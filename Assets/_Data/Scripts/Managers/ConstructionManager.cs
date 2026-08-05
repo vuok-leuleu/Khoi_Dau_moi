@@ -49,6 +49,12 @@ public class ConstructionManager : Singleton<ConstructionManager>
     public GameObject barracksArcherPrefab;
     public GameObject barracksSpearPrefab;
 
+    [Header("Prefab thật - Phát triển sau này")]
+    public GameObject mainHousePrefab;
+    public GameObject farmPlotPrefab;
+    public GameObject woodTreePrefab;
+    public GameObject stoneBoulderPrefab;
+
     private Dictionary<BuildingType, int> buildingCounts = new Dictionary<BuildingType, int>();
 
     private void Start()
@@ -129,7 +135,7 @@ public class ConstructionManager : Singleton<ConstructionManager>
         }
     }
 
-    public void PlaceBuilding(BuildingType type, Vector3 position, Quaternion rotation)
+    public BuildingCtrl PlaceBuilding(BuildingType type, Vector3 position, Quaternion rotation)
     {
         // 1. Kiểm tra trên Grid xem vị trí có bị cản trở không
         if (LandGridManager.Ins != null)
@@ -137,7 +143,8 @@ public class ConstructionManager : Singleton<ConstructionManager>
             if (!LandGridManager.Ins.IsAreaUnlocked(position) || LandGridManager.Ins.IsAreaOccupied(position))
             {
                 Debug.LogWarning($"[ConstructionManager] Vị trí [{type}] bị cản trở trên Grid!");
-                return;
+                UIManager.Ins?.ShowWarning("Vị trí đặt không hợp lệ. Hãy chọn ô khác.");
+                return null;
             }
         }
 
@@ -148,7 +155,8 @@ public class ConstructionManager : Singleton<ConstructionManager>
             if (!JsonDataManager.Ins.HasEnoughResources(cost.woodCost, cost.stoneCost, cost.foodCost))
             {
                 Debug.LogWarning($"[ConstructionManager] Thiếu tài nguyên xây {type}!");
-                return;
+                UIManager.Ins?.ShowWarning("Không đủ tài nguyên để xây công trình này.");
+                return null;
             }
 
             JsonDataManager.Ins.AddWood(-cost.woodCost);
@@ -179,7 +187,10 @@ public class ConstructionManager : Singleton<ConstructionManager>
             }
 
             Debug.Log($"[ConstructionManager] ✅ Đã xây {type} thành công!");
+            return spawned;
         }
+
+        return null;
     }
 
     public BuildingCtrl SpawnBuilding(BuildingType type, Vector3 position, Quaternion rotation)
@@ -199,8 +210,12 @@ public class ConstructionManager : Singleton<ConstructionManager>
         switch (type)
         {
             case BuildingType.House: return housePrefab;
+            case BuildingType.MainHouse: return mainHousePrefab;
             case BuildingType.WoodCutter: return woodCutterPrefab;
             case BuildingType.StoneMine: return stoneMinePrefab;
+            case BuildingType.FarmPlot: return farmPlotPrefab;
+            case BuildingType.WoodTree: return woodTreePrefab;
+            case BuildingType.StoneBoulder: return stoneBoulderPrefab;
             case BuildingType.Kitchen: return kitchenPrefab;
             case BuildingType.FoodStorage: return foodStoragePrefab;
             case BuildingType.StoneStorage: return stoneStoragePrefab;
