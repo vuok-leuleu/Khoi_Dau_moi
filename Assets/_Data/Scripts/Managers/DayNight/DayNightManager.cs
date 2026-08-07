@@ -27,8 +27,8 @@ public class DayNightManager : Singleton<DayNightManager>
     [Tooltip("Thời gian chờ đếm ngược giữa các Wave (tính bằng giây)")]
     public float PreparationDuration = 45f;
 
-    [Tooltip("Tự động chuyển sang Wave đánh nhau khi hết thời gian chuẩn bị")]
-    public bool autoStartWaveOnTimerEnd = true;
+    [Tooltip("Tự động chuyển sang Wave đánh nhau khi hết thời gian chuẩn bị (Mặc định FALSE để ngưng tự chuyển ngày)")]
+    public bool autoStartWaveOnTimerEnd = false;
 
     [Header("--- CẤU HÌNH SKIP WAVE ---")]
     [Tooltip("Thưởng vàng/tài nguyên khi Skip Wave sớm")]
@@ -41,7 +41,7 @@ public class DayNightManager : Singleton<DayNightManager>
     [Tooltip("Kéo Nút Skip Wave trong Canvas vào đây (hoặc tự gắn hàm SkipPreparation vào OnClick)")]
     public Button skipWaveButton;
 
-    [Tooltip("Text hiển thị trên nút Skip Wave (Ví dụ: 'START WAVE 1')")]
+    [Tooltip("Text hiển thị trên nút Skip Wave (Ví dụ: 'SKIP WAVE 1')")]
     public TextMeshProUGUI skipButtonTextTMP;
 
     [Header("--- HIỆU ỨNG ÁNH SÁNG KHI SKIP (3 GIÂY) ---")]
@@ -79,7 +79,7 @@ public class DayNightManager : Singleton<DayNightManager>
     protected override void Awake()
     {
         base.Awake();
-        currentWave = 0;
+        currentWave = PlayerPrefs.GetInt("SavedCurrentWave", 0);
         currentWaveState = WaveState.Preparation;
         timer = PreparationDuration;
         isWaveActive = false;
@@ -126,6 +126,7 @@ public class DayNightManager : Singleton<DayNightManager>
             else
             {
                 timer = 0;
+                // Không tự động chuyển ngày/Wave nữa trừ khi autoStartWaveOnTimerEnd được bật thủ công trong Inspector.
                 if (autoStartWaveOnTimerEnd)
                 {
                     StartCombatWave();
@@ -236,6 +237,9 @@ public class DayNightManager : Singleton<DayNightManager>
 
         // === CHÍNH THỨC TĂNG SỐ NGÀY / WAVE SAU KHI HẾT CHU KỲ ÁNH SÁNG (3S) ===
         currentWave++;
+        PlayerPrefs.SetInt("SavedCurrentWave", currentWave);
+        PlayerPrefs.Save();
+
         currentWaveState = WaveState.Combat;
         isWaveActive = true;
         timer = 0;
@@ -309,6 +313,27 @@ public class DayNightManager : Singleton<DayNightManager>
     private void AddSkipBonusReward(int rewardAmount)
     {
         Debug.Log($"[WaveManager]  Cộng thêm {rewardAmount} vàng thưởng Skip sớm.");
+    }
+
+    public void SaveWaveState()
+    {
+        PlayerPrefs.SetInt("SavedCurrentWave", currentWave);
+        PlayerPrefs.Save();
+    }
+
+    public void ResetWaveState()
+    {
+        currentWave = 0;
+        PlayerPrefs.DeleteKey("SavedCurrentWave");
+        PlayerPrefs.Save();
+        UpdateSkipButtonUI();
+    }
+
+    public void SetWave(int waveNumber)
+    {
+        currentWave = Mathf.Max(0, waveNumber);
+        SaveWaveState();
+        UpdateSkipButtonUI();
     }
 }
 

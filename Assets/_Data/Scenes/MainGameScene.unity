@@ -99613,6 +99613,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: barrackSoldierS
       objectReference: {fileID: 0}
+    - target: {fileID: 5395226637853380458, guid: 4b5e7aa86b35dbe4ab93f718b7f35593, type: 3}
+      propertyPath: maxSoldierCount
+      value: 2
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

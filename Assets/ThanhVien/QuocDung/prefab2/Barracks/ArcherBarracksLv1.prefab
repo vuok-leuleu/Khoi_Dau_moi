@@ -130,6 +130,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpawnSoldier
   soldierPrefab: {fileID: 1999277456456185836, guid: 6f6383d8f0b521f449a9ee5eb68d04cf, type: 3}
+  maxSoldierCount: 2
   spawnRadius: 2
   spawnForwardOffset: 2
   currentLevel: 1
@@ -208,8 +209,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BuildingCtrl
   buildingType: 11
-  door: {fileID: 0}
-  buildProgress: 0
-  isOccupied: 0
-  currentWorkers: 0
   maxWorkers: 4
+  productionRate: 1
+  fixedYRotation: 0

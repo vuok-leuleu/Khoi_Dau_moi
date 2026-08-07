@@ -405,7 +405,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b60570f607011bf41b1bd8c86a8e0c48, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DayNightManager
-  currentMode: 0
+  currentWaveState: 0
   currentWave: 1
   timer: 0
   isWaveActive: 0
@@ -415,3 +415,6 @@ MonoBehaviour:
   bonusPerSecondSkipped: 5
   skipWaveButton: {fileID: 8407570328122230550}
   skipButtonTextTMP: {fileID: 3522584385900899158}
+  directionalLight: {fileID: 0}
+  lightTransitionDuration: 1.15
+  minLightIntensity: 1

@@ -3,8 +3,11 @@ using System.Collections.Generic;
 
 public class EnemySpawn : MonoBehaviour
 {
+    public static EnemySpawn Ins { get; private set; }
+
     [Header("Spawn Settings")]
     [SerializeField] private GameObject enemyPrefab;
+    public GameObject EnemyPrefab => enemyPrefab;
     [SerializeField] private bool spawnOnStart = true;
     [SerializeField] private Transform[] spawnPoints;
 
@@ -53,13 +56,26 @@ public class EnemySpawn : MonoBehaviour
 
     private bool IsTutorialActive()
     {
+        // 1. Nếu đã hoàn thành Tutorial (TutorialCompleted = 1) -> Trả về false để Enemy có thể spawn bình thường
+        if (PlayerPrefs.GetInt("TutorialCompleted", 0) == 1) return false;
+
+        // 2. Kiểm tra CampaignTutorialManager hiện tại
+        if (CampaignTutorialManager.Ins != null)
+        {
+            if (CampaignTutorialManager.Ins.currentStage == TutorialStage.Stage7_Complete) return false;
+            if (CampaignTutorialManager.Ins.currentStage != TutorialStage.None) return true;
+        }
+
+        // 3. Kiểm tra các TutorialManager legacy khác
         TutorialManager tut = Object.FindFirstObjectByType<TutorialManager>();
         if (tut != null && tut.gameObject.activeInHierarchy && tut.enabled) return true;
 
-        GameObject tutCanvas = GameObject.Find("TutorialCanvas");
-        if (tutCanvas != null && tutCanvas.activeInHierarchy) return true;
-
         return false;
+    }
+
+    private void Awake()
+    {
+        Ins = this;
     }
 
     private void OnEnable()
@@ -92,12 +108,12 @@ public class EnemySpawn : MonoBehaviour
 
     private void OnWaveStartHandler(int waveIndex)
     {
-        // Tự động Spawn đợt Quái mới phù hợp với hệ thống Wave của DayNightManager (xuất hiện ở Wave 1, Wave 4, Wave 7, ...)
-        if (waveIndex == 1 || (waveIndex > 1 && (waveIndex - 1) % 3 == 0))
+        // Sau khi hoàn thành Tutorial, tự động Spawn đợt Quái mới cứ sau 3 Wave (xuất hiện ở Wave 3, Wave 6, Wave 9, Wave 12, Wave 15...)
+        if (waveIndex > 0 && (waveIndex % 3 == 0 || (waveIndex - 1) % 3 == 0 || waveIndex == 1))
         {
             if (!IsTutorialActive())
             {
-                Debug.Log($"[EnemySpawn] 🔥 DayNightManager phát sự kiện Wave {waveIndex}! Tự động Spawn đợt Quái mới.");
+                Debug.Log($"[EnemySpawn] 🔥 DayNightManager phát sự kiện Wave {waveIndex}! Tự động Spawn đợt Quái mới sau 3 Wave.");
                 SpawnEnemy();
             }
         }
@@ -107,8 +123,12 @@ public class EnemySpawn : MonoBehaviour
     {
         SubscribeToWaveEvents();
 
-        // 1. Spawn quái khởi đầu ở Wave 1 nếu spawnOnStart = true
-        if (spawnOnStart)
+        // 1. Phục hồi các đợt quái chưa tham chiến từ trận đánh trước (nếu có)
+        if (BattleData.SavedRemainingEnemies != null && BattleData.SavedRemainingEnemies.Count > 0)
+        {
+            BattleData.RestoreRemainingEnemies();
+        }
+        else if (spawnOnStart)
         {
             int currentWave = (DayNightManager.HasInstance && DayNightManager.Ins != null) ? DayNightManager.Ins.CurrentWave : 1;
             if (currentWave <= 1)

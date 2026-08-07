@@ -118,19 +118,20 @@ public class CampaignTutorialManager : MonoBehaviour
 
     private void Start()
     {
-        // 🔥 Nếu vừa đánh thắng từ SceneBattle trở về -> Hoàn thành Stage 6 và chuyển sang Stage 7 nhận thưởng!
-        if (BattleData.LastBattleWasVictory || (BattleData.HasResult && BattleData.IsPlayerVictory))
-        {
-            BattleData.LastBattleWasVictory = false;
-            StartStage7();
-            return;
-        }
-
+        // 1. Nếu đã hoàn thành Tutorial -> Tắt Tutorial UI và thoát ngay (tránh chạy lại thoại hoàn thành khi thắng battle sau này)
         if (PlayerPrefs.GetInt("TutorialCompleted", 0) == 1)
         {
             currentStage = TutorialStage.Stage7_Complete;
             HidePointer();
             if (tutorialCanvas != null) tutorialCanvas.gameObject.SetActive(false);
+            return;
+        }
+
+        // 2. Nếu vừa đánh thắng từ SceneBattle trở về TRONG KHI ĐANG LÀM TUTORIAL -> Hoàn thành Stage 6 và chuyển sang Stage 7 nhận thưởng!
+        if (BattleData.LastBattleWasVictory || (BattleData.HasResult && BattleData.IsPlayerVictory))
+        {
+            BattleData.LastBattleWasVictory = false;
+            StartStage7();
             return;
         }
 

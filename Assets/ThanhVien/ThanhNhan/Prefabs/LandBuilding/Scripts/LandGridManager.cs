@@ -69,11 +69,16 @@ public class LandGridManager : MonoBehaviour
     {
         if (Ins == null) Ins = this;
         else Destroy(gameObject);
+
+        InitializeGridSystem();
     }
 
     private void Start()
     {
-        InitializeGridSystem();
+        if (unlockedTiles == null || unlockedTiles.Count == 0)
+        {
+            InitializeGridSystem();
+        }
     }
 
     /// <summary>
@@ -511,12 +516,13 @@ public class LandGridManager : MonoBehaviour
 
     public Vector2Int WorldToGridCoord(Vector3 worldPos)
     {
-        return new Vector2Int(Mathf.FloorToInt(worldPos.x / tileSize), Mathf.FloorToInt(worldPos.z / tileSize));
+        Vector3 localPos = worldPos - transform.position;
+        return new Vector2Int(Mathf.FloorToInt(localPos.x / tileSize), Mathf.FloorToInt(localPos.z / tileSize));
     }
 
     public Vector3 GetWorldPosition(int x, int z, float yOffset = 0f)
     {
-        return new Vector3(x * tileSize, yOffset, z * tileSize);
+        return transform.position + new Vector3(x * tileSize, yOffset, z * tileSize);
     }
 
     public void GetGridBounds(out int minX, out int maxX, out int minZ, out int maxZ)
@@ -541,5 +547,44 @@ public class LandGridManager : MonoBehaviour
     public void SetGridVisualActive(bool active)
     {
         if (generatedGridOverlay != null) generatedGridOverlay.SetActive(active);
+    }
+
+    /// <summary>
+    /// Giới hạn một vị trí thế giới (Vector3) luôn nằm bên trong VÙNG ĐẤT ĐÃ MỞ KHÓA (LƯỚI XANH)
+    /// </summary>
+    public Vector3 ClampToUnlockedArea(Vector3 worldPos, float padding = 1.0f)
+    {
+        if (unlockedTiles == null || unlockedTiles.Count == 0)
+        {
+            InitializeGridSystem();
+        }
+
+        if (unlockedTiles == null || unlockedTiles.Count == 0) return worldPos;
+
+        GetGridBounds(out int minX, out int maxX, out int minZ, out int maxZ);
+
+        Vector3 origin = transform.position;
+        float minXWorld = origin.x + minX * tileSize + padding;
+        float maxXWorld = origin.x + (maxX + 1) * tileSize - padding;
+        float minZWorld = origin.z + minZ * tileSize + padding;
+        float maxZWorld = origin.z + (maxZ + 1) * tileSize - padding;
+
+        float clampedX = Mathf.Clamp(worldPos.x, minXWorld, maxXWorld);
+        float clampedZ = Mathf.Clamp(worldPos.z, minZWorld, maxZWorld);
+
+        return new Vector3(clampedX, worldPos.y, clampedZ);
+    }
+
+    /// <summary>
+    /// Kiểm tra xem một vị trí thế giới bất kỳ có nằm trong vùng ĐÃ MỞ KHÓA hay không
+    /// </summary>
+    public bool IsWorldPositionUnlocked(Vector3 worldPos)
+    {
+        if (unlockedTiles == null || unlockedTiles.Count == 0)
+        {
+            InitializeGridSystem();
+        }
+        Vector2Int gridCoord = WorldToGridCoord(worldPos);
+        return unlockedTiles != null && unlockedTiles.Contains(gridCoord);
     }
 }

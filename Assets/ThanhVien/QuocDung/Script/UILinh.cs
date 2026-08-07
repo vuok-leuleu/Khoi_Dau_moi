@@ -244,10 +244,17 @@ public class UILinh : MonoBehaviour
                 Debug.LogWarning($"[UILinh] File Save không tồn tại để xóa: {savePath}");
             }
 
-            // 🔥 Xóa cờ trạng thái Tutorial để có thể test lại từ đầu
+            // 🔥 Xóa cờ trạng thái Tutorial & Ngày đã lưu để có thể test lại từ đầu
             PlayerPrefs.DeleteKey("TutorialCompleted");
+            PlayerPrefs.DeleteKey("SavedCurrentWave");
             PlayerPrefs.Save();
-            Debug.Log("[UILinh] Đã reset trạng thái hoàn thành Tutorial trong PlayerPrefs.");
+
+            if (DayNightManager.Ins != null)
+            {
+                DayNightManager.Ins.ResetWaveState();
+            }
+
+            Debug.Log("[UILinh] Đã reset trạng thái hoàn thành Tutorial và Day/Wave trong PlayerPrefs.");
         }
         catch (Exception e)
         {

@@ -8,6 +8,9 @@ public class SpawnSoldier : MonoBehaviour
 {
     [Header("Spawn Settings")]
     [SerializeField] private GameObject soldierPrefab;
+    [Tooltip("Số lượng lính có thể spawn (mặc định Level 1)")]
+    [Min(1)]
+    [SerializeField] private int maxSoldierCount = 4;
     [Tooltip("Bán kính phân bố vị trí lính quanh khu vực sinh lính")]
     [Range(0.5f, 10f)]
     [SerializeField] private float spawnRadius = 3.5f;
@@ -36,6 +39,7 @@ public class SpawnSoldier : MonoBehaviour
     private Coroutine hologramAnimationCoroutine;
 
     public float TestDuration => testDuration;
+    public int MaxSoldierCount => maxSoldierCount;
 
     void Awake()
     {
@@ -297,15 +301,16 @@ public class SpawnSoldier : MonoBehaviour
         }
     }
 
-    // Hàm lấy số lượng lính tối đa dựa theo Level (Lv1: 4, Lv2: 6, Lv3: 8)
+    // Hàm lấy số lượng lính tối đa dựa theo Level (Lv1: maxSoldierCount, Lv2: +2, Lv3: +4)
     public int GetMaxSoldiersForLevel(int level)
     {
+        int baseCount = Mathf.Max(1, maxSoldierCount);
         switch (level)
         {
-            case 1: return 4;
-            case 2: return 6;
-            case 3: return 8;
-            default: return 4; // Fallback
+            case 1: return baseCount;
+            case 2: return baseCount + 2;
+            case 3: return baseCount + 4;
+            default: return baseCount;
         }
     }
 
@@ -344,6 +349,10 @@ public class SpawnSoldier : MonoBehaviour
         Debug.Log($"[SpawnSoldier] {gameObject.name} (Lv {currentLevel}) đang spawn {count} lính mới với sát thương {damage}.");
 
         Vector3 baseSpawnCenter = transform.position + transform.forward * spawnForwardOffset;
+        if (LandGridManager.Ins != null)
+        {
+            baseSpawnCenter = LandGridManager.Ins.ClampToUnlockedArea(baseSpawnCenter, 1.5f);
+        }
 
         for (int i = 0; i < count; i++)
         {
@@ -355,12 +364,31 @@ public class SpawnSoldier : MonoBehaviour
             );
 
             Vector3 spawnPosition = rawPosition;
-            if (UnityEngine.AI.NavMesh.SamplePosition(rawPosition, out UnityEngine.AI.NavMeshHit hit, 10f, UnityEngine.AI.NavMesh.AllAreas))
+            if (LandGridManager.Ins != null)
             {
-                spawnPosition = hit.position;
+                spawnPosition = LandGridManager.Ins.ClampToUnlockedArea(rawPosition, 1.0f);
+            }
+
+            if (UnityEngine.AI.NavMesh.SamplePosition(spawnPosition, out UnityEngine.AI.NavMeshHit hit, 5f, UnityEngine.AI.NavMesh.AllAreas))
+            {
+                if (LandGridManager.Ins == null || LandGridManager.Ins.IsWorldPositionUnlocked(hit.position))
+                {
+                    spawnPosition = hit.position;
+                }
+            }
+
+            if (LandGridManager.Ins != null)
+            {
+                spawnPosition = LandGridManager.Ins.ClampToUnlockedArea(spawnPosition, 1.5f);
             }
 
             GameObject soldier = Instantiate(soldierPrefab, spawnPosition, Quaternion.identity);
+
+            UnityEngine.AI.NavMeshAgent agent = soldier.GetComponent<UnityEngine.AI.NavMeshAgent>();
+            if (agent != null && agent.enabled)
+            {
+                agent.Warp(spawnPosition);
+            }
 
             UnitController unit = soldier.GetComponent<UnitController>();
             if (unit != null)
@@ -493,6 +521,10 @@ public class SpawnSoldier : MonoBehaviour
         }
 
         Vector3 baseSpawnCenter = transform.position + transform.forward * spawnForwardOffset;
+        if (LandGridManager.Ins != null)
+        {
+            baseSpawnCenter = LandGridManager.Ins.ClampToUnlockedArea(baseSpawnCenter, 1.5f);
+        }
 
         for (int i = 0; i < count; i++)
         {
@@ -504,9 +536,22 @@ public class SpawnSoldier : MonoBehaviour
             );
 
             Vector3 spawnPosition = rawPosition;
-            if (UnityEngine.AI.NavMesh.SamplePosition(rawPosition, out UnityEngine.AI.NavMeshHit hit, 10f, UnityEngine.AI.NavMesh.AllAreas))
+            if (LandGridManager.Ins != null)
             {
-                spawnPosition = hit.position;
+                spawnPosition = LandGridManager.Ins.ClampToUnlockedArea(rawPosition, 1.0f);
+            }
+
+            if (UnityEngine.AI.NavMesh.SamplePosition(spawnPosition, out UnityEngine.AI.NavMeshHit hit, 5f, UnityEngine.AI.NavMesh.AllAreas))
+            {
+                if (LandGridManager.Ins == null || LandGridManager.Ins.IsWorldPositionUnlocked(hit.position))
+                {
+                    spawnPosition = hit.position;
+                }
+            }
+
+            if (LandGridManager.Ins != null)
+            {
+                spawnPosition = LandGridManager.Ins.ClampToUnlockedArea(spawnPosition, 1.5f);
             }
 
             GameObject hologram = Instantiate(soldierPrefab, spawnPosition, Quaternion.identity);
