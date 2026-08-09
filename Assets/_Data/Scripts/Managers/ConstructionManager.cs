@@ -157,9 +157,13 @@ public class ConstructionManager : Singleton<ConstructionManager>
         {
             UpgradeableBuilding ub = spawned.GetComponent<UpgradeableBuilding>();
             if (ub == null) ub = spawned.GetComponentInChildren<UpgradeableBuilding>();
-            if (ub != null && SettlementManager.Ins != null && SettlementManager.Ins.CurrentSettlement != null)
+            if (ub != null)
             {
-                SettlementManager.Ins.CurrentSettlement.RegisterBuilding(ub);
+                ub.IsInitialBuildNeeded = false;
+                if (SettlementManager.Ins != null && SettlementManager.Ins.CurrentSettlement != null)
+                {
+                    SettlementManager.Ins.CurrentSettlement.RegisterBuilding(ub);
+                }
             }
 
             if (!buildingCounts.ContainsKey(type)) buildingCounts[type] = 0;
@@ -170,6 +174,9 @@ public class ConstructionManager : Singleton<ConstructionManager>
             SettlementSidePanelUI.Ins?.RefreshPanel();
 
             CampaignTutorialManager.Ins?.OnBuildingPlaced(type);
+
+            // 🔥 Lưu trạng thái công trình vừa xây vào file Save Slot 1
+            BuildingSystem.Ins?.SaveBuildingsToSlot(1);
 
             Debug.Log($"[ConstructionManager] ✅ Đã xây {type} thành công!");
         }

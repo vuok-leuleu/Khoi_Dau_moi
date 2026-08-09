@@ -103,27 +103,54 @@ public class BuildingManager : Singleton<BuildingManager>
     public List<BuildingState> GetAllStates()
     {
         var states = new List<BuildingState>();
-        BuildingCtrl[] sceneBuildings = Object.FindObjectsByType<BuildingCtrl>(FindObjectsSortMode.None);
+        HashSet<GameObject> processedObj = new HashSet<GameObject>();
 
+        // 1. Quét tất cả UpgradeableBuilding trong Scene
+        UpgradeableBuilding[] ubs = Object.FindObjectsByType<UpgradeableBuilding>(FindObjectsSortMode.None);
+        foreach (var ub in ubs)
+        {
+            if (ub == null || !ub.gameObject.activeInHierarchy) continue;
+
+            // Bỏ qua các object ghost / preview
+            if (ub.GetComponentInParent<GhostBuilding>() != null || ub.GetComponent<GhostBuilding>() != null) continue;
+            string gName = ub.gameObject.name.ToLower();
+            if (gName.Contains("ghost") || gName.Contains("ghot")) continue;
+
+            if (processedObj.Contains(ub.gameObject)) continue;
+            processedObj.Add(ub.gameObject);
+
+            BuildingCtrl bCtrl = ub.GetComponent<BuildingCtrl>();
+            BuildingState state = bCtrl != null ? bCtrl.ToState() : new BuildingState
+            {
+                buildingType = ub.buildingType,
+                prefabName = ub.gameObject.name,
+                position = new SerializableVector3(ub.transform.position),
+                rotation = new SerializableVector3(ub.transform.eulerAngles),
+                buildProgress = 1f,
+                isBuilt = true
+            };
+
+            // Lấy chính xác level hiện tại của từng công trình
+            state.level = ub.CurrentLevel;
+            state.isRuined = ub.IsRuined;
+            state.startAsRuined = ub.StartAsRuined;
+            state.isInitialBuildNeeded = ub.IsInitialBuildNeeded;
+
+            states.Add(state);
+        }
+
+        // 2. Quét bổ sung các BuildingCtrl chưa có UpgradeableBuilding (nếu có)
+        BuildingCtrl[] sceneBuildings = Object.FindObjectsByType<BuildingCtrl>(FindObjectsSortMode.None);
         foreach (var b in sceneBuildings)
         {
-            if (b != null && b.gameObject.activeInHierarchy)
+            if (b != null && b.gameObject.activeInHierarchy && !processedObj.Contains(b.gameObject))
             {
+                processedObj.Add(b.gameObject);
                 BuildingState state = b.ToState();
-
-                // 🔥 LẤY CẤP ĐỘ HIỆN TẠI LƯU VÀO STATE
-                var upgradeable = b.GetComponent<UpgradeableBuilding>();
-                if (upgradeable != null)
-                {
-                    state.level = upgradeable.CurrentLevel;
-                    state.isRuined = upgradeable.IsRuined;
-                    state.startAsRuined = upgradeable.StartAsRuined;
-                    state.isInitialBuildNeeded = upgradeable.IsInitialBuildNeeded;
-                }
-
                 states.Add(state);
             }
         }
+
         return states;
     }
 
@@ -153,8 +180,10 @@ public class BuildingManager : Singleton<BuildingManager>
             {
                 spawned.FromState(state);
 
-                // 🔥 ÉP CÔNG TRÌNH KHÔI PHỤC ĐÚNG LEVEL VÀ TẮT ĐẾM GIỜ XÂY LẠI TỪ ĐẦU
+                // ÉP CÔNG TRÌNH KHÔI PHỤC ĐÚNG LEVEL VÀ KHÔNG BỊ TỰ NÂNG CẤP LẦN NỮA
                 UpgradeableBuilding upgradeable = spawned.GetComponent<UpgradeableBuilding>();
+                if (upgradeable == null) upgradeable = spawned.GetComponentInChildren<UpgradeableBuilding>();
+
                 if (upgradeable != null)
                 {
                     upgradeable.LoadBuildingData(state.level, state.isRuined, state.isInitialBuildNeeded);
@@ -170,14 +199,40 @@ public class BuildingManager : Singleton<BuildingManager>
     /// <summary>Phá hủy toàn bộ công trình hiện có – chỉ gọi trước LoadStates().</summary>
     private void ClearAll()
     {
+        HashSet<GameObject> toDestroy = new HashSet<GameObject>();
+
+        UpgradeableBuilding[] allUbs = FindObjectsByType<UpgradeableBuilding>(FindObjectsSortMode.None);
+        foreach (var ub in allUbs)
+        {
+            if (ub != null && ub.gameObject != null)
+            {
+                if (ub.GetComponentInParent<GhostBuilding>() != null || ub.GetComponent<GhostBuilding>() != null) continue;
+                string gName = ub.gameObject.name.ToLower();
+                if (gName.Contains("ghost") || gName.Contains("ghot")) continue;
+
+                toDestroy.Add(ub.gameObject);
+            }
+        }
+
         BuildingCtrl[] allBuildingsInScene = FindObjectsByType<BuildingCtrl>(FindObjectsSortMode.None);
         foreach (var b in allBuildingsInScene)
         {
             if (b != null && b.gameObject != null)
             {
-                DestroyImmediate(b.gameObject);
+                toDestroy.Add(b.gameObject);
             }
         }
+
+        foreach (var obj in toDestroy)
+        {
+            if (obj != null)
+            {
+                obj.SetActive(false);
+                if (Application.isPlaying) Destroy(obj);
+                else DestroyImmediate(obj);
+            }
+        }
+
         buildings.Clear();
 
         if (SettlementManager.Ins != null && SettlementManager.Ins.CurrentSettlement != null)
@@ -188,7 +243,7 @@ public class BuildingManager : Singleton<BuildingManager>
             }
         }
 
-        Debug.Log("[BuildingManager] 🗑️ Đã dọn sạch toàn bộ công trình (kể cả có sẵn) trong scene.");
+        Debug.Log("[BuildingManager] 🗑️ Đã dọn sạch toàn bộ công trình trong scene.");
     }
 
 

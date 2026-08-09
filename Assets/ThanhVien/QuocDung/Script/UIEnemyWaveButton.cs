@@ -101,67 +101,60 @@ public class UIEnemyWaveButton : MonoBehaviour
     [Header("Scene Settings")]
     public string battleSceneName = "SceneBattle";
 
+    [HideInInspector]
+    public bool isTroopsArrivedAtTarget = false;
+
     public void OnAttackButtonClicked()
     {
         Time.timeScale = 1f;
         if (targetLeadEnemy == null) return;
 
-        Vector3 attackPos = targetLeadEnemy.position;
-        Debug.Log($"[UIEnemyWaveButton] Player clicked Leader Attack Button! Recording scene state and switching to battle...");
-
-        EnemyAI leadAI = targetLeadEnemy.GetComponent<EnemyAI>();
-        int waveCount = 1;
-        if (leadAI != null)
+        // 🔥 Nếu lính đã hành quân tới căn cứ địch thành công, người chơi bấm Tấn Công sẽ vào thẳng SceneBattle
+        if (isTroopsArrivedAtTarget)
         {
-            if (leadAI.squadEnemies != null && leadAI.squadEnemies.Count > 0)
+            int enemyCount = 5;
+            EnemySpawn spawner = targetLeadEnemy.GetComponentInParent<EnemySpawn>();
+            if (spawner == null) spawner = Object.FindFirstObjectByType<EnemySpawn>();
+            if (spawner != null && spawner.enemyCountInBase > 0)
             {
-                waveCount = leadAI.squadEnemies.Count;
+                enemyCount = spawner.enemyCountInBase;
             }
-        }
+            else
+            {
+                SettlementZone zone = targetLeadEnemy.GetComponentInParent<SettlementZone>();
+                if (zone != null && zone.enemyCountInBase > 0)
+                {
+                    enemyCount = zone.enemyCountInBase;
+                }
+            }
 
-        EnemyAI[] allEnemies = Object.FindObjectsByType<EnemyAI>(FindObjectsSortMode.None);
-        if (allEnemies != null && allEnemies.Length > waveCount)
-        {
-            waveCount = allEnemies.Length;
-        }
+            Debug.Log($"[UIEnemyWaveButton] ⚔️ Người chơi bấm TẤN CÔNG khi lính đã tập kết đầy đủ! Chuyển sang {battleSceneName}...");
+            
+            // Record targeted settlement zone
+            if (targetLeadEnemy != null)
+            {
+                SettlementZone zone = targetLeadEnemy.GetComponentInParent<SettlementZone>();
+                if (zone == null) zone = targetLeadEnemy.GetComponentInChildren<SettlementZone>();
+                if (zone != null)
+                {
+                    BattleData.TargetedSettlementZoneName = zone.settlementName;
+                }
+            }
 
-        // Lưu trạng thái trước khi giao tranh / chuyển cảnh
-        BattleData.RecordCurrentSceneState(waveCount);
-
-        if (!string.IsNullOrEmpty(battleSceneName))
-        {
-            Debug.Log($"[UIEnemyWaveButton] Đang chuyển sang Scene giao tranh: {battleSceneName}");
-            UnityEngine.SceneManagement.SceneManager.LoadScene(battleSceneName);
+            BattleData.RecordCurrentSceneState(enemyCount);
+            if (!string.IsNullOrEmpty(battleSceneName))
+            {
+                UnityEngine.SceneManagement.SceneManager.LoadScene(battleSceneName);
+            }
+            Destroy(gameObject);
             return;
         }
 
-        foreach (var enemy in allEnemies)
-        {
-            if (enemy != null && enemy.gameObject.activeInHierarchy)
-            {
-                enemy.EnableCombat();
-            }
-        }
+        Vector3 attackPos = targetLeadEnemy.position;
+        Debug.Log($"[UIEnemyWaveButton] Player clicked Attack Button! Opening TroopDispatchUI panel...");
 
-        List<UnitController> soldierList = new List<UnitController>();
-        UnitController[] foundUnits = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
-        foreach (var unit in foundUnits)
-        {
-            if (unit != null && unit.gameObject.activeInHierarchy && !soldierList.Contains(unit))
-            {
-                soldierList.Add(unit);
-            }
-        }
-
-        int count = 0;
-        foreach (UnitController soldier in soldierList)
-        {
-            if (soldier != null)
-            {
-                soldier.RespondToWarning(attackPos);
-                count++;
-            }
-        }
+        // Mở Bảng Chọn Quân Đội Xuất Trận (TroopDispatchUI)
+        TroopDispatchUI.OpenPanel(attackPos, targetLeadEnemy, battleSceneName);
 
         Destroy(gameObject);
     }
@@ -169,13 +162,21 @@ public class UIEnemyWaveButton : MonoBehaviour
     /// <summary>
     /// Helper method to dynamically generate a World Space UI Attack Button over the leader enemy.
     /// </summary>
-    public static UIEnemyWaveButton CreateButton(Transform leadEnemy, float heightOffset = 3.0f)
+    public static UIEnemyWaveButton CreateButton(Transform leadEnemy, float heightOffset = 3.0f, bool isArrived = false)
     {
         if (leadEnemy == null) return null;
 
         // Ensure only ONE button is created per leader enemy
         UIEnemyWaveButton existing = leadEnemy.GetComponentInChildren<UIEnemyWaveButton>();
-        if (existing != null) return existing;
+        if (existing != null)
+        {
+            if (isArrived)
+            {
+                existing.isTroopsArrivedAtTarget = true;
+                if (existing.buttonText != null) existing.buttonText.text = "⚔️ TẤN CÔNG (START)";
+            }
+            return existing;
+        }
 
         // Check EventSystem
         if (UnityEngine.EventSystems.EventSystem.current == null)
@@ -214,7 +215,7 @@ public class UIEnemyWaveButton : MonoBehaviour
         btnRect.sizeDelta = Vector2.zero;
 
         Image btnImage = btnObj.AddComponent<Image>();
-        btnImage.color = new Color(0.9f, 0.2f, 0.2f, 0.95f); // Red UI Button
+        btnImage.color = isArrived ? new Color(0.15f, 0.75f, 0.25f, 0.95f) : new Color(0.9f, 0.2f, 0.2f, 0.95f);
 
         Button btn = btnObj.AddComponent<Button>();
         ColorBlock colors = btn.colors;
@@ -232,7 +233,7 @@ public class UIEnemyWaveButton : MonoBehaviour
         textRect.sizeDelta = Vector2.zero;
 
         TextMeshProUGUI tmpText = textObj.AddComponent<TextMeshProUGUI>();
-        tmpText.text = "⚔️ TẤN CÔNG!";
+        tmpText.text = isArrived ? "⚔️ TẤN CÔNG (START)" : "⚔️ TẤN CÔNG!";
         tmpText.fontSize = 20;
         tmpText.alignment = TextAlignmentOptions.Center;
         tmpText.color = Color.white;
@@ -241,8 +242,97 @@ public class UIEnemyWaveButton : MonoBehaviour
         UIEnemyWaveButton waveBtn = canvasObj.AddComponent<UIEnemyWaveButton>();
         waveBtn.attackButton = btn;
         waveBtn.buttonText = tmpText;
+        waveBtn.isTroopsArrivedAtTarget = isArrived;
         waveBtn.Initialize(leadEnemy, heightOffset);
 
         return waveBtn;
+    }
+}
+
+public class ExpeditionBattleTrigger : MonoBehaviour
+{
+    private List<UnitController> marchingSoldiers;
+    private Transform enemyTarget;
+    private string sceneToLoad;
+
+    public void StartMonitoring(List<UnitController> soldiers, Transform target, string sceneName)
+    {
+        marchingSoldiers = soldiers;
+        enemyTarget = target;
+        sceneToLoad = sceneName;
+    }
+
+    private void Update()
+    {
+        if (enemyTarget == null)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        if (marchingSoldiers == null || marchingSoldiers.Count == 0)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        List<UnitController> activeMarchers = new List<UnitController>();
+        foreach (var s in marchingSoldiers)
+        {
+            if (s != null && s.gameObject.activeInHierarchy && s.isExpeditionMarching)
+            {
+                activeMarchers.Add(s);
+            }
+        }
+
+        if (activeMarchers.Count == 0)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Vector3 targetPos = enemyTarget.position;
+        int currentWave = (DayNightManager.HasInstance && DayNightManager.Ins != null) ? DayNightManager.Ins.CurrentWave : 1;
+        bool allReached = true;
+
+        foreach (var s in activeMarchers)
+        {
+            int remainingWaves = Mathf.Max(0, s.marchTargetWave - currentWave);
+            float distToDest = Vector3.Distance(s.transform.position, s.marchDestinationPosition);
+            float distToCenter = Vector3.Distance(s.transform.position, targetPos);
+
+            // 🔥 Đảm bảo TẤT CẢ lính trong đoàn xuất trận đều đã hoàn thành số wave hành quân và tập kết áp sát mục tiêu
+            if (remainingWaves > 0 || (distToDest > 2.0f && distToCenter > 4.5f))
+            {
+                allReached = false;
+                break;
+            }
+        }
+
+        if (allReached)
+        {
+            Debug.Log("[ExpeditionBattleTrigger] ⚔️ TẤT CẢ lính đã tập kết đầy đủ tại Căn cứ Địch! Dừng hành quân và hiển thị Nút Tấn Công...");
+
+            // Dừng trạng thái di chuyển hành quân để lính tập kết đứng chờ
+            foreach (var s in activeMarchers)
+            {
+                if (s != null)
+                {
+                    s.isExpeditionMarching = false;
+                }
+            }
+
+            // 🔥 Hiển thị Nút Tấn Công (màu xanh lá) trên đầu Căn cứ Địch để người chơi bấm kích hoạt trận đấu
+            if (enemyTarget != null)
+            {
+                UIEnemyWaveButton attackBtn = UIEnemyWaveButton.CreateButton(enemyTarget, 3.5f, true);
+                if (attackBtn != null)
+                {
+                    attackBtn.battleSceneName = sceneToLoad;
+                }
+            }
+
+            Destroy(gameObject);
+        }
     }
 }

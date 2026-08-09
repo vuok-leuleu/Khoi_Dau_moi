@@ -74,6 +74,56 @@ public class UnitController : MonoBehaviour
     [SerializeField] private Vector3 returnPosition;
     [SerializeField] private Vector3 warningPosition;
 
+    [Header("Expedition Wave Marching")]
+    public bool isExpeditionMarching = false;
+    public int marchStartWave = 1;
+    public int marchWavesToReach = 3;
+    public int marchTargetWave = 4;
+    public Vector3 marchStartPosition;
+    public Vector3 marchDestinationPosition;
+
+    public bool isMarchingToEnemyBase => isExpeditionMarching || isRespondingToWarning || isReturning;
+
+    [Header("Mũi Tên Dưới Chân (Ground Arrow)")]
+    [Tooltip("Bật/Tắt hiển thị mũi tên di chuyển dưới chân Soldier")]
+    public bool showGroundArrow = true;
+    public static bool globalShowSoldierGroundArrow = true;
+
+    public SoldierGroundArrow EnsureSoldierGroundArrow()
+    {
+        SoldierGroundArrow arrow = GetComponentInChildren<SoldierGroundArrow>();
+        if (arrow == null)
+        {
+            arrow = SoldierGroundArrow.Create(transform);
+        }
+        if (arrow != null)
+        {
+            arrow.showGroundArrow = showGroundArrow;
+        }
+        return arrow;
+    }
+
+    public void SetGroundArrowVisible(bool visible)
+    {
+        showGroundArrow = visible;
+        SoldierGroundArrow arrow = GetComponentInChildren<SoldierGroundArrow>();
+        if (arrow != null)
+        {
+            arrow.showGroundArrow = visible;
+        }
+    }
+
+    public static void ToggleAllSoldierGroundArrows(bool enable)
+    {
+        globalShowSoldierGroundArrow = enable;
+        SoldierGroundArrow.globalShowSoldierGroundArrow = enable;
+        UnitController[] soldiers = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
+        foreach (var s in soldiers)
+        {
+            if (s != null) s.SetGroundArrowVisible(enable);
+        }
+    }
+
     float GetAttackStopDistance()
     {
         return attackMode == AttackMode.Ranged ? rangedAttackRange : attackRange;
@@ -268,6 +318,47 @@ public class UnitController : MonoBehaviour
     {
         if (hpSoldier != null && hpSoldier.IsDead) return;
 
+        string currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        bool isSceneBattle = currentScene.ToLower().Contains("battle");
+
+        if (isSceneBattle)
+        {
+            isExpeditionMarching = false;
+        }
+
+        // 🔥 Xử lý Lính di chuyển từng nấc theo từng Wave (chỉ khi ở Main Scene)
+        if (isExpeditionMarching && !isSceneBattle)
+        {
+            int currentWave = (DayNightManager.HasInstance && DayNightManager.Ins != null) ? DayNightManager.Ins.CurrentWave : marchStartWave;
+            int elapsedWaves = Mathf.Max(0, currentWave - marchStartWave);
+            float progress = Mathf.Clamp01((float)elapsedWaves / (float)marchWavesToReach);
+
+            Vector3 targetStepPos = Vector3.Lerp(marchStartPosition, marchDestinationPosition, progress);
+
+            if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh)
+            {
+                agent.isStopped = true;
+                if (Vector3.Distance(transform.position, targetStepPos) > 0.05f)
+                {
+                    agent.Warp(Vector3.MoveTowards(transform.position, targetStepPos, 8f * Time.deltaTime));
+                }
+            }
+            else
+            {
+                transform.position = Vector3.MoveTowards(transform.position, targetStepPos, 8f * Time.deltaTime);
+            }
+
+            Vector3 lookDir = marchDestinationPosition - transform.position;
+            lookDir.y = 0f;
+            if (lookDir.sqrMagnitude > 0.01f)
+            {
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(lookDir), 360f * Time.deltaTime);
+            }
+
+            UpdateAnimationState();
+            return;
+        }
+
         // Chỉ quét tự động tìm mục tiêu nếu autoAggro = true HOẶC đang trong chế độ phản công theo nút bấm (isRespondingToWarning)
         if (autoAggro || isRespondingToWarning)
         {
@@ -372,33 +463,49 @@ public class UnitController : MonoBehaviour
 
     public void RespondToWarning(Vector3 targetPosition)
     {
-        if (!isRespondingToWarning && !isReturning)
+        string currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        if (currentScene.ToLower().Contains("battle"))
         {
-            returnPosition = transform.position;
+            isExpeditionMarching = false;
+            isRespondingToWarning = true;
+            isReturning = false;
+            autoAggro = true;
+            currentState = UnitState.Moving;
+
+            SetDestination(targetPosition);
+            return;
         }
-        warningPosition = targetPosition;
+
+        StartExpeditionMarch(targetPosition, -1);
+    }
+
+    public void StartExpeditionMarch(Vector3 destinationPos, int wavesToReach = -1)
+    {
+        if (!isExpeditionMarching)
+        {
+            marchStartPosition = transform.position;
+        }
+        marchDestinationPosition = destinationPos;
+        marchStartWave = (DayNightManager.HasInstance && DayNightManager.Ins != null) ? DayNightManager.Ins.CurrentWave : 1;
+
+        if (wavesToReach <= 0)
+        {
+            float dist = Vector3.Distance(marchStartPosition, marchDestinationPosition);
+            // 🔥 Tự động tính số Wave cần thiết dựa theo khoảng cách thực tế (khoảng 15m / Wave)
+            wavesToReach = Mathf.Max(1, Mathf.RoundToInt(dist / 15f));
+        }
+
+        marchWavesToReach = wavesToReach;
+        marchTargetWave = marchStartWave + marchWavesToReach;
+        isExpeditionMarching = true;
         isRespondingToWarning = true;
         isReturning = false;
         currentState = UnitState.Moving;
 
-        if (agent != null)
+        if (showGroundArrow && globalShowSoldierGroundArrow)
         {
-            if (!agent.isOnNavMesh)
-            {
-                if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 5f, NavMesh.AllAreas))
-                {
-                    agent.Warp(hit.position);
-                }
-            }
-
-            if (agent.isOnNavMesh)
-            {
-                agent.isStopped = false;
-                agent.SetDestination(targetPosition);
-            }
+            EnsureSoldierGroundArrow().SetTargetDestination(destinationPos);
         }
-
-        // Debug.Log($"[UnitController] {gameObject.name} responding to attack button -> Moving to {targetPosition}");
     }
 
     public void EnableCombat(Vector3 enemyTargetPos)

@@ -32462,7 +32462,8 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 6073714925271644086, guid: 3cb7dd4e9b30c8f4e880cbfe7f0a92d2, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -48359,6 +48360,72 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: e0318625d93a21146a3a5a8c50f07f8b, type: 3}
+--- !u!1001 &666057505
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 5604620364914663613, guid: 4fcac8d28f94ffd47af5177b708af36b, type: 3}
+      propertyPath: attackTarget
+      value: 
+      objectReference: {fileID: 1977744098}
+    - target: {fileID: 6904818074612623944, guid: 4fcac8d28f94ffd47af5177b708af36b, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -26
+      objectReference: {fileID: 0}
+    - target: {fileID: 6904818074612623944, guid: 4fcac8d28f94ffd47af5177b708af36b, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 3.84
+      objectReference: {fileID: 0}
+    - target: {fileID: 6904818074612623944, guid: 4fcac8d28f94ffd47af5177b708af36b, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 16.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 6904818074612623944, guid: 4fcac8d28f94ffd47af5177b708af36b, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6904818074612623944, guid: 4fcac8d28f94ffd47af5177b708af36b, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6904818074612623944, guid: 4fcac8d28f94ffd47af5177b708af36b, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6904818074612623944, guid: 4fcac8d28f94ffd47af5177b708af36b, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6904818074612623944, guid: 4fcac8d28f94ffd47af5177b708af36b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6904818074612623944, guid: 4fcac8d28f94ffd47af5177b708af36b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6904818074612623944, guid: 4fcac8d28f94ffd47af5177b708af36b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7797942323167277163, guid: 4fcac8d28f94ffd47af5177b708af36b, type: 3}
+      propertyPath: m_Name
+      value: EnemySpawnManager
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 4fcac8d28f94ffd47af5177b708af36b, type: 3}
+--- !u!4 &666057506 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 267864803989536797, guid: 4fcac8d28f94ffd47af5177b708af36b, type: 3}
+  m_PrefabInstance: {fileID: 666057505}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &667741278
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -95916,7 +95983,10 @@ MonoBehaviour:
   unlockAllBuildings: 0
   unlockedBuildingTypes: 06000000
   hasEnemyOutpost: 1
-  enemyOutpostPrefab: {fileID: 7797942323167277163, guid: 579bc620d8991b4499911079d1f4ce62, type: 3}
+  enemyCountInBase: 5
+  enemyOutpostPrefab: {fileID: 0}
+  enemySpawnPoint: {fileID: 666057506}
+  enemySpawn: {fileID: 0}
   spawnedEnemyOutpostInstance: {fileID: 0}
   townHallBuilding: {fileID: 0}
   builtStructures: []
@@ -122271,7 +122341,10 @@ MonoBehaviour:
   unlockAllBuildings: 1
   unlockedBuildingTypes: 
   hasEnemyOutpost: 0
+  enemyCountInBase: 5
   enemyOutpostPrefab: {fileID: 0}
+  enemySpawnPoint: {fileID: 0}
+  enemySpawn: {fileID: 0}
   spawnedEnemyOutpostInstance: {fileID: 0}
   townHallBuilding: {fileID: 0}
   builtStructures: []
@@ -130740,4 +130813,5 @@ SceneRoots:
   - {fileID: 1363923317}
   - {fileID: 870269812}
   - {fileID: 663185552}
+  - {fileID: 666057505}
   - {fileID: 995527687}

@@ -9,6 +9,12 @@ public class EnemySpawnWarningArrow : MonoBehaviour
     public Transform targetEnemy;
 
     [Header("Mũi Tên Dưới Chân (Ground Arrow)")]
+    [Tooltip("Bật/Tắt hiển thị mũi tên dưới chân Enemy này")]
+    public bool showGroundArrow = true;
+
+    [Tooltip("Cờ bật/tắt toàn cục cho tất cả Enemy")]
+    public static bool globalShowEnemyGroundArrow = true;
+
     [Tooltip("Điều chỉnh chiều rộng mũi tên (mét) kéo dài bệt dưới chân Enemy")]
     [Range(0.1f, 5f)]
     public float arrowSize = 1.0f;
@@ -396,10 +402,54 @@ public class EnemySpawnWarningArrow : MonoBehaviour
 
     private void UpdateStretchedArrowGeometry()
     {
-        // Đã xóa mũi tên dưới chân theo yêu cầu
-        if (arrowQuadObj != null && arrowQuadObj.activeSelf)
+        string currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        if (!showGroundArrow || !globalShowEnemyGroundArrow || currentScene.ToLower().Contains("battle"))
         {
-            arrowQuadObj.SetActive(false);
+            if (arrowQuadObj != null && arrowQuadObj.activeSelf)
+            {
+                arrowQuadObj.SetActive(false);
+            }
+            return;
+        }
+
+        Transform target = GetActualEnemyTarget();
+        if (target == null || targetEnemy == null)
+        {
+            if (arrowQuadObj != null && arrowQuadObj.activeSelf)
+            {
+                arrowQuadObj.SetActive(false);
+            }
+            return;
+        }
+
+        Vector3 enemyPos = targetEnemy.position;
+        Vector3 targetFeetPos = GetTargetFeetPosition(target);
+
+        Vector3 dir = targetFeetPos - enemyPos;
+        dir.y = 0f;
+        float dist = dir.magnitude;
+
+        if (dist < 0.5f)
+        {
+            if (arrowQuadObj != null && arrowQuadObj.activeSelf)
+            {
+                arrowQuadObj.SetActive(false);
+            }
+            return;
+        }
+
+        if (arrowQuadObj != null)
+        {
+            if (!arrowQuadObj.activeSelf) arrowQuadObj.SetActive(true);
+
+            dir.Normalize();
+            Quaternion rot = Quaternion.LookRotation(dir, Vector3.up) * Quaternion.Euler(90f, 0f, 0f);
+
+            arrowQuadObj.transform.position = enemyPos + Vector3.up * arrowGroundOffset;
+            arrowQuadObj.transform.rotation = rot;
+
+            float totalLength = Mathf.Max(0.5f, dist * arrowLengthMultiplier + arrowExtraLength);
+            arrowQuadObj.transform.localScale = new Vector3(arrowSize, totalLength, 1f);
         }
     }
 

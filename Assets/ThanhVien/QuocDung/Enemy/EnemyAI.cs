@@ -17,6 +17,11 @@ public class EnemyAI : MonoBehaviour
     [Tooltip("Góc xoay bù cho nút UI (Ví dụ X:0, Y:0, Z:90 để xoay ngang nút lại).")]
     public Vector3 buttonRotationOffset = new Vector3(0, 0, 90);
 
+    [Header("Mũi Tên Dưới Chân (Ground Arrow)")]
+    [Tooltip("Bật/Tắt hiển thị mũi tên chỉ mục tiêu dưới chân Enemy")]
+    public bool showGroundArrow = true;
+    public static bool globalShowEnemyGroundArrow = true;
+
     [Header("Wave Arrival Settings")]
     [Tooltip("Số Wave mà Enemy cần trải qua để tiếp cận thành (mặc định 3 Wave).")]
     public int wavesToReachTarget = 3;
@@ -38,9 +43,9 @@ public class EnemyAI : MonoBehaviour
     }
 
     /// <summary>
-    /// Tính toán vị trí mép ngoài tường thành thực tế của LandGridManager (bám sát ngoài prefab Fence/Gate)
+    /// Tính toán vị trí mục tiêu thực tế (bám sát ngoài nhà chính / khu định cư)
     /// </summary>
-    public static Vector3 GetCastleWallDestination(Vector3 fromPosition, Transform fallbackTarget = null, float wallOffset = 1.5f)
+    public static Vector3 GetTargetDestinationPosition(Vector3 fromPosition, Transform fallbackTarget = null, float wallOffset = 1.5f)
     {
         if (fallbackTarget != null) return fallbackTarget.position;
         if (SettlementManager.Ins != null && SettlementManager.Ins.CurrentSettlement != null)
@@ -48,6 +53,12 @@ public class EnemyAI : MonoBehaviour
             return SettlementManager.Ins.CurrentSettlement.transform.position;
         }
         return fromPosition;
+    }
+
+    [System.Obsolete("Dùng GetTargetDestinationPosition thay thế.")]
+    public static Vector3 GetCastleWallDestination(Vector3 fromPosition, Transform fallbackTarget = null, float wallOffset = 1.5f)
+    {
+        return GetTargetDestinationPosition(fromPosition, fallbackTarget, wallOffset);
     }
 
     [Header("Patrol (Deprecated)")]
@@ -232,6 +243,39 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
+    public void SetGroundArrowVisible(bool visible)
+    {
+        showGroundArrow = visible;
+        EnemySpawnWarningArrow warningComp = GetComponentInChildren<EnemySpawnWarningArrow>();
+        if (warningComp != null)
+        {
+            warningComp.showGroundArrow = visible;
+        }
+    }
+
+    public static void ToggleAllEnemyGroundArrows(bool enable)
+    {
+        globalShowEnemyGroundArrow = enable;
+        EnemySpawnWarningArrow.globalShowEnemyGroundArrow = enable;
+        EnemyAI[] enemies = Object.FindObjectsByType<EnemyAI>(FindObjectsSortMode.None);
+        foreach (var e in enemies)
+        {
+            if (e != null) e.SetGroundArrowVisible(enable);
+        }
+    }
+
+    public void EnsureWarningArrow()
+    {
+        if (showGroundArrow && globalShowEnemyGroundArrow)
+        {
+            EnemySpawnWarningArrow warningComp = EnemySpawnWarningArrow.Create(transform);
+            if (warningComp != null)
+            {
+                warningComp.showGroundArrow = showGroundArrow;
+            }
+        }
+    }
+
     private void OnEnable()
     {
         if (!globalActiveEnemies.Contains(this))
@@ -244,6 +288,7 @@ public class EnemyAI : MonoBehaviour
         }
 
         SubscribeToWaveEvents();
+        EnsureWarningArrow();
     }
 
     private void OnDisable()
@@ -453,7 +498,7 @@ public class EnemyAI : MonoBehaviour
                 Vector3 destination = startSpawnPosition;
                 if (villageCenter != null)
                 {
-                    destination = GetCastleWallDestination(startSpawnPosition, villageCenter);
+                    destination = GetTargetDestinationPosition(startSpawnPosition, villageCenter);
                 }
 
                 Vector3 targetStepPosition = Vector3.Lerp(startSpawnPosition, destination, progress);

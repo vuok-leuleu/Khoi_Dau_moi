@@ -21,9 +21,18 @@ public class SettlementZoneClickHandler : MonoBehaviour
     {
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
-        if (targetZone != null && SettlementManager.Ins != null)
+        if (targetZone != null)
         {
-            SettlementManager.Ins.SelectSettlement(targetZone);
+            if (targetZone.hasEnemyOutpost)
+            {
+                EnemySpawn spawner = targetZone.GetComponentInChildren<EnemySpawn>();
+                Transform btnTarget = (spawner != null) ? spawner.GetSpawnPoint() : (targetZone.spawnedEnemyOutpostInstance != null ? targetZone.spawnedEnemyOutpostInstance.transform : targetZone.transform);
+                UIEnemyWaveButton.CreateButton(btnTarget);
+            }
+            else if (SettlementManager.Ins != null)
+            {
+                SettlementManager.Ins.SelectSettlement(targetZone);
+            }
         }
     }
 }

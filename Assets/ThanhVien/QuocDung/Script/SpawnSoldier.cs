@@ -37,6 +37,36 @@ public class SpawnSoldier : MonoBehaviour
 
     public float TestDuration => testDuration;
 
+    public List<UnitController> GetActiveSoldierControllers()
+    {
+        List<UnitController> list = new List<UnitController>();
+        if (spawnedSoldiers != null)
+        {
+            foreach (var go in spawnedSoldiers)
+            {
+                if (go != null && go.activeInHierarchy)
+                {
+                    UnitController uc = go.GetComponent<UnitController>();
+                    if (uc == null) uc = go.GetComponentInChildren<UnitController>();
+                    if (uc != null && !list.Contains(uc)) list.Add(uc);
+                }
+            }
+        }
+
+        if (list.Count == 0)
+        {
+            UnitController[] children = GetComponentsInChildren<UnitController>();
+            foreach (var uc in children)
+            {
+                if (uc != null && uc.gameObject.activeInHierarchy && !list.Contains(uc))
+                {
+                    list.Add(uc);
+                }
+            }
+        }
+        return list;
+    }
+
     void Awake()
     {
         // Tự động tìm component UpgradeableBuilding trên cùng Object hoặc ở Object cha

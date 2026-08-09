@@ -39,8 +39,14 @@ public class SettlementZone : MonoBehaviour
     [Header("=== CĂN CỨ / CÔNG TRÌNH ĐỊCH (CHINH PHỤC VÙNG ĐẤT) ===")]
     [Tooltip("Tích vào nếu vùng đất này ban đầu bị Kẻ Địch chiếm đóng.")]
     public bool hasEnemyOutpost = false;
+    [Tooltip("Số lượng Enemy tại căn cứ này khi đem quân đến đánh (Tùy chỉnh riêng từng vùng).")]
+    public int enemyCountInBase = 5;
     [Tooltip("Kéo Prefab Căn cứ / Công trình Địch từ Project vào đây.")]
     public GameObject enemyOutpostPrefab;
+    [Tooltip("Kéo vị trí / GameObject Spawn / EnemySpawn vào đây (nếu để trống sẽ tự động tìm EnemySpawn trong Scene).")]
+    public Transform enemySpawnPoint;
+    [Tooltip("Gán EnemySpawn trực tiếp (tùy chọn).")]
+    public EnemySpawn enemySpawn;
 
     /// <summary>
     /// Kiểm tra xem loại công nghệ công trình này đã được mở khóa toàn quốc (cho phép xây ở mọi vùng đất) chưa.
@@ -229,15 +235,22 @@ public class SettlementZone : MonoBehaviour
         // 🔒 Nếu bỏ tích hasEnemyOutpost trong Play Mode hoặc đã tiêu diệt nhưng đối tượng 3D vẫn còn -> Tự động Destroy đối tượng 3D
         if (!hasEnemyOutpost && spawnedEnemyOutpostInstance != null)
         {
-            Destroy(spawnedEnemyOutpostInstance);
+            GameObject outpostObj = spawnedEnemyOutpostInstance;
             spawnedEnemyOutpostInstance = null;
+            if (outpostObj != null)
+            {
+                outpostObj.SetActive(false);
+                if (Application.isPlaying) Destroy(outpostObj);
+                else DestroyImmediate(outpostObj);
+            }
+
             if (SettlementSidePanelUI.Ins != null)
             {
                 SettlementSidePanelUI.Ins.UpdateHeaderVisual();
                 SettlementSidePanelUI.Ins.RefreshPanel();
             }
         }
-        else if (hasEnemyOutpost && spawnedEnemyOutpostInstance == null)
+        else if (hasEnemyOutpost && spawnedEnemyOutpostInstance == null && !isTownHallEstablished)
         {
             OnEnemyOutpostDestroyed();
         }
@@ -293,14 +306,19 @@ public class SettlementZone : MonoBehaviour
     /// </summary>
     public void Update3DSlotVisibility()
     {
+        if (this == null || gameObject == null) return;
+
         int unlockedCount = GetUnlockedSlotCount();
 
         for (int i = 0; i < slotPoints.Count; i++)
         {
-            if (slotPoints[i] != null)
+            if (slotPoints[i] != null && slotPoints[i].gameObject != null)
             {
                 bool activeState = isTownHallEstablished && !hasEnemyOutpost && (i < unlockedCount);
-                slotPoints[i].gameObject.SetActive(activeState);
+                if (slotPoints[i].gameObject.activeSelf != activeState)
+                {
+                    slotPoints[i].gameObject.SetActive(activeState);
+                }
             }
         }
     }
@@ -348,21 +366,83 @@ public class SettlementZone : MonoBehaviour
     /// </summary>
     public void InstantiateEnemyOutpost()
     {
-        if (!hasEnemyOutpost || enemyOutpostPrefab == null) return;
+        if (!hasEnemyOutpost) return;
         if (spawnedEnemyOutpostInstance != null) return;
 
-        Transform spawnPoint = (townHallPoint != null) ? townHallPoint : transform;
-        spawnedEnemyOutpostInstance = Instantiate(enemyOutpostPrefab, spawnPoint.position, spawnPoint.rotation, transform);
-        
-        HPTower enemyHP = spawnedEnemyOutpostInstance.GetComponent<HPTower>();
-        if (enemyHP == null) enemyHP = spawnedEnemyOutpostInstance.GetComponentInChildren<HPTower>();
-
-        if (enemyHP != null)
+        // 1. Tự động tìm EnemySpawn từ enemySpawn, enemySpawnPoint hoặc trong Scene / Children nếu chưa được gán
+        if (enemySpawn == null && enemySpawnPoint != null)
         {
-            enemyHP.OnDeathEvent += OnEnemyOutpostDestroyed;
+            enemySpawn = enemySpawnPoint.GetComponent<EnemySpawn>();
+            if (enemySpawn == null) enemySpawn = enemySpawnPoint.GetComponentInParent<EnemySpawn>();
+            if (enemySpawn == null) enemySpawn = enemySpawnPoint.GetComponentInChildren<EnemySpawn>();
         }
 
-        Debug.Log($"[SettlementZone] ⚔️ Đã sinh Căn cứ Địch tại vùng đất {settlementName}!");
+        if (enemySpawn == null)
+        {
+            enemySpawn = GetComponentInChildren<EnemySpawn>();
+            if (enemySpawn == null)
+            {
+                enemySpawn = Object.FindFirstObjectByType<EnemySpawn>();
+            }
+        }
+
+        // 2. Xác định vị trí spawn từ EnemySpawn (hoặc enemySpawnPoint / townHallPoint / transform)
+        Vector3 spawnPosition = transform.position;
+        Quaternion spawnRotation = transform.rotation;
+
+        if (enemySpawn != null)
+        {
+            spawnPosition = enemySpawn.GetSpawnPosition();
+            spawnRotation = enemySpawn.transform.rotation;
+        }
+        else if (enemySpawnPoint != null)
+        {
+            spawnPosition = enemySpawnPoint.position;
+            spawnRotation = enemySpawnPoint.rotation;
+        }
+        else if (townHallPoint != null)
+        {
+            spawnPosition = townHallPoint.position;
+            spawnRotation = townHallPoint.rotation;
+        }
+
+        // 3. Khởi tạo hoặc liên kết Căn cứ Địch
+        if (enemySpawn != null && enemySpawn.gameObject.scene.IsValid() && enemySpawn.GetComponentInChildren<HPTower>() != null)
+        {
+            spawnedEnemyOutpostInstance = enemySpawn.gameObject;
+        }
+        else if (enemySpawnPoint != null && enemySpawnPoint.gameObject.scene.IsValid() && enemySpawnPoint.GetComponentInChildren<HPTower>() != null)
+        {
+            spawnedEnemyOutpostInstance = enemySpawnPoint.gameObject;
+        }
+        else if (enemyOutpostPrefab != null)
+        {
+            spawnedEnemyOutpostInstance = Instantiate(enemyOutpostPrefab, spawnPosition, spawnRotation, transform);
+        }
+
+        // 4. Đăng ký sự kiện tiêu diệt Căn cứ Địch
+        if (spawnedEnemyOutpostInstance != null)
+        {
+            if (enemySpawn == null)
+            {
+                enemySpawn = spawnedEnemyOutpostInstance.GetComponentInChildren<EnemySpawn>();
+            }
+
+            HPTower enemyHP = spawnedEnemyOutpostInstance.GetComponent<HPTower>();
+            if (enemyHP == null) enemyHP = spawnedEnemyOutpostInstance.GetComponentInChildren<HPTower>();
+
+            if (enemyHP != null)
+            {
+                enemyHP.OnDeathEvent -= OnEnemyOutpostDestroyed;
+                enemyHP.OnDeathEvent += OnEnemyOutpostDestroyed;
+            }
+
+            Debug.Log($"[SettlementZone] ⚔️ Căn cứ Địch đã khởi tạo/liên kết tại vị trí spawn {spawnPosition} cho vùng đất {settlementName}!");
+        }
+        else
+        {
+            Debug.LogWarning($"[SettlementZone] ⚠️ Chưa gán enemyOutpostPrefab hoặc không tìm thấy vị trí EnemySpawn cho vùng đất {settlementName}!");
+        }
     }
 
     public void OnEnemyOutpostDestroyed()

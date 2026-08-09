@@ -13,11 +13,40 @@ public static class BattleData
         public Vector3 originalPosition;
     }
 
+    [System.Serializable]
+    public class EnemyMarchInfo
+    {
+        public Vector3 position;
+        public Vector3 startSpawnPosition;
+        public int spawnWave;
+        public int targetWave;
+        public int wavesToReachTarget;
+    }
+
+    [System.Serializable]
+    public class SoldierMarchInfo
+    {
+        public Vector3 position;
+        public Vector3 marchStartPosition;
+        public Vector3 marchDestinationPosition;
+        public int marchStartWave;
+        public int marchWavesToReach;
+        public int marchTargetWave;
+    }
+
     public static bool HasData = false;
     public static int EnemyWaveCount = 1;
     public static List<BuildingInfo> PlayerBuildings = new List<BuildingInfo>();
     public static int TotalSoldiersInBase = 0;
     public static string MainSceneName = "MainScene";
+    public static string TargetedSettlementZoneName = "";
+
+    // Lưu trữ tiến trình Wave & Di chuyển khi chuyển sang SceneBattle
+    public static int SavedCurrentWave = 0;
+    public static DayNightManager.WaveState SavedWaveState = DayNightManager.WaveState.Preparation;
+    public static bool SavedIsWaveActive = false;
+    public static List<EnemyMarchInfo> SavedEnemyMarches = new List<EnemyMarchInfo>();
+    public static List<SoldierMarchInfo> SavedSoldierMarches = new List<SoldierMarchInfo>();
 
     // Kết quả trận đấu
     public static bool HasResult = false;
@@ -58,6 +87,9 @@ public static class BattleData
                 }
             }
 
+            // 🔥 PHỤC HỒI TIẾN TRÌNH WAVE & TIẾN TRÌNH DI CHUYỂN CỦA QUÁI VÀ LÍNH
+            RestoreWaveAndMarchProgress();
+
             if (HasResult)
             {
                 ApplyBattleResultToScene();
@@ -84,22 +116,64 @@ public static class BattleData
             buildingSys.SaveBuildingsToSlot(1);
         }
 
-        EnemyWaveCount = Mathf.Max(1, waveEnemyCount);
-        PlayerBuildings.Clear();
-        TotalSoldiersInBase = 0;
+        // 1. Lưu trạng thái Wave của DayNightManager
+        if (DayNightManager.HasInstance && DayNightManager.Ins != null)
+        {
+            SavedCurrentWave = DayNightManager.Ins.CurrentWave;
+            SavedWaveState = DayNightManager.Ins.CurrentWaveState;
+            SavedIsWaveActive = DayNightManager.Ins.IsWaveActive;
+        }
 
-        // 1. Đếm chính xác số lính thực tế đang có mặt trên map (UnitController)
+        // 2. Lưu tiến trình di chuyển của các đợt EnemyAI
+        SavedEnemyMarches.Clear();
+        EnemyAI[] activeEnemies = Object.FindObjectsByType<EnemyAI>(FindObjectsSortMode.None);
+        foreach (var e in activeEnemies)
+        {
+            if (e != null && e.gameObject.activeInHierarchy)
+            {
+                SavedEnemyMarches.Add(new EnemyMarchInfo
+                {
+                    position = e.transform.position,
+                    startSpawnPosition = e.transform.position,
+                    spawnWave = e.spawnWave,
+                    targetWave = e.targetWave,
+                    wavesToReachTarget = e.wavesToReachTarget
+                });
+            }
+        }
+
+        // 3. Lưu tiến trình hành quân của Lính (UnitController) đang xuất trận
+        SavedSoldierMarches.Clear();
         UnitController[] activeUnits = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
         int realActiveSoldierCount = 0;
         foreach (var u in activeUnits)
         {
             if (u != null && u.gameObject.activeInHierarchy)
             {
-                realActiveSoldierCount++;
+                if (u.isExpeditionMarching)
+                {
+                    SavedSoldierMarches.Add(new SoldierMarchInfo
+                    {
+                        position = u.transform.position,
+                        marchStartPosition = u.marchStartPosition,
+                        marchDestinationPosition = u.marchDestinationPosition,
+                        marchStartWave = u.marchStartWave,
+                        marchWavesToReach = u.marchWavesToReach,
+                        marchTargetWave = u.marchTargetWave
+                    });
+                }
+                else
+                {
+                    realActiveSoldierCount++;
+                }
             }
         }
 
-        // 2. Tìm tất cả các công trình UpgradeableBuilding trong scene
+        EnemyWaveCount = Mathf.Max(1, waveEnemyCount);
+        PlayerBuildings.Clear();
+        TotalSoldiersInBase = 0;
+
+        // 4. Tìm tất cả các công trình UpgradeableBuilding trong scene
         UpgradeableBuilding[] buildings = Object.FindObjectsByType<UpgradeableBuilding>(FindObjectsSortMode.None);
         
         foreach (var building in buildings)
@@ -114,23 +188,98 @@ public static class BattleData
                 soldierCount = 0
             };
 
-            // Nếu là Doanh Trại, lấy số lính ĐANG HOẠT ĐỘNG THỰC TẾ của công trình đó
+            // Nếu là Doanh Trại, lấy số lính ĐANG Ở CĂN CỨ (không đi chinh phạt)
             SpawnSoldier spawner = building.GetComponent<SpawnSoldier>();
             if (spawner == null) spawner = building.GetComponentInChildren<SpawnSoldier>();
 
             if (spawner != null)
             {
-                info.soldierCount = spawner.GetActiveSoldiersCount();
+                int atBaseCount = 0;
+                var soldiersInBuilding = spawner.GetComponentsInChildren<UnitController>();
+                foreach (var s in soldiersInBuilding)
+                {
+                    if (s != null && s.gameObject.activeInHierarchy && !s.isExpeditionMarching)
+                    {
+                        atBaseCount++;
+                    }
+                }
+                info.soldierCount = atBaseCount;
             }
 
             PlayerBuildings.Add(info);
         }
 
-        // Đảm bảo TotalSoldiersInBase phản ánh đúng số lính thực tế
         TotalSoldiersInBase = realActiveSoldierCount;
-
         HasData = true;
-        Debug.Log($"[BattleData] Đã lưu dữ liệu Trận Đấu: MainScene = {MainSceneName}, Enemy Wave = {EnemyWaveCount}, Tổng số công trình = {PlayerBuildings.Count}, Tổng lính thực tế = {TotalSoldiersInBase}");
+        Debug.Log($"[BattleData] Đã lưu dữ liệu Trận Đấu: MainScene = {MainSceneName}, CurrentWave = {SavedCurrentWave}, Enemy Wave Count = {EnemyWaveCount}, Quái hành quân = {SavedEnemyMarches.Count}, Lính xuất trận = {SavedSoldierMarches.Count}");
+    }
+
+    private static void RestoreWaveAndMarchProgress()
+    {
+        // 1. Phục hồi số Wave hiện tại trên DayNightManager
+        if (DayNightManager.HasInstance && DayNightManager.Ins != null && SavedCurrentWave > 0)
+        {
+            DayNightManager.Ins.RestoreWaveState(SavedCurrentWave, SavedWaveState, SavedIsWaveActive);
+            Debug.Log($"[BattleData] 🔄 Đã khôi phục Wave: {SavedCurrentWave}");
+        }
+
+        // 2. Phục hồi vị trí và số wave còn lại của các đợt EnemyAI
+        if (SavedEnemyMarches.Count > 0)
+        {
+            EnemyAI[] sceneEnemies = Object.FindObjectsByType<EnemyAI>(FindObjectsSortMode.None);
+            for (int i = 0; i < SavedEnemyMarches.Count && i < sceneEnemies.Length; i++)
+            {
+                var info = SavedEnemyMarches[i];
+                var e = sceneEnemies[i];
+                if (e != null)
+                {
+                    e.transform.position = info.position;
+                    e.spawnWave = info.spawnWave;
+                    e.targetWave = info.targetWave;
+                    e.wavesToReachTarget = info.wavesToReachTarget;
+                }
+            }
+        }
+
+        // 3. Phục hồi đoàn Lính đang hành quân xuất trận
+        if (SavedSoldierMarches.Count > 0)
+        {
+            UnitController[] sceneUnits = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
+            int marchIdx = 0;
+            List<UnitController> marchingList = new List<UnitController>();
+
+            foreach (var u in sceneUnits)
+            {
+                if (u != null && marchIdx < SavedSoldierMarches.Count)
+                {
+                    var info = SavedSoldierMarches[marchIdx];
+                    u.transform.position = info.position;
+                    u.marchStartPosition = info.marchStartPosition;
+                    u.marchDestinationPosition = info.marchDestinationPosition;
+                    u.marchStartWave = info.marchStartWave;
+                    u.marchWavesToReach = info.marchWavesToReach;
+                    u.marchTargetWave = info.marchTargetWave;
+                    u.isExpeditionMarching = true;
+                    u.currentState = UnitState.Moving;
+
+                    marchingList.Add(u);
+                    marchIdx++;
+                }
+            }
+
+            if (marchingList.Count > 0)
+            {
+                EnemySpawn enemySpawn = Object.FindFirstObjectByType<EnemySpawn>();
+                Transform targetTr = enemySpawn != null ? enemySpawn.transform : null;
+
+                if (targetTr != null)
+                {
+                    GameObject runner = new GameObject("ExpeditionBattleTriggerRunner");
+                    ExpeditionBattleTrigger trigger = runner.AddComponent<ExpeditionBattleTrigger>();
+                    trigger.StartMonitoring(marchingList, targetTr, "SceneBattle");
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -144,6 +293,9 @@ public static class BattleData
         TotalSoldiersInBase = 0;
         HasResult = false;
         LastBattleWasVictory = false;
+        SavedCurrentWave = 0;
+        SavedEnemyMarches.Clear();
+        SavedSoldierMarches.Clear();
     }
 
     /// <summary>
@@ -166,11 +318,19 @@ public static class BattleData
         }
 
         HasResult = false;
+
+        // 🔥 Lưu lại trạng thái công trình sau trận đấu vào Save Slot 1
+        BuildingSystem buildingSys = BuildingSystem.Ins != null ? BuildingSystem.Ins : Object.FindFirstObjectByType<BuildingSystem>();
+        if (buildingSys != null)
+        {
+            buildingSys.SaveBuildingsToSlot(1);
+        }
     }
 
     private static void ApplyVictoryResult(int survivingCount)
     {
         SpawnSoldier[] spawners = Object.FindObjectsByType<SpawnSoldier>(FindObjectsSortMode.None);
+        HashSet<GameObject> processedBuildings = new HashSet<GameObject>();
         int remainingToAssign = survivingCount;
 
         foreach (var spawner in spawners)
@@ -178,8 +338,12 @@ public static class BattleData
             if (spawner == null || !spawner.gameObject.activeInHierarchy) continue;
 
             UpgradeableBuilding building = spawner.GetComponent<UpgradeableBuilding>();
-            if (building == null) building = spawner.GetComponentInChildren<UpgradeableBuilding>();
             if (building == null) building = spawner.GetComponentInParent<UpgradeableBuilding>();
+            if (building == null) building = spawner.GetComponentInChildren<UpgradeableBuilding>();
+
+            GameObject bObj = building != null ? building.gameObject : spawner.transform.root.gameObject;
+            if (processedBuildings.Contains(bObj)) continue;
+            processedBuildings.Add(bObj);
 
             if (building != null && building.IsRuined)
             {
@@ -203,12 +367,49 @@ public static class BattleData
             {
                 if (activeUnits[i] != null && activeUnits[i].gameObject.activeInHierarchy)
                 {
+                    if (activeUnits[i].isExpeditionMarching) continue;
                     Object.Destroy(activeUnits[i].gameObject);
                     extraToRemove--;
                 }
             }
         }
 
+        // 🔥 CHINH PHỤC VÙNG ĐẤT: TIÊU DIỆT CĂN CỨ ĐỊCH TRÊN SETTLEMENT ZONE KHI GIẢI PHÓNG THÀNH CÔNG
+        SettlementZone conqueredZone = null;
+        if (!string.IsNullOrEmpty(TargetedSettlementZoneName))
+        {
+            SettlementZone[] allZones = Object.FindObjectsByType<SettlementZone>(FindObjectsSortMode.None);
+            foreach (var z in allZones)
+            {
+                if (z != null && z.settlementName == TargetedSettlementZoneName)
+                {
+                    conqueredZone = z;
+                    break;
+                }
+            }
+        }
+
+        if (conqueredZone == null)
+        {
+            SettlementZone[] allZones = Object.FindObjectsByType<SettlementZone>(FindObjectsSortMode.None);
+            foreach (var z in allZones)
+            {
+                if (z != null && z.hasEnemyOutpost)
+                {
+                    conqueredZone = z;
+                    break;
+                }
+            }
+        }
+
+        if (conqueredZone != null)
+        {
+            conqueredZone.OnEnemyOutpostDestroyed();
+            conqueredZone.SaveSettlementState();
+            Debug.Log($"[BattleData] 🏆 CHINH PHỤC THÀNH CÔNG! Đã giải phóng vùng đất '{conqueredZone.settlementName}'. Người chơi hiện có thể xây dựng công trình trên ô đất tại đây!");
+        }
+
+        TargetedSettlementZoneName = "";
         Debug.Log($"[BattleData] 🏆 Thắng trận! Đã cập nhật {survivingCount} lính còn sống trên Scene chính.");
     }
 
