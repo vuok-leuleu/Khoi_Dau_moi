@@ -20,6 +20,11 @@ public enum AttackMode
 [RequireComponent(typeof(NavMeshAgent))]
 public class UnitController : MonoBehaviour
 {
+    void Awake()
+    {
+        Debug.Log($"<color=yellow>[SPAWN TRACKER] 🪖 Lính '{gameObject.name}' vừa được sinh ra tại vị trí {transform.position}. StackTrace:\n{System.Environment.StackTrace}</color>", this);
+    }
+
     private static readonly Dictionary<int, UnitController> claimedEnemies = new Dictionary<int, UnitController>();
 
     // 2. Khai báo các thành phần cần thiết

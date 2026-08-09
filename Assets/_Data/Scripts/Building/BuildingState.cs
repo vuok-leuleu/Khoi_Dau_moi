@@ -41,4 +41,5 @@ public class BuildingState
     public bool isRuined;
     public bool startAsRuined;
     public bool isInitialBuildNeeded;
+    public int soldierCount;
 }

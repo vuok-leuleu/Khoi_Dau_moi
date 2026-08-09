@@ -67,8 +67,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Skip
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
-  m_sharedMaterial: {fileID: 0}
+  m_fontAsset: {fileID: 11400000, guid: 8613df30da603804ab312215265d0457, type: 2}
+  m_sharedMaterial: {fileID: 6380613566361885368, guid: 8613df30da603804ab312215265d0457, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -416,5 +416,5 @@ MonoBehaviour:
   skipWaveButton: {fileID: 8407570328122230550}
   skipButtonTextTMP: {fileID: 3522584385900899158}
   directionalLight: {fileID: 0}
-  lightTransitionDuration: 3
-  minLightIntensity: 0.15
+  lightTransitionDuration: 1.15
+  minLightIntensity: 1

@@ -290,8 +290,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: New Text
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -360,174 +360,6 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
---- !u!1 &1755743869501144764
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 146775029854320408}
-  - component: {fileID: 6433424450021180024}
-  - component: {fileID: 5875882416545680179}
-  - component: {fileID: 941656120178719768}
-  - component: {fileID: 345653697167012685}
-  - component: {fileID: 5520760294616889419}
-  m_Layer: 0
-  m_Name: barracksLVl3
-  m_TagString: Tower
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!4 &146775029854320408
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1755743869501144764}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 5794169586589521644}
-  m_Father: {fileID: 9149305197321316400}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &6433424450021180024
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1755743869501144764}
-  m_Mesh: {fileID: 4300000, guid: cf3146e36e1b20a4e90a9d00b89ce50d, type: 3}
---- !u!23 &5875882416545680179
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1755743869501144764}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 2
-  m_LightProbeUsage: 0
-  m_ReflectionProbeUsage: 0
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 71e41e43b459a244abaf5acca76b89ee, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &941656120178719768
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1755743869501144764}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 4300000, guid: 40b77a0eba992d24d9fc9c39f49af5fa, type: 3}
---- !u!114 &345653697167012685
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1755743869501144764}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 485d2a5022bd6934c9f803e1d0cb66c6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UpgradeableBuilding
-  isInitialBuildNeeded: 1
-  startAsRuined: 0
-  initialBuildDuration: 5
-  buildingType: 0
-  buildingName: "Nh\xE0 Ch\xEDnh"
-  visualModels:
-  - {fileID: 7853028267333884208, guid: aaac31cc1d39e3a42977e09d51b7eaf8, type: 3}
-  - {fileID: 2885378263953420472, guid: 1e10263a81f02ba47a857b0261efa46a, type: 3}
-  - {fileID: 1755743869501144764}
-  upgradeCosts: []
-  towerLevelScripts: []
-  woodStorageLevels: []
-  stoneStorageLevels: []
-  riceStorageLevels: []
-  kitchenLevels: []
-  houseLevels: []
-  buildingIcons: []
-  ruinedVisualModel: {fileID: 0}
-  repairWoodCost: 30
-  repairStoneCost: 30
-  repairDuration: 5
---- !u!114 &5520760294616889419
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1755743869501144764}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 32cfc10cc292ab44b92717cf0e5bf574, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SpawnSoldier
-  soldierPrefab: {fileID: 5529766660109328545, guid: 6faae46d02eec1b458eaa4f73464be71, type: 3}
-  spawnRadius: 5
-  spawnForwardOffset: 2.5
-  currentLevel: 3
-  testDuration: 5
-  hologramMaterial: {fileID: 0}
-  hologramColor: {r: 0, g: 0.7, b: 1, a: 0.35}
 --- !u!1 &2173193893198805216
 GameObject:
   m_ObjectHideFlags: 0
@@ -713,7 +545,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: Button
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 0}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -887,8 +719,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: New Text
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1024,8 +856,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: New Text
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1107,6 +939,7 @@ GameObject:
   - component: {fileID: 47225826261490700}
   - component: {fileID: 3599186673193315070}
   - component: {fileID: 9125901989616287334}
+  - component: {fileID: 5871137533403991562}
   m_Layer: 0
   m_Name: barrackSoldierS
   m_TagString: Tower
@@ -1149,7 +982,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpawnSoldier
   soldierPrefab: {fileID: 5529766660109328545, guid: 6faae46d02eec1b458eaa4f73464be71, type: 3}
-  spawnRadius: 5
+  maxSoldierCount: 3
+  spawnRadius: 2.5
   spawnForwardOffset: 2.5
   currentLevel: 1
   testDuration: 5
@@ -1167,24 +1001,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 485d2a5022bd6934c9f803e1d0cb66c6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UpgradeableBuilding
-  isInitialBuildNeeded: 1
+  isInitialBuildNeeded: 0
   startAsRuined: 0
-  initialBuildDuration: 1
+  initialBuildDuration: 5
   buildingType: 11
   buildingName: "Tr\u1EA1i L\xEDnh Ki\u1EBFm"
   visualModels:
   - {fileID: 1302770435861314428}
   - {fileID: 6935105313400852636}
   - {fileID: 9202587608779209564}
-  upgradeCosts:
-  - woodCost: 0
-    stoneCost: 0
-    foodCost: 0
-    upgradeDuration: 2
-  - woodCost: 0
-    stoneCost: 0
-    foodCost: 0
-    upgradeDuration: 3
+  upgradeCosts: []
   towerLevelScripts: []
   woodStorageLevels: []
   stoneStorageLevels: []
@@ -1195,7 +1021,7 @@ MonoBehaviour:
   ruinedVisualModel: {fileID: 4838578752027418739}
   repairWoodCost: 30
   repairStoneCost: 30
-  repairDuration: 1.5
+  repairDuration: 5
 --- !u!114 &3599186673193315070
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1209,7 +1035,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BuildingCtrl
   buildingType: 11
-  maxWorkers: 4
+  maxWorkers: 0
   productionRate: 1
   fixedYRotation: 0
 --- !u!114 &9125901989616287334
@@ -1230,96 +1056,41 @@ MonoBehaviour:
   hpBarSize: {x: 2, y: 0.25}
   hpBarColor: {r: 1, g: 0, b: 0, a: 1}
   hideHpBarWhenFull: 1
---- !u!1 &4503912483284888268
-GameObject:
+--- !u!114 &5871137533403991562
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 5794169586589521644}
-  - component: {fileID: 9176495506098962918}
-  - component: {fileID: 3727378800046818024}
-  m_Layer: 0
-  m_Name: SM_Bld_Tent_Square_Ropes_01
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &5794169586589521644
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4503912483284888268}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 146775029854320408}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &9176495506098962918
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4503912483284888268}
-  m_Mesh: {fileID: 4300002, guid: cf3146e36e1b20a4e90a9d00b89ce50d, type: 3}
---- !u!23 &3727378800046818024
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4503912483284888268}
+  m_GameObject: {fileID: 3931698542001477388}
   m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 71e41e43b459a244abaf5acca76b89ee, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc57fa606907c314788857a7534eefc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BuildingUpgradeUI
+  localUpgradePanel: {fileID: 2173193893198805216}
+  panelRectTransform: {fileID: 1846517044562339928}
+  lockUIRotation: 1
+  faceCamera: 1
+  keepConstantSize: 1
+  baseDistance: 15
+  baseOrthographicSize: 5
+  globalUIScaleMultiplier: 1
+  autoArrangeButtons: 1
+  ringRadius: 200
+  startAngle: 90
+  enableWorkerSpawn: 0
+  spawnWorkerButton: {fileID: 0}
+  animDuration: 0.18
+  buildingNameText: {fileID: 7492521397313518123}
+  levelText: {fileID: 2513271333332861002}
+  upgradeButton: {fileID: 1321320329569012360}
+  upgradeButtonText: {fileID: 0}
+  repairButton: {fileID: 9203829929468925971}
+  moveButton: {fileID: 2091852142545084971}
+  woodCostText: {fileID: 7292631599434696762}
+  stoneCostText: {fileID: 1396895517532574218}
+  foodCostText: {fileID: 5983217153368037740}
 --- !u!1 &4507352912040174753
 GameObject:
   m_ObjectHideFlags: 0
@@ -1540,7 +1311,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: Button
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 0}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -1677,8 +1448,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: New Text
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1747,173 +1518,6 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
---- !u!1 &7543228084623214570
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1442678235827778476}
-  - component: {fileID: 2660862245108581309}
-  - component: {fileID: 876439587006796243}
-  - component: {fileID: 7260463656118141428}
-  - component: {fileID: 472733760140380690}
-  - component: {fileID: 5799823168487650923}
-  m_Layer: 0
-  m_Name: barracksLV1
-  m_TagString: Tower
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1442678235827778476
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7543228084623214570}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 9149305197321316400}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &2660862245108581309
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7543228084623214570}
-  m_Mesh: {fileID: 4300000, guid: e219313dce4790e448279f29974bc6fe, type: 3}
---- !u!23 &876439587006796243
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7543228084623214570}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 2
-  m_LightProbeUsage: 0
-  m_ReflectionProbeUsage: 0
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 71e41e43b459a244abaf5acca76b89ee, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &7260463656118141428
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7543228084623214570}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 4300000, guid: 8a96b539394bfef4aa1bde12ca3a973e, type: 3}
---- !u!114 &472733760140380690
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7543228084623214570}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 32cfc10cc292ab44b92717cf0e5bf574, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SpawnSoldier
-  soldierPrefab: {fileID: 5529766660109328545, guid: 6faae46d02eec1b458eaa4f73464be71, type: 3}
-  spawnRadius: 5
-  spawnForwardOffset: 2.5
-  currentLevel: 1
-  testDuration: 5
-  hologramMaterial: {fileID: 0}
-  hologramColor: {r: 0, g: 0.7, b: 1, a: 0.35}
---- !u!114 &5799823168487650923
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7543228084623214570}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 485d2a5022bd6934c9f803e1d0cb66c6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UpgradeableBuilding
-  isInitialBuildNeeded: 1
-  startAsRuined: 0
-  initialBuildDuration: 5
-  buildingType: 0
-  buildingName: "Nh\xE0 Ch\xEDnh"
-  visualModels:
-  - {fileID: 7543228084623214570}
-  - {fileID: 2885378263953420472, guid: 1e10263a81f02ba47a857b0261efa46a, type: 3}
-  - {fileID: 802437640450695728, guid: 9f2f94b7b7b603a43bace0f5cea4b45f, type: 3}
-  upgradeCosts: []
-  towerLevelScripts: []
-  woodStorageLevels: []
-  stoneStorageLevels: []
-  riceStorageLevels: []
-  kitchenLevels: []
-  houseLevels: []
-  buildingIcons: []
-  ruinedVisualModel: {fileID: 0}
-  repairWoodCost: 30
-  repairStoneCost: 30
-  repairDuration: 5
 --- !u!1 &8094573243509177666
 GameObject:
   m_ObjectHideFlags: 0
@@ -1981,8 +1585,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: New Text
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2150,7 +1754,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: Button
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 0}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -3378,6 +2982,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 150798883003263115}
     m_Modifications:
+    - target: {fileID: 2706408300087418665, guid: 1e10263a81f02ba47a857b0261efa46a, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2706408300087418665, guid: 1e10263a81f02ba47a857b0261efa46a, type: 3}
+      propertyPath: maxSoldierCount
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2885378263953420472, guid: 1e10263a81f02ba47a857b0261efa46a, type: 3}
       propertyPath: m_Name
       value: barracksLV2
@@ -3422,16 +3034,9 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 5724686432380399247, guid: 1e10263a81f02ba47a857b0261efa46a, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects:
-    - targetCorrespondingSourceObject: {fileID: 3948602637498566676, guid: 1e10263a81f02ba47a857b0261efa46a, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1442678235827778476}
-    - targetCorrespondingSourceObject: {fileID: 3948602637498566676, guid: 1e10263a81f02ba47a857b0261efa46a, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 146775029854320408}
+    m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 1e10263a81f02ba47a857b0261efa46a, type: 3}
 --- !u!1 &6935105313400852636 stripped
@@ -3508,12 +3113,19 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 6271588539456090533, guid: ba06fce2318fb204d8990c9767483301, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6271588539456090533, guid: ba06fce2318fb204d8990c9767483301, type: 3}
+      propertyPath: maxSoldierCount
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8387842726007996306, guid: ba06fce2318fb204d8990c9767483301, type: 3}
       propertyPath: m_Name
       value: barrackSoldierLV1
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 5838635027722993084, guid: ba06fce2318fb204d8990c9767483301, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -3623,6 +3235,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: barracksLVl3
       objectReference: {fileID: 0}
+    - target: {fileID: 5465207863262979208, guid: 9f2f94b7b7b603a43bace0f5cea4b45f, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5465207863262979208, guid: 9f2f94b7b7b603a43bace0f5cea4b45f, type: 3}
+      propertyPath: maxSoldierCount
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8008543284958548682, guid: 9f2f94b7b7b603a43bace0f5cea4b45f, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -3663,8 +3283,7 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 6336417671541130913, guid: 9f2f94b7b7b603a43bace0f5cea4b45f, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []

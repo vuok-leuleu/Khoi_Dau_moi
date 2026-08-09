@@ -110,20 +110,19 @@ public class UIEnemyWaveButton : MonoBehaviour
         Debug.Log($"[UIEnemyWaveButton] Player clicked Leader Attack Button! Recording scene state and switching to battle...");
 
         EnemyAI leadAI = targetLeadEnemy.GetComponent<EnemyAI>();
-        int waveCount = 1;
-        if (leadAI != null)
+        List<EnemyAI> attackedSquad = (leadAI != null && leadAI.squadEnemies != null && leadAI.squadEnemies.Count > 0)
+            ? new List<EnemyAI>(leadAI.squadEnemies)
+            : new List<EnemyAI>();
+
+        if (attackedSquad.Count == 0 && leadAI != null)
         {
-            if (leadAI.squadEnemies != null && leadAI.squadEnemies.Count > 0)
-            {
-                waveCount = leadAI.squadEnemies.Count;
-            }
+            attackedSquad.Add(leadAI);
         }
 
-        EnemyAI[] allEnemies = Object.FindObjectsByType<EnemyAI>(FindObjectsSortMode.None);
-        if (allEnemies != null && allEnemies.Length > waveCount)
-        {
-            waveCount = allEnemies.Length;
-        }
+        int waveCount = attackedSquad.Count > 0 ? attackedSquad.Count : 1;
+
+        // 🔥 Lưu danh sách các quái thuộc đợt KHÁC (chưa tham chiến) để phục hồi sau trận đấu
+        BattleData.SaveRemainingEnemiesState(attackedSquad);
 
         // Lưu trạng thái trước khi giao tranh / chuyển cảnh
         BattleData.RecordCurrentSceneState(waveCount);
@@ -135,7 +134,8 @@ public class UIEnemyWaveButton : MonoBehaviour
             return;
         }
 
-        foreach (var enemy in allEnemies)
+        EnemyAI[] allEnemiesInScene = Object.FindObjectsByType<EnemyAI>(FindObjectsSortMode.None);
+        foreach (var enemy in allEnemiesInScene)
         {
             if (enemy != null && enemy.gameObject.activeInHierarchy)
             {

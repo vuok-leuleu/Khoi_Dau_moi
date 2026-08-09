@@ -8,6 +8,9 @@ public class SpawnSoldier : MonoBehaviour
 {
     [Header("Spawn Settings")]
     [SerializeField] private GameObject soldierPrefab;
+    [Tooltip("Số lượng lính có thể spawn (mặc định Level 1)")]
+    [Min(1)]
+    [SerializeField] private int maxSoldierCount = 4;
     [Tooltip("Bán kính phân bố vị trí lính quanh khu vực sinh lính")]
     [Range(0.5f, 10f)]
     [SerializeField] private float spawnRadius = 3.5f;
@@ -36,10 +39,10 @@ public class SpawnSoldier : MonoBehaviour
     private Coroutine hologramAnimationCoroutine;
 
     public float TestDuration => testDuration;
+    public int MaxSoldierCount => maxSoldierCount;
 
     void Awake()
     {
-        // Tự động tìm component UpgradeableBuilding trên cùng Object hoặc ở Object cha
         upgradeableBuilding = GetComponent<UpgradeableBuilding>();
         if (upgradeableBuilding != null)
         {
@@ -50,14 +53,80 @@ public class SpawnSoldier : MonoBehaviour
             upgradeableBuilding = GetComponentInParent<UpgradeableBuilding>();
             isOnMainBuildingObject = false;
         }
+
+        if (!IsAllowedToSpawn())
+        {
+            enabled = false;
+        }
+    }
+
+    public bool IsAllowedToSpawn()
+    {
+        // 0. CẤM HOÀN TOÀN TẤT CẢ SPAWNER HOẠT ĐỘNG TRONG SCENE BATTLE!
+        string activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        if (activeScene.Equals("SceneBattle", System.StringComparison.OrdinalIgnoreCase) || activeScene.Contains("Battle"))
+        {
+            return false;
+        }
+
+        UpgradeableBuilding ub = upgradeableBuilding;
+        if (ub == null) ub = GetComponent<UpgradeableBuilding>();
+        if (ub == null) ub = GetComponentInParent<UpgradeableBuilding>();
+
+        if (ub == null) return true;
+
+        // 1. Nếu Root (ub.gameObject) có SpawnSoldier -> CHỈ CHO PHÉP ROOT SPAWNER HOẠT ĐỘNG!
+        SpawnSoldier rootSpawner = ub.GetComponent<SpawnSoldier>();
+        if (rootSpawner != null)
+        {
+            if (this != rootSpawner)
+            {
+                return false;
+            }
+            return true;
+        }
+
+        // 2. Nếu Root không có SpawnSoldier, CHỈ CHO PHÉP Spawner thuộc CẤP ĐỘ HIỆN TẠI (CurrentLevel + 1) của nhà hoạt động!
+        int buildingActiveLevel = ub.CurrentLevel + 1;
+        if (this.currentLevel != buildingActiveLevel)
+        {
+            return false; // Spawner này thuộc level khác -> CẤM HOÀN TOÀN!
+        }
+
+        // 3. Nếu có nhiều spawner cùng level, chỉ cho phép spawner đầu tiên của level đó
+        SpawnSoldier[] allSpawners = ub.GetComponentsInChildren<SpawnSoldier>(true);
+        foreach (var s in allSpawners)
+        {
+            if (s != null && s.currentLevel == buildingActiveLevel)
+            {
+                if (s != this) return false;
+                break;
+            }
+        }
+
+        return true;
     }
 
     void OnEnable()
     {
+        if (!IsAllowedToSpawn())
+        {
+            enabled = false;
+            return;
+        }
+
+        // 🔥 NẾU ĐANG CÓ KẾT QUẢ BATTLE CẦN ÁP DỤNG -> KHÔNG TỰ Ý SPAWN MẶC ĐỊNH!
+        if (BattleData.HasResult) return;
+
         if (upgradeableBuilding != null)
         {
+            upgradeableBuilding.OnUpgradeStart -= HandleUpgradeStart;
             upgradeableBuilding.OnUpgradeStart += HandleUpgradeStart;
+
+            upgradeableBuilding.OnUpgradeComplete -= HandleUpgradeComplete;
             upgradeableBuilding.OnUpgradeComplete += HandleUpgradeComplete;
+
+            upgradeableBuilding.OnLevelChanged -= HandleLevelChanged;
             upgradeableBuilding.OnLevelChanged += HandleLevelChanged;
 
             if (upgradeableBuilding.IsUpgrading && !upgradeableBuilding.IsInitialBuildNeeded)
@@ -71,7 +140,6 @@ public class SpawnSoldier : MonoBehaviour
         }
         else
         {
-            // Spawn số lượng lính tương ứng với Level hiện tại (nếu ko có building)
             int initialCount = GetMaxSoldiersForLevel(currentLevel);
             SpawnSoldiers(initialCount);
         }
@@ -86,34 +154,26 @@ public class SpawnSoldier : MonoBehaviour
             upgradeableBuilding.OnLevelChanged -= HandleLevelChanged;
         }
 
-        // Khi Spawner bị tắt (do nâng cấp tắt model con hoặc bị hủy), xóa toàn bộ lính cũ
-        ClearSpawnedSoldiers();
         ClearHolograms();
     }
 
     private void SyncLevel()
     {
+        if (!IsAllowedToSpawn())
+        {
+            enabled = false;
+            return;
+        }
+
+        // 🔥 NẾU ĐANG CÓ KẾT QUẢ BATTLE CẦN ÁP DỤNG -> CHỜ ApplyBattleResultToScene GỌI CỤ THỂ!
+        if (BattleData.HasResult) return;
+
         if (upgradeableBuilding != null)
         {
-            // Nếu nhà đang trong tiến trình nâng cấp/xây mới thì đợi đến khi xong mới spawn lính thật
             if (upgradeableBuilding.IsUpgrading) return;
-
-            int activeLevel = upgradeableBuilding.CurrentLevel + 1;
-
-            if (isOnMainBuildingObject)
-            {
-                currentLevel = activeLevel;
-            }
-            else
-            {
-                // Chỉ sinh lính nếu cấp độ của script này trùng khớp với cấp độ thực tế của công trình
-                if (currentLevel != activeLevel)
-                {
-                    ClearSpawnedSoldiers();
-                    return;
-                }
-            }
         }
+
+        if (GetActiveSoldiersCount() > 0) return;
 
         int count = GetMaxSoldiersForLevel(currentLevel);
         SpawnSoldiers(count);
@@ -297,16 +357,10 @@ public class SpawnSoldier : MonoBehaviour
         }
     }
 
-    // Hàm lấy số lượng lính tối đa dựa theo Level (Lv1: 4, Lv2: 6, Lv3: 8)
+    // Hàm lấy số lượng lính tối đa dựa theo thiết lập maxSoldierCount trong Inspector
     public int GetMaxSoldiersForLevel(int level)
     {
-        switch (level)
-        {
-            case 1: return 4;
-            case 2: return 6;
-            case 3: return 8;
-            default: return 4; // Fallback
-        }
+        return Mathf.Max(1, maxSoldierCount);
     }
 
     // Hàm lấy sát thương của lính dựa theo Level
@@ -324,6 +378,8 @@ public class SpawnSoldier : MonoBehaviour
     // Hàm dùng để spawn một số lượng lính nhất định
     public void SpawnSoldiers(int count)
     {
+        if (!IsAllowedToSpawn() || !gameObject.activeInHierarchy || !enabled) return;
+
         if (soldierPrefab == null)
         {
             Debug.LogWarning("Soldier Prefab chưa được gán trong Inspector!");
@@ -335,15 +391,35 @@ public class SpawnSoldier : MonoBehaviour
         ClearSpawnedSoldiers();
 
         int maxAllowed = GetMaxSoldiersForLevel(currentLevel);
-        if (count <= 0 || count > maxAllowed)
+
+        // 1. Nếu count < 0 (chưa truyền số lượng), mặc định dùng maxAllowed
+        if (count < 0)
         {
             count = maxAllowed;
         }
 
+        // 2. Ép giới hạn: Không bao giờ cho phép spawn vượt quá maxAllowed (tránh file save cũ hoặc input truyền > maxAllowed)
+        if (count > maxAllowed)
+        {
+            Debug.LogWarning($"[SpawnSoldier] {gameObject.name}: Số lượng lính yêu cầu ({count}) vượt quá giới hạn tối đa ({maxAllowed}). Đã tự động ép về {maxAllowed}.");
+            count = maxAllowed;
+        }
+
+        // 3. Nếu count == 0 thì chỉ dọn dẹp lính cũ và không sinh lính mới
+        if (count == 0)
+        {
+            Debug.Log($"[SpawnSoldier] {gameObject.name} (Lv {currentLevel}) dọn dẹp lính (0 lính).");
+            return;
+        }
+
         float damage = GetDamageForLevel(currentLevel);
-        Debug.Log($"[SpawnSoldier] {gameObject.name} (Lv {currentLevel}) đang spawn {count} lính mới với sát thương {damage}.");
+        Debug.Log($"<color=cyan>[SpawnSoldier Execution] 🏢 Công trình '{gameObject.name}' (Root: '{transform.root.name}') đang spawn {count} lính mới với sát thương {damage}. (maxAllowed={maxAllowed})</color>", gameObject);
 
         Vector3 baseSpawnCenter = transform.position + transform.forward * spawnForwardOffset;
+        if (LandGridManager.Ins != null)
+        {
+            baseSpawnCenter = LandGridManager.Ins.ClampToUnlockedArea(baseSpawnCenter, 1.5f);
+        }
 
         for (int i = 0; i < count; i++)
         {
@@ -355,12 +431,31 @@ public class SpawnSoldier : MonoBehaviour
             );
 
             Vector3 spawnPosition = rawPosition;
-            if (UnityEngine.AI.NavMesh.SamplePosition(rawPosition, out UnityEngine.AI.NavMeshHit hit, 10f, UnityEngine.AI.NavMesh.AllAreas))
+            if (LandGridManager.Ins != null)
             {
-                spawnPosition = hit.position;
+                spawnPosition = LandGridManager.Ins.ClampToUnlockedArea(rawPosition, 1.0f);
+            }
+
+            if (UnityEngine.AI.NavMesh.SamplePosition(spawnPosition, out UnityEngine.AI.NavMeshHit hit, 5f, UnityEngine.AI.NavMesh.AllAreas))
+            {
+                if (LandGridManager.Ins == null || LandGridManager.Ins.IsWorldPositionUnlocked(hit.position))
+                {
+                    spawnPosition = hit.position;
+                }
+            }
+
+            if (LandGridManager.Ins != null)
+            {
+                spawnPosition = LandGridManager.Ins.ClampToUnlockedArea(spawnPosition, 1.5f);
             }
 
             GameObject soldier = Instantiate(soldierPrefab, spawnPosition, Quaternion.identity);
+
+            UnityEngine.AI.NavMeshAgent agent = soldier.GetComponent<UnityEngine.AI.NavMeshAgent>();
+            if (agent != null && agent.enabled)
+            {
+                agent.Warp(spawnPosition);
+            }
 
             UnitController unit = soldier.GetComponent<UnitController>();
             if (unit != null)
@@ -380,7 +475,7 @@ public class SpawnSoldier : MonoBehaviour
     }
 
     // Hàm dọn dẹp các lính cũ đang hoạt động
-    private void ClearSpawnedSoldiers()
+    public void ClearSpawnedSoldiers()
     {
         if (spawnedSoldiers == null) return;
 
@@ -398,11 +493,26 @@ public class SpawnSoldier : MonoBehaviour
             GameObject soldier = spawnedSoldiers[i];
             if (soldier != null)
             {
-                Debug.Log($"[SpawnSoldier] Hủy lính trong danh sách: {soldier.name}");
-                Destroy(soldier);
+                soldier.tag = "Untagged";
+                soldier.SetActive(false);
+                if (Application.isPlaying) Destroy(soldier);
+                else DestroyImmediate(soldier);
             }
         }
         spawnedSoldiers.Clear();
+
+        // Dọn dẹp tất cả các con lính trực thuộc Transform của công trình (nếu có)
+        UnitController[] childUnits = GetComponentsInChildren<UnitController>(true);
+        foreach (var u in childUnits)
+        {
+            if (u != null && u.gameObject != gameObject)
+            {
+                u.gameObject.tag = "Untagged";
+                u.gameObject.SetActive(false);
+                if (Application.isPlaying) Destroy(u.gameObject);
+                else DestroyImmediate(u.gameObject);
+            }
+        }
     }
 
     // Hàm tạo material hologram mặc định bằng code
@@ -493,6 +603,10 @@ public class SpawnSoldier : MonoBehaviour
         }
 
         Vector3 baseSpawnCenter = transform.position + transform.forward * spawnForwardOffset;
+        if (LandGridManager.Ins != null)
+        {
+            baseSpawnCenter = LandGridManager.Ins.ClampToUnlockedArea(baseSpawnCenter, 1.5f);
+        }
 
         for (int i = 0; i < count; i++)
         {
@@ -504,9 +618,22 @@ public class SpawnSoldier : MonoBehaviour
             );
 
             Vector3 spawnPosition = rawPosition;
-            if (UnityEngine.AI.NavMesh.SamplePosition(rawPosition, out UnityEngine.AI.NavMeshHit hit, 10f, UnityEngine.AI.NavMesh.AllAreas))
+            if (LandGridManager.Ins != null)
             {
-                spawnPosition = hit.position;
+                spawnPosition = LandGridManager.Ins.ClampToUnlockedArea(rawPosition, 1.0f);
+            }
+
+            if (UnityEngine.AI.NavMesh.SamplePosition(spawnPosition, out UnityEngine.AI.NavMeshHit hit, 5f, UnityEngine.AI.NavMesh.AllAreas))
+            {
+                if (LandGridManager.Ins == null || LandGridManager.Ins.IsWorldPositionUnlocked(hit.position))
+                {
+                    spawnPosition = hit.position;
+                }
+            }
+
+            if (LandGridManager.Ins != null)
+            {
+                spawnPosition = LandGridManager.Ins.ClampToUnlockedArea(spawnPosition, 1.5f);
             }
 
             GameObject hologram = Instantiate(soldierPrefab, spawnPosition, Quaternion.identity);
@@ -634,12 +761,35 @@ public class SpawnSoldier : MonoBehaviour
         return spawnedSoldiers.Count;
     }
 
+    public static SpawnSoldier GetActiveSpawnerForBuilding(UpgradeableBuilding building)
+    {
+        if (building == null) return null;
+
+        SpawnSoldier rootSpawner = building.GetComponent<SpawnSoldier>();
+        if (rootSpawner != null && rootSpawner.IsAllowedToSpawn())
+        {
+            return rootSpawner;
+        }
+
+        SpawnSoldier[] spawners = building.GetComponentsInChildren<SpawnSoldier>(true);
+        if (spawners == null || spawners.Length == 0) return null;
+
+        foreach (var s in spawners)
+        {
+            if (s != null && s.IsAllowedToSpawn())
+                return s;
+        }
+
+        return null;
+    }
+
     public void LoadAndSpawnSoldiers(int count, int buildingLevel)
     {
+        if (!IsAllowedToSpawn() || !gameObject.activeInHierarchy || !enabled) return;
         ClearSpawnedSoldiers();
         currentLevel = buildingLevel + 1;
         int maxAllowed = GetMaxSoldiersForLevel(currentLevel);
-        if (count <= 0 || count > maxAllowed)
+        if (count < 0 || count > maxAllowed)
         {
             count = maxAllowed;
         }

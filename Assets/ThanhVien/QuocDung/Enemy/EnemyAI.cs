@@ -25,8 +25,8 @@ public class EnemyAI : MonoBehaviour
     [Tooltip("Wave mà Enemy sẽ chính thức tới chỗ thành.")]
     public int targetWave = 4;
 
-    private Vector3 startSpawnPosition;
-    private bool isWaveInfoInitialized = false;
+    public Vector3 startSpawnPosition;
+    public bool isWaveInfoInitialized = false;
 
     public void InitializeWaveArrival(int currentWave, int wavesToReach = 3)
     {
@@ -34,6 +34,15 @@ public class EnemyAI : MonoBehaviour
         spawnWave = currentWave;
         targetWave = spawnWave + wavesToReachTarget;
         startSpawnPosition = transform.position;
+        isWaveInfoInitialized = true;
+    }
+
+    public void RestoreWaveData(int savedSpawnWave, int savedTargetWave, int savedWavesToReach, Vector3 savedStartSpawnPos)
+    {
+        spawnWave = savedSpawnWave;
+        targetWave = savedTargetWave;
+        wavesToReachTarget = savedWavesToReach > 0 ? savedWavesToReach : 3;
+        startSpawnPosition = savedStartSpawnPos != Vector3.zero ? savedStartSpawnPos : transform.position;
         isWaveInfoInitialized = true;
     }
 
@@ -383,7 +392,22 @@ public class EnemyAI : MonoBehaviour
     public void OnAttackButtonClicked()
     {
         Time.timeScale = 1f;
-        int waveCount = (squadEnemies != null && squadEnemies.Count > 0) ? squadEnemies.Count : 1;
+
+        List<EnemyAI> attackedSquad = (squadEnemies != null && squadEnemies.Count > 0)
+            ? new List<EnemyAI>(squadEnemies)
+            : new List<EnemyAI>();
+
+        if (attackedSquad.Count == 0)
+        {
+            attackedSquad.Add(this);
+        }
+
+        int waveCount = attackedSquad.Count;
+
+        // 🔥 Lưu lại trạng thái của tất cả các đợt quái còn lại trước khi chuyển scene
+        BattleData.SaveRemainingEnemiesState(attackedSquad);
+
+        // 🔥 Ghi nhận trạng thái hiện tại của Scene chính (bản đồ, tài nguyên, công trình, lính)
         BattleData.RecordCurrentSceneState(waveCount);
 
         Debug.Log($"[EnemyAI] Bấm nút Tấn Công (Wave = {waveCount} Enemy) -> Đang chuyển sang Scene: {battleSceneName}");
