@@ -46,13 +46,6 @@ public class BuildingManager : Singleton<BuildingManager>
             return;
         }
 
-        // Kiểm tra chồng lấn với công trình đã có (bỏ qua chính nó)
-        if (!CanBuild(building.transform.position, building.buildingType, building))
-        {
-            Debug.LogWarning($"[BuildingManager] ⚠️ Chồng lấn vị trí khi đăng ký {building.buildingType} tại {building.transform.position}");
-            return;
-        }
-
         buildings.Add(building);
         Debug.Log($"[BuildingManager] ➕ Đã đăng ký: {building.buildingType} ({building.gameObject.name})");
     }
@@ -116,7 +109,7 @@ public class BuildingManager : Singleton<BuildingManager>
             {
                 BuildingState state = b.ToState();
 
-                // 🔥 LẤY CẤP ĐỘ HIỆN TẠI LƯU VÀO STATE
+                // 🔥 LẤY CẤP ĐỘ HIỆN TẠI VÀ SỐ LÍNH LƯU VÀO STATE
                 var upgradeable = b.GetComponent<UpgradeableBuilding>();
                 if (upgradeable != null)
                 {
@@ -124,6 +117,12 @@ public class BuildingManager : Singleton<BuildingManager>
                     state.isRuined = upgradeable.IsRuined;
                     state.startAsRuined = upgradeable.StartAsRuined;
                     state.isInitialBuildNeeded = upgradeable.IsInitialBuildNeeded;
+
+                    SpawnSoldier spawner = SpawnSoldier.GetActiveSpawnerForBuilding(upgradeable);
+                    if (spawner != null)
+                    {
+                        state.soldierCount = spawner.GetActiveSoldiersCount();
+                    }
                 }
 
                 states.Add(state);
@@ -158,11 +157,20 @@ public class BuildingManager : Singleton<BuildingManager>
             {
                 spawned.FromState(state);
 
-                // 🔥 ÉP CÔNG TRÌNH KHÔI PHỤC ĐÚNG LEVEL VÀ TẮT ĐẾM GIỜ XÂY LẠI TỪ ĐẦU
+                // 🔥 ÉP CÔNG TRÌNH KHÔI PHỤC ĐÚNG LEVEL VÀ SỐ LÍNH
                 UpgradeableBuilding upgradeable = spawned.GetComponent<UpgradeableBuilding>();
                 if (upgradeable != null)
                 {
                     upgradeable.LoadBuildingData(state.level, state.isRuined, state.isInitialBuildNeeded);
+
+                    if (state.soldierCount > 0)
+                    {
+                        SpawnSoldier spawner = SpawnSoldier.GetActiveSpawnerForBuilding(upgradeable);
+                        if (spawner != null)
+                        {
+                            spawner.LoadAndSpawnSoldiers(state.soldierCount, state.level);
+                        }
+                    }
                 }
             }
             else
@@ -179,7 +187,10 @@ public class BuildingManager : Singleton<BuildingManager>
         foreach (var b in allBuildingsInScene)
         {
             if (b != null)
+            {
+                b.gameObject.SetActive(false);
                 Destroy(b.gameObject);
+            }
         }
         buildings.Clear();
         Debug.Log("[BuildingManager] 🗑️ Đã dọn sạch toàn bộ công trình (kể cả có sẵn) trong scene.");

@@ -982,7 +982,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpawnSoldier
   soldierPrefab: {fileID: 5529766660109328545, guid: 6faae46d02eec1b458eaa4f73464be71, type: 3}
-  spawnRadius: 5
+  maxSoldierCount: 3
+  spawnRadius: 2.5
   spawnForwardOffset: 2.5
   currentLevel: 1
   testDuration: 5
@@ -1000,7 +1001,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 485d2a5022bd6934c9f803e1d0cb66c6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UpgradeableBuilding
-  isInitialBuildNeeded: 1
+  isInitialBuildNeeded: 0
   startAsRuined: 0
   initialBuildDuration: 5
   buildingType: 11
@@ -1034,11 +1035,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BuildingCtrl
   buildingType: 11
-  door: {fileID: 0}
-  buildProgress: 0
-  isOccupied: 0
-  currentWorkers: 0
-  maxWorkers: 4
+  maxWorkers: 0
+  productionRate: 1
+  fixedYRotation: 0
 --- !u!114 &9125901989616287334
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2983,6 +2982,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 150798883003263115}
     m_Modifications:
+    - target: {fileID: 2706408300087418665, guid: 1e10263a81f02ba47a857b0261efa46a, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2706408300087418665, guid: 1e10263a81f02ba47a857b0261efa46a, type: 3}
+      propertyPath: maxSoldierCount
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2885378263953420472, guid: 1e10263a81f02ba47a857b0261efa46a, type: 3}
       propertyPath: m_Name
       value: barracksLV2
@@ -3106,6 +3113,14 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 6271588539456090533, guid: ba06fce2318fb204d8990c9767483301, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6271588539456090533, guid: ba06fce2318fb204d8990c9767483301, type: 3}
+      propertyPath: maxSoldierCount
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8387842726007996306, guid: ba06fce2318fb204d8990c9767483301, type: 3}
       propertyPath: m_Name
       value: barrackSoldierLV1
@@ -3219,6 +3234,14 @@ PrefabInstance:
     - target: {fileID: 802437640450695728, guid: 9f2f94b7b7b603a43bace0f5cea4b45f, type: 3}
       propertyPath: m_Name
       value: barracksLVl3
+      objectReference: {fileID: 0}
+    - target: {fileID: 5465207863262979208, guid: 9f2f94b7b7b603a43bace0f5cea4b45f, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5465207863262979208, guid: 9f2f94b7b7b603a43bace0f5cea4b45f, type: 3}
+      propertyPath: maxSoldierCount
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8008543284958548682, guid: 9f2f94b7b7b603a43bace0f5cea4b45f, type: 3}
       propertyPath: m_LocalPosition.x

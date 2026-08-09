@@ -62,9 +62,14 @@ public static class BattleData
                 SkipAutoLoadOnNextSceneLoad = false;
                 Debug.Log("[BattleData] ⏩ Bỏ qua auto-load Save (Reset Scene được yêu cầu).");
             }
+            else if (HasResult)
+            {
+                // Khi quay lại từ BattleScene có kết quả trận đấu -> ApplyBattleResultToScene sẽ tự động xử lý và lưu game!
+                ApplyBattleResultToScene();
+            }
             else
             {
-                // 🔥 Tải lại toàn bộ công trình và tài nguyên từ file Save JSON khi quay lại Scene chính
+                // Chỉ Load từ slot save khi khởi động bình thường
                 BuildingSystem buildingSys = BuildingSystem.Ins != null ? BuildingSystem.Ins : Object.FindFirstObjectByType<BuildingSystem>();
                 if (buildingSys != null)
                 {
@@ -75,11 +80,6 @@ public static class BattleData
                 {
                     JsonDataManager.Ins.LoadGame(1);
                 }
-            }
-
-            if (HasResult)
-            {
-                ApplyBattleResultToScene();
             }
         }
     }
@@ -121,14 +121,18 @@ public static class BattleData
         PlayerBuildings.Clear();
         TotalSoldiersInBase = 0;
 
-        // 1. Đếm chính xác số lính thực tế đang có mặt trên map (UnitController)
+        // 1. Đếm chính xác số lính thực tế thuộc phe Người chơi đang có mặt trên map
         UnitController[] activeUnits = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
         int realActiveSoldierCount = 0;
         foreach (var u in activeUnits)
         {
             if (u != null && u.gameObject.activeInHierarchy)
             {
-                realActiveSoldierCount++;
+                // Chỉ đếm Lính thật của Người Chơi (Không đếm EnemyAI)
+                if (u.GetComponent<EnemyAI>() == null && u.GetComponentInParent<EnemyAI>() == null)
+                {
+                    realActiveSoldierCount++;
+                }
             }
         }
 
@@ -148,8 +152,7 @@ public static class BattleData
             };
 
             // Nếu là Doanh Trại, lấy số lính ĐANG HOẠT ĐỘNG THỰC TẾ của công trình đó
-            SpawnSoldier spawner = building.GetComponent<SpawnSoldier>();
-            if (spawner == null) spawner = building.GetComponentInChildren<SpawnSoldier>();
+            SpawnSoldier spawner = SpawnSoldier.GetActiveSpawnerForBuilding(building);
 
             if (spawner != null)
             {
@@ -188,15 +191,65 @@ public static class BattleData
         if (!HasResult) return;
 
         LastBattleWasVictory = IsPlayerVictory;
-        Debug.Log($"[BattleData] 🔥 Đang áp dụng kết quả trận đấu vào Scene chính ({MainSceneName}): Victory = {IsPlayerVictory}, SurvivingSoldiers = {SurvivingSoldiersCount}");
+        Debug.Log($"[BattleData] 🔥 Đang áp dụng kết quả trận đấu: IsPlayerVictory = {IsPlayerVictory}, SurvivingSoldiersCount = {SurvivingSoldiersCount}");
 
-        if (IsPlayerVictory)
+        // 🔥 XÓA SẠCH TẤT CẢ LÍNH CŨ / MỒ CÔI TRÊN MAP TRƯỚC KHI TẠO LÍNH MỚI
+        GameObject[] oldSoldiers = GameObject.FindGameObjectsWithTag("Soldier");
+        foreach (var s in oldSoldiers)
         {
-            ApplyVictoryResult(SurvivingSoldiersCount);
+            if (s != null)
+            {
+                s.tag = "Untagged";
+                s.SetActive(false);
+                if (Application.isPlaying) Object.Destroy(s);
+                else Object.DestroyImmediate(s);
+            }
         }
-        else
+
+        UpgradeableBuilding[] buildings = Object.FindObjectsByType<UpgradeableBuilding>(FindObjectsSortMode.None);
+        int remainingSurvivingSoldiers = SurvivingSoldiersCount;
+
+        foreach (var b in buildings)
         {
-            ApplyDefeatResult();
+            if (b == null || !b.gameObject.activeInHierarchy) continue;
+
+            if (IsBarracksOnly(b.buildingType))
+            {
+                SpawnSoldier spawner = SpawnSoldier.GetActiveSpawnerForBuilding(b);
+                int maxCapacity = spawner != null ? spawner.GetMaxSoldiersForLevel(b.CurrentLevel) : 3;
+
+                int assignedSurviving = Mathf.Min(remainingSurvivingSoldiers, maxCapacity);
+                remainingSurvivingSoldiers = Mathf.Max(0, remainingSurvivingSoldiers - assignedSurviving);
+
+                // QUY TẮC:
+                // 1. Nếu có ít nhất 1 lính của Barracks sống sót -> Barracks GIỮ NGUYÊN và duy trì đủ 3 lính!
+                // 2. Nếu cả 3 lính của Barracks chết hết -> PHÁ HỦY CÔNG TRÌNH BARRACKS ĐÓ!
+                if (assignedSurviving > 0 || (IsPlayerVictory && SurvivingSoldiersCount > 0))
+                {
+                    if (spawner != null)
+                    {
+                        if (!spawner.gameObject.activeSelf) spawner.gameObject.SetActive(true);
+                        spawner.enabled = true;
+                        spawner.LoadAndSpawnSoldiers(maxCapacity, b.CurrentLevel - 1);
+                    }
+                }
+                else
+                {
+                    Debug.Log($"[BattleData] 💀 Toàn bộ 3 lính của công trình {b.gameObject.name} đã chết -> PHÁ HỦY BARRACKS!");
+                    b.TriggerDestructionSequence();
+
+                    if (spawner != null)
+                    {
+                        spawner.LoadAndSpawnSoldiers(0, b.CurrentLevel - 1);
+                    }
+                }
+            }
+        }
+
+        BuildingSystem buildingSys = BuildingSystem.Ins != null ? BuildingSystem.Ins : Object.FindFirstObjectByType<BuildingSystem>();
+        if (buildingSys != null)
+        {
+            buildingSys.SaveBuildingsToSlot(1);
         }
 
         UILinh uiLinh = Object.FindFirstObjectByType<UILinh>();
@@ -208,88 +261,11 @@ public static class BattleData
         HasResult = false;
     }
 
-    private static void ApplyVictoryResult(int survivingCount)
+    public static bool IsBarracksOnly(BuildingType type)
     {
-        SpawnSoldier[] spawners = Object.FindObjectsByType<SpawnSoldier>(FindObjectsSortMode.None);
-        int remainingToAssign = survivingCount;
-
-        foreach (var spawner in spawners)
-        {
-            if (spawner == null || !spawner.gameObject.activeInHierarchy) continue;
-
-            UpgradeableBuilding building = spawner.GetComponent<UpgradeableBuilding>();
-            if (building == null) building = spawner.GetComponentInChildren<UpgradeableBuilding>();
-            if (building == null) building = spawner.GetComponentInParent<UpgradeableBuilding>();
-
-            if (building != null && building.IsRuined)
-            {
-                spawner.LoadAndSpawnSoldiers(0, building.CurrentLevel);
-                continue;
-            }
-
-            int level = spawner.CurrentLevel;
-            int maxForLevel = spawner.GetMaxSoldiersForLevel(level);
-
-            int assignCount = Mathf.Min(remainingToAssign, maxForLevel);
-            spawner.LoadAndSpawnSoldiers(assignCount, level - 1);
-            remainingToAssign -= assignCount;
-        }
-
-        UnitController[] activeUnits = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
-        if (activeUnits.Length > survivingCount)
-        {
-            int extraToRemove = activeUnits.Length - survivingCount;
-            for (int i = activeUnits.Length - 1; i >= 0 && extraToRemove > 0; i--)
-            {
-                if (activeUnits[i] != null && activeUnits[i].gameObject.activeInHierarchy)
-                {
-                    Object.Destroy(activeUnits[i].gameObject);
-                    extraToRemove--;
-                }
-            }
-        }
-
-        Debug.Log($"[BattleData] 🏆 Thắng trận! Đã cập nhật {survivingCount} lính còn sống trên Scene chính.");
-    }
-
-    private static void ApplyDefeatResult()
-    {
-        UpgradeableBuilding[] buildings = Object.FindObjectsByType<UpgradeableBuilding>(FindObjectsSortMode.None);
-
-        foreach (var b in buildings)
-        {
-            if (b == null || !b.gameObject.activeInHierarchy) continue;
-
-            if (IsBarracksOrTower(b.buildingType))
-            {
-                b.TriggerDestructionSequence();
-
-                SpawnSoldier spawner = b.GetComponent<SpawnSoldier>();
-                if (spawner == null) spawner = b.GetComponentInChildren<SpawnSoldier>();
-                if (spawner != null)
-                {
-                    spawner.LoadAndSpawnSoldiers(0, b.CurrentLevel);
-                }
-
-                HPTower hpTower = b.GetComponent<HPTower>();
-                if (hpTower == null) hpTower = b.GetComponentInChildren<HPTower>();
-                if (hpTower != null)
-                {
-                    hpTower.SetRuinedHealth();
-                }
-            }
-        }
-
-        UnitController[] activeUnits = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
-        foreach (var u in activeUnits)
-        {
-            if (u != null && u.gameObject.activeInHierarchy)
-            {
-                Object.Destroy(u.gameObject);
-            }
-        }
-
-        Debug.Log("[BattleData] 💀 Thua trận! Tất cả công trình Barracks & Tower đã bị phá hủy bên Scene chính.");
+        return type == BuildingType.BarracksMelee ||
+               type == BuildingType.BarracksArcher ||
+               type == BuildingType.BarracksSpear;
     }
 
     public static void SaveRemainingEnemiesState(List<EnemyAI> attackedSquad)

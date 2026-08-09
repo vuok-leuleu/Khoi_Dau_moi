@@ -107,7 +107,11 @@ public class BuildingProgressBarUI : MonoBehaviour
     public void DeactivateAllVFX()
     {
         if (placementDustVFX != null) placementDustVFX.gameObject.SetActive(false);
-        if (constructionLoopVFX != null) constructionLoopVFX.gameObject.SetActive(false);
+        if (constructionLoopVFX != null)
+        {
+            if (constructionLoopVFX.isPlaying) constructionLoopVFX.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            constructionLoopVFX.gameObject.SetActive(false);
+        }
         if (completionAuraVFX != null) completionAuraVFX.gameObject.SetActive(false);
     }
 
@@ -216,9 +220,13 @@ public class BuildingProgressBarUI : MonoBehaviour
 
     private void StopConstructionVFXSmoothly()
     {
-        if (constructionLoopVFX != null && constructionLoopVFX.isPlaying)
+        if (constructionLoopVFX != null)
         {
-            constructionLoopVFX.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+            if (constructionLoopVFX.isPlaying)
+            {
+                constructionLoopVFX.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+            }
+            constructionLoopVFX.gameObject.SetActive(false);
         }
     }
 

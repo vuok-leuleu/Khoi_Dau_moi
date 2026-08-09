@@ -43,9 +43,17 @@ public class UILinh : MonoBehaviour
         savePath = Path.Combine(Application.persistentDataPath, saveFileName);
     }
 
-    void Start()
+    private bool isInitialized = false;
+
+    private System.Collections.IEnumerator Start()
     {
-        LoadGame();
+        if (!BattleData.HasResult)
+        {
+            LoadGame();
+        }
+        yield return new WaitForSeconds(0.5f);
+        lastCount = CountSoldiers();
+        isInitialized = true;
     }
 
     void Update()
@@ -57,7 +65,7 @@ public class UILinh : MonoBehaviour
             textCount.text = "" + count;
         }
 
-        if (count != lastCount)
+        if (isInitialized && count != lastCount)
         {
             lastCount = count;
             SaveGame();
@@ -98,8 +106,26 @@ public class UILinh : MonoBehaviour
 
     public int CountSoldiers()
     {
+        int count = 0;
         GameObject[] soldiers = GameObject.FindGameObjectsWithTag(soldierTag);
-        return soldiers.Length;
+        foreach (GameObject soldier in soldiers)
+        {
+            if (soldier != null && soldier.activeInHierarchy && soldier.CompareTag(soldierTag))
+            {
+                HPSoldier hp = soldier.GetComponent<HPSoldier>();
+                if (hp == null) hp = soldier.GetComponentInChildren<HPSoldier>();
+
+                if (hp != null)
+                {
+                    if (!hp.IsDead && hp.CurrentHealth > 0f) count++;
+                }
+                else
+                {
+                    count++;
+                }
+            }
+        }
+        return count;
     }
 
     public int GetSoldierCount()
@@ -111,6 +137,12 @@ public class UILinh : MonoBehaviour
     {
         try
         {
+            BuildingSystem buildingSys = BuildingSystem.Ins != null ? BuildingSystem.Ins : FindObjectOfType<BuildingSystem>();
+            if (buildingSys != null)
+            {
+                buildingSys.SaveBuildingsToSlot(1);
+            }
+
             GameSaveData saveData = new GameSaveData();
             saveData.lastSavedTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
@@ -123,7 +155,7 @@ public class UILinh : MonoBehaviour
                 entry.isRuined = building.IsRuined;
                 entry.isInitialBuildNeeded = building.IsInitialBuildNeeded;
 
-                SpawnSoldier spawner = building.GetComponentInChildren<SpawnSoldier>();
+                SpawnSoldier spawner = SpawnSoldier.GetActiveSpawnerForBuilding(building);
                 if (spawner != null)
                 {
                     entry.soldierCount = spawner.GetActiveSoldiersCount();
@@ -152,6 +184,15 @@ public class UILinh : MonoBehaviour
     {
         try
         {
+            BuildingSystem buildingSys = BuildingSystem.Ins != null ? BuildingSystem.Ins : FindObjectOfType<BuildingSystem>();
+            if (buildingSys != null)
+            {
+                buildingSys.LoadBuildingsFromSlot(1);
+                lastCount = CountSoldiers();
+                if (textCount != null) textCount.text = "" + lastCount;
+                return;
+            }
+
             if (File.Exists(savePath))
             {
                 string json = File.ReadAllText(savePath);
@@ -161,12 +202,14 @@ public class UILinh : MonoBehaviour
 
                 foreach (BuildingSaveEntry entry in saveData.buildings)
                 {
-                    UpgradeableBuilding building = Array.Find(sceneBuildings, b => b.gameObject.name == entry.buildingName);
+                    UpgradeableBuilding building = Array.Find(sceneBuildings, b => b != null && b.gameObject.activeInHierarchy && (b.gameObject.name == entry.buildingName || b.buildingType.ToString() == entry.buildingName));
                     if (building != null)
                     {
-                        building.LoadBuildingData(entry.level, entry.isRuined, entry.isInitialBuildNeeded);
+                        // Đảm bảo không ghi đè công trình đã xây xong thành trạng thái chưa xây
+                        bool targetInitialBuild = building.IsInitialBuildNeeded ? entry.isInitialBuildNeeded : false;
+                        building.LoadBuildingData(entry.level, entry.isRuined, targetInitialBuild);
 
-                        SpawnSoldier spawner = building.GetComponentInChildren<SpawnSoldier>();
+                        SpawnSoldier spawner = SpawnSoldier.GetActiveSpawnerForBuilding(building);
                         if (spawner != null)
                         {
                             spawner.LoadAndSpawnSoldiers(entry.soldierCount, entry.level);

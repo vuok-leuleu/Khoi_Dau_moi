@@ -105,6 +105,9 @@ public class UpgradeableBuilding : MonoBehaviour
             var defenceAI = GetComponent<DefenceTowerAI>();
             if (defenceAI != null) defenceAI.enabled = false;
 
+            var spawnSoldier = GetComponent<SpawnSoldier>();
+            if (spawnSoldier != null) spawnSoldier.enabled = false;
+
             enabled = false;
         }
     }
@@ -154,6 +157,19 @@ public class UpgradeableBuilding : MonoBehaviour
         }
     }
 
+    private void EnsureRenderersEnabled(GameObject model)
+    {
+        if (model == null) return;
+        foreach (var mr in model.GetComponentsInChildren<MeshRenderer>(true))
+        {
+            if (mr != null) mr.enabled = true;
+        }
+        foreach (var smr in model.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+        {
+            if (smr != null) smr.enabled = true;
+        }
+    }
+
     private void SetOriginalLevelActive(bool active)
     {
         if (rootRendererComponent != null) rootRendererComponent.enabled = active;
@@ -161,7 +177,11 @@ public class UpgradeableBuilding : MonoBehaviour
 
         for (int i = 0; i < originalChildren.Count; i++)
         {
-            if (originalChildren[i] != null) originalChildren[i].SetActive(active);
+            if (originalChildren[i] != null)
+            {
+                originalChildren[i].SetActive(active);
+                if (active) EnsureRenderersEnabled(originalChildren[i]);
+            }
         }
     }
 
@@ -249,11 +269,13 @@ public class UpgradeableBuilding : MonoBehaviour
                 newInstance.name = modelSource.name;
                 instantiatedModels[i] = newInstance;
                 newInstance.SetActive(i == CurrentLevel);
+                if (i == CurrentLevel) EnsureRenderersEnabled(newInstance);
             }
             else
             {
                 instantiatedModels[i] = modelSource;
                 modelSource.SetActive(i == CurrentLevel);
+                if (i == CurrentLevel) EnsureRenderersEnabled(modelSource);
             }
         }
 
@@ -263,22 +285,6 @@ public class UpgradeableBuilding : MonoBehaviour
             if (rootRenderer != null) rootRenderer.enabled = false;
             SkinnedMeshRenderer rootSkinnedRenderer = GetComponent<SkinnedMeshRenderer>();
             if (rootSkinnedRenderer != null) rootSkinnedRenderer.enabled = false;
-
-            foreach (Transform child in transform)
-            {
-                if (ruinedVisualModel != null && child.gameObject == ruinedVisualModel) continue;
-
-                bool isVisualModel = false;
-                foreach (var im in instantiatedModels)
-                {
-                    if (im == child.gameObject) { isVisualModel = true; break; }
-                }
-                if (!isVisualModel)
-                {
-                    foreach (var mr in child.GetComponentsInChildren<MeshRenderer>(true)) mr.enabled = false;
-                    foreach (var smr in child.GetComponentsInChildren<SkinnedMeshRenderer>(true)) smr.enabled = false;
-                }
-            }
         }
     }
 
@@ -366,6 +372,8 @@ public class UpgradeableBuilding : MonoBehaviour
             
             while (currentProcessTimer < durationWaves)
             {
+                if (DayNightManager.Ins == null) break;
+
                 currentProcessTimer = DayNightManager.Ins.CurrentWave - startWave;
                 if (currentProcessTimer < 0) currentProcessTimer = 0;
 
@@ -566,8 +574,16 @@ public class UpgradeableBuilding : MonoBehaviour
         if (instantiatedModels == null) return;
         for (int i = 0; i < instantiatedModels.Length; i++)
         {
-            if (i == selfRefIndex) SetOriginalLevelActive(i == CurrentLevel);
-            else if (instantiatedModels[i] != null) instantiatedModels[i].SetActive(i == CurrentLevel);
+            bool isActive = (i == CurrentLevel);
+            if (i == selfRefIndex)
+            {
+                SetOriginalLevelActive(isActive);
+            }
+            else if (instantiatedModels[i] != null)
+            {
+                instantiatedModels[i].SetActive(isActive);
+                if (isActive) EnsureRenderersEnabled(instantiatedModels[i]);
+            }
         }
         UpdateFirePointForLevel();
     }
@@ -610,9 +626,11 @@ public class UpgradeableBuilding : MonoBehaviour
         CurrentLevel = Mathf.Clamp(level, 0, MaxLevel - 1);
         IsRuined = isRuinedState;
         
-        // 🔥 FIX: Đồng bộ cả biến startAsRuined khi Load Data từ Save
+        // 🔥 FIX: Đồng bộ cả biến startAsRuined và isInitialBuildNeeded khi Load Data từ Save
         startAsRuined = isRuinedState;
         isInitialBuildNeeded = isInitialBuildNeededState;
+
+        BuildingProgressBarUI progressUI = GetComponentInChildren<BuildingProgressBarUI>(true);
 
         if (IsRuined)
         {
@@ -621,6 +639,18 @@ public class UpgradeableBuilding : MonoBehaviour
 
             HPTower hpComponent = GetComponent<HPTower>();
             if (hpComponent != null) hpComponent.SetRuinedHealth();
+
+            if (progressUI != null)
+            {
+                progressUI.HideProgress();
+                progressUI.DeactivateAllVFX();
+            }
+        }
+        else if (isInitialBuildNeeded)
+        {
+            ToggleBuildingLogic(false);
+            IsUpgrading = true;
+            currentProcessCoroutine = StartCoroutine(UpgradeRoutine(initialBuildDuration));
         }
         else
         {
@@ -629,6 +659,12 @@ public class UpgradeableBuilding : MonoBehaviour
 
             HPTower hpComponent = GetComponent<HPTower>();
             if (hpComponent != null) hpComponent.ResetHealth();
+
+            if (progressUI != null)
+            {
+                progressUI.HideProgress();
+                progressUI.DeactivateAllVFX();
+            }
         }
 
         UpdateCivilianBuildingData();

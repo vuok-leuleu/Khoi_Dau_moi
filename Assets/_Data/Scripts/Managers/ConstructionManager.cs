@@ -186,15 +186,60 @@ public class ConstructionManager : Singleton<ConstructionManager>
     {
         GameObject prefab = GetPrefab(type);
 
-        if (prefab == null) return null;
+        if (prefab == null)
+        {
+            Debug.LogError($"[ConstructionManager] ❌ Không tìm thấy Prefab cho loại công trình: {type}");
+            return null;
+        }
 
         GameObject obj = Instantiate(prefab, position, rotation);
         obj.name = type.ToString();
 
-        return obj.GetComponent<BuildingCtrl>();
+        BuildingCtrl buildingCtrl = obj.GetComponent<BuildingCtrl>();
+        if (buildingCtrl == null)
+        {
+            buildingCtrl = obj.GetComponentInChildren<BuildingCtrl>();
+        }
+        return buildingCtrl;
     }
 
     private GameObject GetPrefab(BuildingType type)
+    {
+        GameObject found = GetAssignedPrefab(type);
+        if (found != null) return found;
+
+        // Fallback 1: Nếu là Doanh Trại bất kỳ (Melee, Archer, Spear) -> Dùng Prefab Doanh Trại có sẵn
+        if (type == BuildingType.BarracksMelee || type == BuildingType.BarracksArcher || type == BuildingType.BarracksSpear)
+        {
+            if (barracksMeleePrefab != null) return barracksMeleePrefab;
+            if (barracksArcherPrefab != null) return barracksArcherPrefab;
+            if (barracksSpearPrefab != null) return barracksSpearPrefab;
+        }
+
+        // Fallback 2: Nếu là Tháp bất kỳ -> Dùng Prefab Tháp có sẵn
+        if (type == BuildingType.WatchTower || type == BuildingType.ArcherTower)
+        {
+            if (watchTowerPrefab != null) return watchTowerPrefab;
+            if (archerTowerPrefab != null) return archerTowerPrefab;
+        }
+
+        // Fallback 3: Tìm động trong Resources/Memory (chỉ lấy Prefab asset, không lấy Scene Object!)
+        var allBuildings = Resources.FindObjectsOfTypeAll<UpgradeableBuilding>();
+        foreach (var b in allBuildings)
+        {
+            if (b != null && b.buildingType == type)
+            {
+                if (!b.gameObject.scene.IsValid() || b.gameObject.name.ToLower().Contains("prefab"))
+                {
+                    return b.gameObject;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private GameObject GetAssignedPrefab(BuildingType type)
     {
         switch (type)
         {

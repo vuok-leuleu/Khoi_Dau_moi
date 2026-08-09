@@ -55,9 +55,15 @@ public class BattleManager : MonoBehaviour
     [Tooltip("Góc xoay mặc định của Camera (nếu không dùng battleCameraPoint)")]
     [SerializeField] private Vector3 cameraRotation = new Vector3(30f, 0f, 0f);
 
-    [Header("Battle Result & Transition Settings")]
-    [SerializeField] private float battleEndDelay = 2.0f;
+    [Header("Battle Result & UI Settings")]
+    [SerializeField] private float battleEndDelay = 1.0f;
+    [SerializeField] private BattleResultUI battleResultUI;
+    [SerializeField] private int rewardCrestPerWave = 5;
+    [SerializeField] private int rewardWoodPerWave = 50;
+    [SerializeField] private int rewardGoldPerWave = 10;
+
     private bool isBattleOver = false;
+    private int initialPlayerSoldierCount = 0;
 
     private List<GameObject> spawnedPlayerObjects = new List<GameObject>();
     private List<GameObject> spawnedEnemyObjects = new List<GameObject>();
@@ -87,17 +93,49 @@ public class BattleManager : MonoBehaviour
         SpawnPlayerSide();
         SpawnEnemySide();
 
+        // Đếm tổng số lính ban đầu của phe người chơi
+        initialPlayerSoldierCount = CountLivingPlayerSoldiers();
+
         // 4. Thiết lập vị trí Camera tại giao tranh
         SetupBattleCamera();
 
         // 5. Cho lính và Enemy lập tức bay vào đánh nhau
         StartCoroutine(TriggerImmediateCombatRoutine());
 
-        // 6. Theo dõi kết quả giao tranh và tự động chuyển về Scene chính
+        // 6. Theo dõi kết quả giao tranh và hiển thị Bảng Kết Quả
         StartCoroutine(MonitorBattleRoutine());
 
         Debug.Log($"[BattleManager] 🔥 Trận đấu khởi tạo thành công! " +
-                  $"Sinh {spawnedPlayerObjects.Count} vật thể Người Chơi (BÊN TRÁI) và {spawnedEnemyObjects.Count} Enemy (BÊN PHẢI).");
+                  $"Sinh {spawnedPlayerObjects.Count} vật thể Người Chơi (BÊN TRÁI, {initialPlayerSoldierCount} lính) và {spawnedEnemyObjects.Count} Enemy (BÊN PHẢI).");
+    }
+
+    private int CountLivingPlayerSoldiers()
+    {
+        int count = 0;
+        foreach (var playerObj in spawnedPlayerObjects)
+        {
+            if (playerObj != null && playerObj.activeInHierarchy)
+            {
+                UnitController unit = playerObj.GetComponent<UnitController>();
+                if (unit == null) unit = playerObj.GetComponentInChildren<UnitController>();
+
+                if (unit != null)
+                {
+                    HPSoldier hp = unit.GetComponent<HPSoldier>();
+                    if (hp == null) hp = unit.GetComponentInChildren<HPSoldier>();
+
+                    if (hp != null)
+                    {
+                        if (!hp.IsDead && hp.CurrentHealth > 0f) count++;
+                    }
+                    else
+                    {
+                        count++;
+                    }
+                }
+            }
+        }
+        return count;
     }
 
     /// <summary>
@@ -132,65 +170,100 @@ public class BattleManager : MonoBehaviour
             }
 
             // 2. Đếm số Lính (UnitController) còn sống trong Battle Scene
-            int livingSoldiers = 0;
-            foreach (var playerObj in spawnedPlayerObjects)
-            {
-                if (playerObj != null && playerObj.activeInHierarchy)
-                {
-                    UnitController unit = playerObj.GetComponent<UnitController>();
-                    if (unit == null) unit = playerObj.GetComponentInChildren<UnitController>();
-
-                    if (unit != null)
-                    {
-                        HPSoldier hp = unit.GetComponent<HPSoldier>();
-                        if (hp == null) hp = unit.GetComponentInChildren<HPSoldier>();
-
-                        if (hp != null)
-                        {
-                            if (!hp.IsDead && hp.CurrentHealth > 0f) livingSoldiers++;
-                        }
-                        else
-                        {
-                            livingSoldiers++;
-                        }
-                    }
-                }
-            }
+            int livingSoldiers = CountLivingPlayerSoldiers();
 
             // 3. Đánh giá kết quả giao tranh:
             if (livingEnemies == 0)
             {
                 // Phe Lính THẮNG!
                 isBattleOver = true;
-                Debug.Log($"[BattleManager] 🏆 PHE LÍNH THẮNG TRẬN! Số lính sống sót = {livingSoldiers}. Đang chuyển về {BattleData.MainSceneName} sau {battleEndDelay}s...");
-
                 BattleData.HasResult = true;
                 BattleData.IsPlayerVictory = true;
                 BattleData.SurvivingSoldiersCount = livingSoldiers;
 
+                int unitsLost = Mathf.Max(0, initialPlayerSoldierCount - livingSoldiers);
+                Debug.Log($"[BattleManager] 🏆 PHE LÍNH THẮNG TRẬN! Số lính sống sót = {livingSoldiers}, Lính hy sinh = {unitsLost}.");
+
                 yield return new WaitForSeconds(battleEndDelay);
 
-                string returnScene = string.IsNullOrEmpty(BattleData.MainSceneName) ? "MainScene" : BattleData.MainSceneName;
-                UnityEngine.SceneManagement.SceneManager.LoadScene(returnScene);
+                ShowBattleResultPanel(isVictory: true, unitsLost: unitsLost);
                 yield break;
             }
             else if (livingSoldiers == 0)
             {
                 // Phe Lính THUA!
                 isBattleOver = true;
-                Debug.Log($"[BattleManager] 💀 PHE LÍNH THUA TRẬN! Toàn bộ lính đã ngã xuống. Đang chuyển về {BattleData.MainSceneName} sau {battleEndDelay}s...");
-
                 BattleData.HasResult = true;
                 BattleData.IsPlayerVictory = false;
                 BattleData.SurvivingSoldiersCount = 0;
 
+                int unitsLost = Mathf.Max(initialPlayerSoldierCount, 1);
+                Debug.Log($"[BattleManager] 💀 PHE LÍNH THUA TRẬN! Toàn bộ lính đã ngã xuống ({unitsLost} lính hy sinh).");
+
                 yield return new WaitForSeconds(battleEndDelay);
 
-                string returnScene = string.IsNullOrEmpty(BattleData.MainSceneName) ? "MainScene" : BattleData.MainSceneName;
-                UnityEngine.SceneManagement.SceneManager.LoadScene(returnScene);
+                ShowBattleResultPanel(isVictory: false, unitsLost: unitsLost);
                 yield break;
             }
         }
+    }
+
+    private void EnsureBattleResultUI()
+    {
+        if (battleResultUI == null)
+        {
+            battleResultUI = Object.FindFirstObjectByType<BattleResultUI>();
+        }
+
+        if (battleResultUI == null)
+        {
+            GameObject uiObj = new GameObject("BattleResultUI_System");
+            battleResultUI = uiObj.AddComponent<BattleResultUI>();
+        }
+    }
+
+    private void ShowBattleResultPanel(bool isVictory, int unitsLost)
+    {
+        EnsureBattleResultUI();
+
+        List<BattleRewardData> rewards = new List<BattleRewardData>();
+
+        if (isVictory)
+        {
+            int waveMultiplier = Mathf.Max(1, BattleData.EnemyWaveCount);
+            int crestAmount = rewardCrestPerWave * waveMultiplier;
+            int woodAmount = rewardWoodPerWave * waveMultiplier;
+            int goldAmount = rewardGoldPerWave * waveMultiplier;
+
+            Sprite crestIcon = battleResultUI != null ? battleResultUI.RewardCrestIcon : null;
+            Sprite woodIcon = battleResultUI != null ? battleResultUI.RewardWoodIcon : null;
+            Sprite goldIcon = battleResultUI != null ? battleResultUI.RewardGoldIcon : null;
+
+            rewards.Add(new BattleRewardData { rewardName = "Crest", amount = crestAmount, icon = crestIcon });
+            rewards.Add(new BattleRewardData { rewardName = "Wood", amount = woodAmount, icon = woodIcon });
+
+            if (goldAmount > 0)
+            {
+                rewards.Add(new BattleRewardData { rewardName = "Gold", amount = goldAmount, icon = goldIcon });
+            }
+
+            // Cộng tài nguyên vào JsonDataManager
+            if (JsonDataManager.Ins != null)
+            {
+                if (woodAmount > 0) JsonDataManager.Ins.AddWood(woodAmount);
+                if (goldAmount > 0) JsonDataManager.Ins.AddGold(goldAmount);
+            }
+        }
+
+        battleResultUI.ShowResult(isVictory, unitsLost, rewards, OnReturnToMainSceneClicked);
+    }
+
+    private void OnReturnToMainSceneClicked()
+    {
+        Time.timeScale = 1f;
+        string returnScene = string.IsNullOrEmpty(BattleData.MainSceneName) ? "MainScene" : BattleData.MainSceneName;
+        Debug.Log($"[BattleManager] 🚪 Returning to scene: {returnScene}");
+        UnityEngine.SceneManagement.SceneManager.LoadScene(returnScene);
     }
 
     /// <summary>
@@ -347,12 +420,14 @@ public class BattleManager : MonoBehaviour
     {
         if (spawnedBuilding == null) return;
 
-        // Tắt SpawnSoldier trên công trình ở SceneBattle để tránh tự động spawn lính lần 2!
-        SpawnSoldier spawner = spawnedBuilding.GetComponent<SpawnSoldier>();
-        if (spawner == null) spawner = spawnedBuilding.GetComponentInChildren<SpawnSoldier>();
-        if (spawner != null)
+        // Tắt HOÀN TOÀN tất cả SpawnSoldier trên công trình ở SceneBattle để tránh tự động spawn lính thừa!
+        SpawnSoldier[] spawners = spawnedBuilding.GetComponentsInChildren<SpawnSoldier>(true);
+        foreach (var spawner in spawners)
         {
-            spawner.enabled = false;
+            if (spawner != null)
+            {
+                spawner.enabled = false;
+            }
         }
 
         // Cập nhật Cấp độ và ĐẶT TRẠNG THÁI ĐÃ XÂY XONG cho UpgradeableBuilding
@@ -406,7 +481,6 @@ public class BattleManager : MonoBehaviour
         Vector3 soldierFrontOrigin = attackBuildingOrigin + Vector3.right * 5f;
 
         float actualBuildingSpacing = Mathf.Max(6.0f, buildingSpacing);
-        int soldierTotalSpawned = 0;
 
         // 1. Spawn Tháp Canh (Hàng sau cùng)
         for (int i = 0; i < watchTowers.Count; i++)
@@ -440,7 +514,6 @@ public class BattleManager : MonoBehaviour
                 int countInRow = Mathf.Min(buildingsPerRow, attackBuildings.Count - bRow * buildingsPerRow);
 
                 float offsetZ = (bCol - (countInRow - 1) * 0.5f) * actualBuildingSpacing;
-                // bRow tăng tiến về phía trước theo hướng right (hướng enemy) hoặc lùi dần
                 Vector3 pos = attackBuildingOrigin + Vector3.right * (bRow * 4f) + Vector3.forward * offsetZ;
                 Quaternion rot = Quaternion.Euler(0, 90, 0);
 
@@ -452,51 +525,36 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        // 2. Spawn toàn bộ Lính trong căn cứ
-        foreach (var buildingInfo in BattleData.PlayerBuildings)
+        // 3. Spawn chính xác số Lính của Người Chơi (Bằng đúng số lính thực tế từ MainScene)
+        int targetTotalSoldiers = BattleData.TotalSoldiersInBase;
+        if (targetTotalSoldiers <= 0)
         {
-            int countToSpawn = buildingInfo.soldierCount;
-            for (int i = 0; i < countToSpawn; i++)
+            targetTotalSoldiers = 0;
+            foreach (var bInfo in BattleData.PlayerBuildings)
             {
-                if (soldierPrefab != null)
-                {
-                    int row = soldierTotalSpawned / unitsPerRow;
-                    int col = soldierTotalSpawned % unitsPerRow;
+                targetTotalSoldiers += bInfo.soldierCount;
+            }
+            if (targetTotalSoldiers <= 0) targetTotalSoldiers = 3; // Fallback mặc định duy nhất nếu trống dữ liệu
+        }
 
-                    float sOffsetZ = (col - (unitsPerRow - 1) * 0.5f) * unitSpacing;
-                    Vector3 soldierPos = soldierFrontOrigin + Vector3.left * (row * unitSpacing) + Vector3.forward * sOffsetZ;
-                    Quaternion soldierRot = Quaternion.Euler(0, 90, 0); // Quay mặt về phía Enemy (Bên Phải)
+        for (int i = 0; i < targetTotalSoldiers; i++)
+        {
+            if (soldierPrefab != null)
+            {
+                int row = i / unitsPerRow;
+                int col = i % unitsPerRow;
 
-                    GameObject spawnedSoldier = Instantiate(soldierPrefab, soldierPos, soldierRot);
-                    spawnedSoldier.name = $"Player_Soldier_{soldierTotalSpawned + 1}";
-                    spawnedPlayerObjects.Add(spawnedSoldier);
-                }
-                soldierTotalSpawned++;
+                float sOffsetZ = (col - (unitsPerRow - 1) * 0.5f) * unitSpacing;
+                Vector3 soldierPos = soldierFrontOrigin + Vector3.left * (row * unitSpacing) + Vector3.forward * sOffsetZ;
+                Quaternion soldierRot = Quaternion.Euler(0, 90, 0);
+
+                GameObject spawnedSoldier = Instantiate(soldierPrefab, soldierPos, soldierRot);
+                spawnedSoldier.name = $"Player_Soldier_{i + 1}";
+                spawnedPlayerObjects.Add(spawnedSoldier);
             }
         }
 
-        // Nếu tổng số lính đã spawn chưa đủ số lính thực tế trong căn cứ
-        if (soldierTotalSpawned < BattleData.TotalSoldiersInBase)
-        {
-            int remaining = BattleData.TotalSoldiersInBase - soldierTotalSpawned;
-            for (int i = 0; i < remaining; i++)
-            {
-                if (soldierPrefab != null)
-                {
-                    int idx = soldierTotalSpawned + i;
-                    int row = idx / unitsPerRow;
-                    int col = idx % unitsPerRow;
-
-                    float sOffsetZ = (col - (unitsPerRow - 1) * 0.5f) * unitSpacing;
-                    Vector3 soldierPos = soldierFrontOrigin + Vector3.left * (row * unitSpacing) + Vector3.forward * sOffsetZ;
-                    Quaternion soldierRot = Quaternion.Euler(0, 90, 0);
-
-                    GameObject spawnedSoldier = Instantiate(soldierPrefab, soldierPos, soldierRot);
-                    spawnedSoldier.name = $"Player_Soldier_{idx + 1}";
-                    spawnedPlayerObjects.Add(spawnedSoldier);
-                }
-            }
-        }
+        Debug.Log($"[BattleManager] 🔥 Đã sinh chính xác {targetTotalSoldiers} lính cho SceneBattle (Khớp 100% với MainScene).");
     }
 
     /// <summary>
