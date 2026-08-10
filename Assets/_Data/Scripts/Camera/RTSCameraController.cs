@@ -39,8 +39,11 @@ public class RTSCameraController : MonoBehaviour
         forward.Normalize();
         right.Normalize();
 
+        // Nhân thêm mouseSpeed từ SettingManager cho di chuyển WASD
+        float speedMultiplier = (SettingManager.Ins != null) ? SettingManager.Ins.mouseSpeed / 5f : 1f;
+
         Vector3 moveDirection = (forward * v + right * h).normalized;
-        transform.position += moveDirection * moveSpeed * Time.deltaTime;
+        transform.position += moveDirection * moveSpeed * speedMultiplier * Time.deltaTime;
     }
 
     private void ZoomCamera()
