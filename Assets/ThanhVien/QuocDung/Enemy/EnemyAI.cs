@@ -43,20 +43,36 @@ public class EnemyAI : MonoBehaviour
     }
 
     /// <summary>
-    /// Tính toán vị trí mục tiêu thực tế (bám sát ngoài nhà chính / khu định cư)
+    /// Tính toán vị trí mục tiêu thực tế (dừng cách ngoài nhà chính / khu định cư một khoảng an toàn)
     /// </summary>
-    public static Vector3 GetTargetDestinationPosition(Vector3 fromPosition, Transform fallbackTarget = null, float wallOffset = 1.5f)
+    public static Vector3 GetTargetDestinationPosition(Vector3 fromPosition, Transform fallbackTarget = null, float wallOffset = 3.5f)
     {
-        if (fallbackTarget != null) return fallbackTarget.position;
-        if (SettlementManager.Ins != null && SettlementManager.Ins.CurrentSettlement != null)
+        Vector3 targetPos = (fallbackTarget != null) ? fallbackTarget.position : 
+            (SettlementManager.Ins != null && SettlementManager.Ins.CurrentSettlement != null ? SettlementManager.Ins.CurrentSettlement.transform.position : fromPosition);
+
+        if (fallbackTarget != null)
         {
-            return SettlementManager.Ins.CurrentSettlement.transform.position;
+            Collider col = fallbackTarget.GetComponentInChildren<Collider>();
+            if (col != null && !col.isTrigger)
+            {
+                Vector3 closestOnBounds = col.bounds.ClosestPoint(fromPosition);
+                Vector3 dirOut = (fromPosition - closestOnBounds).normalized;
+                dirOut.y = 0f;
+                if (dirOut.sqrMagnitude < 0.001f) dirOut = (fromPosition - targetPos).normalized;
+                return closestOnBounds + dirOut * wallOffset;
+            }
+
+            Vector3 dirFromTarget = (fromPosition - targetPos).normalized;
+            dirFromTarget.y = 0f;
+            if (dirFromTarget.sqrMagnitude < 0.001f) dirFromTarget = Vector3.forward;
+            return targetPos + dirFromTarget * wallOffset;
         }
-        return fromPosition;
+
+        return targetPos;
     }
 
     [System.Obsolete("Dùng GetTargetDestinationPosition thay thế.")]
-    public static Vector3 GetCastleWallDestination(Vector3 fromPosition, Transform fallbackTarget = null, float wallOffset = 1.5f)
+    public static Vector3 GetCastleWallDestination(Vector3 fromPosition, Transform fallbackTarget = null, float wallOffset = 3.5f)
     {
         return GetTargetDestinationPosition(fromPosition, fallbackTarget, wallOffset);
     }
@@ -1362,7 +1378,10 @@ public class EnemyAI : MonoBehaviour
 
             if (minDistance != float.MaxValue)
             {
-                basePosition = bestPoint;
+                Vector3 dir = (transform.position - bestPoint).normalized;
+                dir.y = 0f;
+                if (dir.sqrMagnitude < 0.001f) dir = (transform.position - target.position).normalized;
+                basePosition = bestPoint + dir * 3.5f;
             }
         }
 

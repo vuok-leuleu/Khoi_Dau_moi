@@ -68,7 +68,7 @@ MonoBehaviour:
   m_text: New Text
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
-  m_sharedMaterial: {fileID: 0}
+  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -205,7 +205,7 @@ MonoBehaviour:
   m_text: New Text
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
-  m_sharedMaterial: {fileID: 0}
+  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -648,7 +648,7 @@ MonoBehaviour:
   m_text: New Text
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
-  m_sharedMaterial: {fileID: 0}
+  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1056,7 +1056,7 @@ MonoBehaviour:
   m_text: New Text
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
-  m_sharedMaterial: {fileID: 0}
+  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1433,7 +1433,6 @@ GameObject:
   - component: {fileID: 2388463201279782421}
   - component: {fileID: 6921839730028787767}
   - component: {fileID: 6765081719761675800}
-  - component: {fileID: 7506379079746429103}
   m_Layer: 11
   m_Name: KhoGos
   m_TagString: Tower
@@ -1494,6 +1493,7 @@ MonoBehaviour:
   isInitialBuildNeeded: 1
   startAsRuined: 0
   initialBuildDuration: 1
+  slotIndex: -1
   buildingType: 2
   buildingName: "Kho g\u1ED7"
   visualModels:
@@ -1565,41 +1565,6 @@ MonoBehaviour:
   hpBarSize: {x: 2, y: 0.25}
   hpBarColor: {r: 1, g: 0, b: 0, a: 1}
   hideHpBarWhenFull: 1
---- !u!114 &7506379079746429103
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7303015327051835898}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: dc57fa606907c314788857a7534eefc5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BuildingUpgradeUI
-  localUpgradePanel: {fileID: 4755994269972547739}
-  panelRectTransform: {fileID: 4148108356387972103}
-  lockUIRotation: 1
-  faceCamera: 1
-  keepConstantSize: 1
-  baseDistance: 15
-  baseOrthographicSize: 5
-  globalUIScaleMultiplier: 1
-  autoArrangeButtons: 1
-  ringRadius: 200
-  startAngle: 45
-  enableWorkerSpawn: 0
-  spawnWorkerButton: {fileID: 0}
-  animDuration: 0.18
-  buildingNameText: {fileID: 5637770120443627173}
-  levelText: {fileID: 222445221111416176}
-  upgradeButton: {fileID: 8678254022674508637}
-  upgradeButtonText: {fileID: 0}
-  repairButton: {fileID: 5521623866789227510}
-  moveButton: {fileID: 6048458807304947128}
-  woodCostText: {fileID: 5190142736148261322}
-  stoneCostText: {fileID: 1043967222756235711}
-  foodCostText: {fileID: 4523017308305604831}
 --- !u!1 &7325317990235908031
 GameObject:
   m_ObjectHideFlags: 0
@@ -1770,7 +1735,7 @@ MonoBehaviour:
   m_text: New Text
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
-  m_sharedMaterial: {fileID: 0}
+  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

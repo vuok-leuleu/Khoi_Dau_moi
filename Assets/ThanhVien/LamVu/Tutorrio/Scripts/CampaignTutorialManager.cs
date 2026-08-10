@@ -102,6 +102,7 @@ public class CampaignTutorialManager : MonoBehaviour
         {
             currentStage = DemaciaTutorialStage.Completed;
             HidePointer();
+            HideHintText();
             if (tutorialCanvas != null) tutorialCanvas.gameObject.SetActive(false);
             return;
         }
@@ -289,7 +290,7 @@ public class CampaignTutorialManager : MonoBehaviour
         EnemySpawn spawner = GetEnemySpawner();
         if (spawner != null)
         {
-            spawner.SpawnEnemy();
+            spawner.SpawnSingleEnemy();
         }
 
         EnemyAI monster = Object.FindFirstObjectByType<EnemyAI>();
@@ -474,7 +475,26 @@ public class CampaignTutorialManager : MonoBehaviour
                 JsonDataManager.Ins.BroadcastAllResources();
             }
             UpdateHint("Đã hoàn thành Hướng Dẫn Khẩn Hoang! Nhận 500 Gỗ và 500 Đá.");
+            Invoke(nameof(HideHintText), 3.5f);
         });
+    }
+
+    public void HideHintText()
+    {
+        if (hintText != null)
+        {
+            hintText.text = "";
+            hintText.gameObject.SetActive(false);
+
+            if (hintText.transform.parent != null && hintText.transform.parent != tutorialCanvas?.transform)
+            {
+                string pName = hintText.transform.parent.name.ToLower();
+                if (pName.Contains("panel") || pName.Contains("hint") || pName.Contains("container"))
+                {
+                    hintText.transform.parent.gameObject.SetActive(false);
+                }
+            }
+        }
     }
 
     // ====================================================================
