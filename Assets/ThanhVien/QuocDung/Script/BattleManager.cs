@@ -58,7 +58,8 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private Vector3 cameraRotation = new Vector3(30f, 0f, 0f);
 
     [Header("Battle Result & Transition Settings")]
-    [SerializeField] private float battleEndDelay = 2.0f;
+    [Tooltip("Thời gian chờ trước khi tự động chuyển scene (Mặc định: 0s để bấm nút Return là quay scene ngay)")]
+    [SerializeField] private float battleEndDelay = 0.0f;
 
     [Header("Demacia Battle UI Settings")]
     [Tooltip("Bật/Tắt thanh máu Demacia Rising trên đỉnh camera")]
@@ -143,11 +144,11 @@ public class BattleManager : MonoBehaviour
     /// </summary>
     private System.Collections.IEnumerator MonitorBattleRoutine()
     {
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(0.2f);
 
         while (!isBattleOver)
         {
-            yield return new WaitForSeconds(0.5f);
+            yield return new WaitForSeconds(0.2f);
 
             // 1. Đếm số Enemy còn sống trong Battle Scene
             int livingEnemies = 0;
@@ -203,35 +204,40 @@ public class BattleManager : MonoBehaviour
             {
                 // Phe Lính THẮNG!
                 isBattleOver = true;
-                Debug.Log($"[BattleManager] 🏆 PHE LÍNH THẮNG TRẬN! Số lính sống sót = {livingSoldiers}. Đang chuyển về {BattleData.MainSceneName} sau {battleEndDelay}s...");
+                Debug.Log($"[BattleManager] 🏆 PHE LÍNH THẮNG TRẬN! Số lính sống sót = {livingSoldiers}. Cập nhật dữ liệu kết quả trận đấu.");
 
                 BattleData.HasResult = true;
                 BattleData.IsPlayerVictory = true;
                 BattleData.SurvivingSoldiersCount = livingSoldiers;
 
-                yield return new WaitForSeconds(battleEndDelay);
-
-                string returnScene = string.IsNullOrEmpty(BattleData.MainSceneName) ? "MainScene" : BattleData.MainSceneName;
-                UnityEngine.SceneManagement.SceneManager.LoadScene(returnScene);
+                // Hoàn tất đánh giá kết quả, không delay, không tự chuyển scene (UISceneBattle sẽ tự hiển thị UI và chuyển scene khi bấm Return)
                 yield break;
             }
             else if (livingSoldiers == 0 || curPlayerHP <= 0f)
             {
                 // Phe Lính THUA!
                 isBattleOver = true;
-                Debug.Log($"[BattleManager] 💀 PHE LÍNH THUA TRẬN! Toàn bộ lính đã ngã xuống. Đang chuyển về {BattleData.MainSceneName} sau {battleEndDelay}s...");
+                Debug.Log($"[BattleManager] 💀 PHE LÍNH THUA TRẬN! Toàn bộ lính đã ngã xuống. Cập nhật dữ liệu kết quả trận đấu.");
 
                 BattleData.HasResult = true;
                 BattleData.IsPlayerVictory = false;
                 BattleData.SurvivingSoldiersCount = 0;
 
-                yield return new WaitForSeconds(battleEndDelay);
-
-                string returnScene = string.IsNullOrEmpty(BattleData.MainSceneName) ? "MainScene" : BattleData.MainSceneName;
-                UnityEngine.SceneManagement.SceneManager.LoadScene(returnScene);
+                // Hoàn tất đánh giá kết quả, không delay, không tự chuyển scene (UISceneBattle sẽ tự hiển thị UI và chuyển scene khi bấm Return)
                 yield break;
             }
         }
+    }
+
+    /// <summary>
+    /// Chuyển về Scene chính ngay lập tức không delay
+    /// </summary>
+    public void ReturnToMainScene()
+    {
+        Time.timeScale = 1f;
+        string targetScene = (BattleData.HasData && !string.IsNullOrEmpty(BattleData.MainSceneName)) ? BattleData.MainSceneName : "MainScene";
+        Debug.Log($"[BattleManager] 🚀 ReturnToMainScene -> LoadScene('{targetScene}') ngay lập tức!");
+        UnityEngine.SceneManagement.SceneManager.LoadScene(targetScene);
     }
 
     private void Update()
