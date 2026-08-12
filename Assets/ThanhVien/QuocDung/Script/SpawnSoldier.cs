@@ -67,18 +67,34 @@ public class SpawnSoldier : MonoBehaviour
         return list;
     }
 
+    private bool IsBarracksBuildingType(BuildingType type)
+    {
+        return type == BuildingType.BarracksMelee ||
+               type == BuildingType.BarracksArcher ||
+               type == BuildingType.BarracksSpear ||
+               type.ToString().StartsWith("Barracks");
+    }
+
     void Awake()
     {
-        // Tự động tìm component UpgradeableBuilding trên cùng Object hoặc ở Object cha
-        upgradeableBuilding = GetComponent<UpgradeableBuilding>();
-        if (upgradeableBuilding != null)
+        UpgradeableBuilding ub = GetComponent<UpgradeableBuilding>();
+        if (ub != null && IsBarracksBuildingType(ub.buildingType))
         {
+            upgradeableBuilding = ub;
             isOnMainBuildingObject = true;
         }
         else
         {
-            upgradeableBuilding = GetComponentInParent<UpgradeableBuilding>();
-            isOnMainBuildingObject = false;
+            UpgradeableBuilding[] parents = GetComponentsInParent<UpgradeableBuilding>();
+            foreach (var p in parents)
+            {
+                if (p != null && IsBarracksBuildingType(p.buildingType))
+                {
+                    upgradeableBuilding = p;
+                    isOnMainBuildingObject = false;
+                    break;
+                }
+            }
         }
     }
 
@@ -101,9 +117,8 @@ public class SpawnSoldier : MonoBehaviour
         }
         else
         {
-            // Spawn số lượng lính tương ứng với Level hiện tại (nếu ko có building)
-            int initialCount = GetMaxSoldiersForLevel(currentLevel);
-            SpawnSoldiers(initialCount);
+            // Đồng bộ Level hiện tại (lính chỉ được sinh thông qua hệ thống Ô Huấn Luyện)
+            SyncLevel();
         }
     }
 
@@ -116,19 +131,17 @@ public class SpawnSoldier : MonoBehaviour
             upgradeableBuilding.OnLevelChanged -= HandleLevelChanged;
         }
 
-        // Khi Spawner bị tắt (do nâng cấp tắt model con hoặc bị hủy), xóa toàn bộ lính cũ
-        ClearSpawnedSoldiers();
+        // Không xóa lính thực khi OnDisable để bảo toàn lính khi nâng cấp công trình
         ClearHolograms();
     }
 
     [Header("Training Control")]
-    public bool autoSpawnOnBuild = false; // 🔥 Mặc định false: Lính sẽ được huấn luyện thông qua Ô Huấn Luyện
+    public bool autoSpawnOnBuild = false; // Mặc định false: Lính sẽ được huấn luyện thông qua Ô Huấn Luyện
 
     private void SyncLevel()
     {
         if (upgradeableBuilding != null)
         {
-            // Nếu nhà đang trong tiến trình nâng cấp/xây mới thì đợi đến khi xong mới spawn lính thật
             if (upgradeableBuilding.IsUpgrading) return;
 
             int activeLevel = upgradeableBuilding.CurrentLevel + 1;
@@ -139,10 +152,8 @@ public class SpawnSoldier : MonoBehaviour
             }
             else
             {
-                // Chỉ sinh lính nếu cấp độ của script này trùng khớp với cấp độ thực tế của công trình
                 if (currentLevel != activeLevel)
                 {
-                    ClearSpawnedSoldiers();
                     return;
                 }
             }
@@ -190,6 +201,7 @@ public class SpawnSoldier : MonoBehaviour
         if (unit == null) unit = newSoldier.GetComponentInChildren<UnitController>();
         if (unit != null)
         {
+            unit.SetHomePosition(spawnPosition);
             unit.SetAttackDamage(damage);
         }
 
@@ -204,16 +216,10 @@ public class SpawnSoldier : MonoBehaviour
         if (upgradeableBuilding == null) return;
         if (upgradeableBuilding.IsInitialBuildNeeded) return;
 
-        // Chỉ sinh hologram nếu cấp độ hiện tại của spawner khớp với cấp độ đang hoạt động của nhà
         int activeLevel = upgradeableBuilding.CurrentLevel + 1;
         if (currentLevel == activeLevel)
         {
-            // Khi bắt đầu nâng cấp, dọn dẹp lính thực cũ trước để lấy chỗ cho hologram
-            ClearSpawnedSoldiers();
-
-            // Số lượng hologram spawn bằng đúng level của công trình hiện tại
             int count = GetMaxSoldiersForLevel(currentLevel);
-
             SpawnHologramSoldiers(count);
             StartHologramAnimationCoroutine();
         }
@@ -388,6 +394,33 @@ public class SpawnSoldier : MonoBehaviour
         }
     }
 
+    public int GetCurrentActiveSoldierCount()
+    {
+        if (spawnedSoldiers == null) return 0;
+        int count = 0;
+        foreach (var s in spawnedSoldiers)
+        {
+            if (s != null && s.activeInHierarchy)
+            {
+                UnitController uc = s.GetComponent<UnitController>();
+                if (uc == null) uc = s.GetComponentInChildren<UnitController>();
+                if (uc != null && !uc.isDead) count++;
+            }
+        }
+        return count;
+    }
+
+    public bool IsCapacityFull()
+    {
+        int maxAllowed = GetMaxSoldiersForLevel(currentLevel);
+        return GetCurrentActiveSoldierCount() >= maxAllowed;
+    }
+
+    public void DestroyAllSoldiers()
+    {
+        ClearSpawnedSoldiers();
+    }
+
     // Hàm lấy sát thương của lính dựa theo Level
     public float GetDamageForLevel(int level)
     {
@@ -444,6 +477,7 @@ public class SpawnSoldier : MonoBehaviour
             UnitController unit = soldier.GetComponent<UnitController>();
             if (unit != null)
             {
+                unit.SetHomePosition(spawnPosition);
                 unit.SetAttackDamage(damage);
             }
 
@@ -696,12 +730,8 @@ public class SpawnSoldier : MonoBehaviour
             return;
         }
 
-        ClearSpawnedSoldiers();
         currentLevel++;
-        int newMax = GetMaxSoldiersForLevel(currentLevel);
-        SpawnSoldiers(newMax);
-
-        Debug.Log($"Nâng cấp thành công lên Level {currentLevel}! Đã xóa lính cũ và spawn {newMax} lính mới với sát thương {GetDamageForLevel(currentLevel)}.");
+        Debug.Log($"Nâng cấp thành công Trại Lính lên Level {currentLevel}! Mở khóa thêm ô huấn luyện mới.");
     }
 
     public int CurrentLevel => currentLevel;
@@ -718,11 +748,11 @@ public class SpawnSoldier : MonoBehaviour
         ClearSpawnedSoldiers();
         currentLevel = buildingLevel + 1;
         int maxAllowed = GetMaxSoldiersForLevel(currentLevel);
-        if (count <= 0 || count > maxAllowed)
+        int validCount = Mathf.Clamp(count, 0, maxAllowed);
+        if (validCount > 0)
         {
-            count = maxAllowed;
+            SpawnSoldiers(validCount);
         }
-        SpawnSoldiers(count);
     }
 
     [ContextMenu("Test Training")]

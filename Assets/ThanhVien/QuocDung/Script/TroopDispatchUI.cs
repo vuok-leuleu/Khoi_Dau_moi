@@ -158,7 +158,16 @@ public class TroopDispatchUI : MonoBehaviour
             BuildingCtrl bc = spawner.GetComponent<BuildingCtrl>();
             if (bc == null) bc = spawner.GetComponentInParent<BuildingCtrl>();
 
-            GameObject bObj = ub != null ? ub.gameObject : (bc != null ? bc.gameObject : spawner.transform.root.gameObject);
+            // Chỉ chấp nhận nếu Spawner thuộc về một công trình Doanh Trại thực sự
+            if (ub == null && bc == null) continue;
+            BuildingType bType = ub != null ? ub.buildingType : bc.buildingType;
+            bool isBarracks = bType == BuildingType.BarracksMelee ||
+                              bType == BuildingType.BarracksArcher ||
+                              bType == BuildingType.BarracksSpear ||
+                              bType.ToString().StartsWith("Barracks");
+            if (!isBarracks) continue;
+
+            GameObject bObj = ub != null ? ub.gameObject : bc.gameObject;
 
             // Deduplicate: Mỗi công trình Doanh Trại thật trong scene chỉ hiển thị đúng 1 dòng trên bảng UI
             if (processedBuildings.Contains(bObj)) continue;
@@ -186,10 +195,29 @@ public class TroopDispatchUI : MonoBehaviour
                 }
             }
 
-            string rawName = ub != null && !string.IsNullOrEmpty(ub.buildingName) ? ub.buildingName : bObj.name;
-            rawName = rawName.Replace("(Clone)", "").Trim();
+            SettlementZone zone = spawner.GetComponentInParent<SettlementZone>();
+            if (zone == null && ub != null) zone = ub.GetComponentInParent<SettlementZone>();
+            if (zone == null)
+            {
+                SettlementZone[] allZones = Object.FindObjectsByType<SettlementZone>(FindObjectsSortMode.None);
+                float minDist = float.MaxValue;
+                foreach (var z in allZones)
+                {
+                    if (z != null)
+                    {
+                        float d = Vector3.Distance(spawner.transform.position, z.transform.position);
+                        if (d < minDist)
+                        {
+                            minDist = d;
+                            zone = z;
+                        }
+                    }
+                }
+            }
 
-            string bName = $"Doanh Trại {bIndex} ({rawName})";
+            string zName = (zone != null && !string.IsNullOrEmpty(zone.settlementName)) ? zone.settlementName : $"Vùng {bIndex}";
+            string bName = $"Doanh Trại ({zName})";
+            bIndex++;
             bool hasSoldiers = activeSoldiers.Count > 0;
 
             BarracksDispatchData data = new BarracksDispatchData
@@ -235,9 +263,50 @@ public class TroopDispatchUI : MonoBehaviour
             GameObject labelObj = new GameObject("LabelText");
             labelObj.transform.SetParent(rowObj.transform, false);
             TextMeshProUGUI labelTMP = labelObj.AddComponent<TextMeshProUGUI>();
-            string countText = hasSoldiers 
-                ? $"<color=#FFD700>{activeSoldiers.Count} Lính Xuất Trận</color>" 
-                : "<color=#FF6666>0 Lính (Chưa sẵn sàng)</color>";
+            bool isDispatched = false;
+            foreach (var u in activeSoldiers)
+            {
+                if (u != null && u.isExpeditionMarching)
+                {
+                    isDispatched = true;
+                    break;
+                }
+            }
+
+            string targetName = "vùng đất địch";
+            if (!string.IsNullOrEmpty(BattleData.TargetedSettlementZoneName))
+            {
+                targetName = BattleData.TargetedSettlementZoneName;
+            }
+            else if (enemyTarget != null)
+            {
+                SettlementZone tZone = enemyTarget.GetComponentInParent<SettlementZone>();
+                if (tZone != null && !string.IsNullOrEmpty(tZone.settlementName))
+                {
+                    targetName = tZone.settlementName;
+                }
+                else
+                {
+                    targetName = enemyTarget.gameObject.name.Replace("(Clone)", "").Trim();
+                }
+            }
+
+            string countText;
+            if (isDispatched)
+            {
+                countText = $"<color=#FF9900>Đã cử đi tấn công vùng đất {targetName}</color>";
+                toggle.isOn = false;
+                toggle.interactable = false;
+            }
+            else if (hasSoldiers)
+            {
+                countText = $"<color=#FFD700>{activeSoldiers.Count} Lính Xuất Trận</color>";
+            }
+            else
+            {
+                countText = "<color=#FF6666>0 Lính (Chưa sẵn sàng)</color>";
+            }
+
             labelTMP.text = $"<b>{bName}</b> - {countText}";
             labelTMP.fontSize = 18;
             labelTMP.alignment = TextAlignmentOptions.Left;
@@ -297,6 +366,7 @@ public class TroopDispatchUI : MonoBehaviour
         dispatchTMP.fontStyle = FontStyles.Bold;
         dispatchTMP.alignment = TextAlignmentOptions.Center;
         dispatchTMP.color = Color.white;
+        dispatchTMP.raycastTarget = false;
         RectTransform dispatchTextRect = dispatchTextObj.GetComponent<RectTransform>();
         dispatchTextRect.anchorMin = Vector2.zero;
         dispatchTextRect.anchorMax = Vector2.one;
@@ -321,6 +391,7 @@ public class TroopDispatchUI : MonoBehaviour
         cancelTMP.fontSize = 18;
         cancelTMP.alignment = TextAlignmentOptions.Center;
         cancelTMP.color = Color.white;
+        cancelTMP.raycastTarget = false;
         RectTransform cancelTextRect = cancelTextObj.GetComponent<RectTransform>();
         cancelTextRect.anchorMin = Vector2.zero;
         cancelTextRect.anchorMax = Vector2.one;
@@ -360,7 +431,19 @@ public class TroopDispatchUI : MonoBehaviour
         Vector3 centerTarget = attackPosition;
         int totalSoldiers = selectedSoldiersToDispatch.Count;
 
-        // Chỉ gửi những lính của Doanh Trại ĐƯỢC CHỌN đi hành quân (với vị trí Formation đồng đều)
+        // Tính toán khoảng cách tối đa và đồng bộ hóa số Wave hành quân cho toàn bộ quân đoàn
+        float maxDist = 0f;
+        foreach (var soldier in selectedSoldiersToDispatch)
+        {
+            if (soldier != null)
+            {
+                float d = Vector3.Distance(soldier.transform.position, centerTarget);
+                if (d > maxDist) maxDist = d;
+            }
+        }
+        int syncWavesToReach = Mathf.Max(1, Mathf.RoundToInt(maxDist / 15f));
+
+        // Gửi toàn bộ lính đi hành quân đồng bộ theo Wave với vị trí Formation đồng đều
         for (int i = 0; i < totalSoldiers; i++)
         {
             var soldier = selectedSoldiersToDispatch[i];
@@ -368,9 +451,11 @@ public class TroopDispatchUI : MonoBehaviour
             {
                 float angle = (360f / Mathf.Max(1, totalSoldiers)) * i;
                 Vector3 offset = new Vector3(Mathf.Cos(angle * Mathf.Deg2Rad), 0f, Mathf.Sin(angle * Mathf.Deg2Rad)) * 2.0f;
-                soldier.StartExpeditionMarch(centerTarget + offset, -1);
+                soldier.StartExpeditionMarch(centerTarget + offset, syncWavesToReach);
             }
         }
+
+        BattleData.IsAttackingExpedition = true;
 
         // Bắt đầu Coroutine giám sát khi nhóm Lính hành quân này tới nơi thì nổ SceneBattle
         GameObject runner = new GameObject("ExpeditionBattleTriggerRunner");

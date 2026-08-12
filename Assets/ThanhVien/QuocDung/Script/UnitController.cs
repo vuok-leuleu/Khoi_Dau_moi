@@ -74,6 +74,11 @@ public class UnitController : MonoBehaviour
     [SerializeField] private Vector3 returnPosition;
     [SerializeField] private Vector3 warningPosition;
 
+    public void SetHomePosition(Vector3 pos)
+    {
+        returnPosition = pos;
+    }
+
     [Header("Expedition Wave Marching")]
     public bool isExpeditionMarching = false;
     public int marchStartWave = 1;
@@ -83,6 +88,7 @@ public class UnitController : MonoBehaviour
     public Vector3 marchDestinationPosition;
 
     public bool isMarchingToEnemyBase => isExpeditionMarching || isRespondingToWarning || isReturning;
+    public bool isDead => hpSoldier != null && hpSoldier.IsDead;
 
     [Header("Mũi Tên Dưới Chân (Ground Arrow)")]
     [Tooltip("Bật/Tắt hiển thị mũi tên di chuyển dưới chân Soldier")]
@@ -231,6 +237,11 @@ public class UnitController : MonoBehaviour
             {
                 agent.Warp(hit.position);
             }
+        }
+
+        if (returnPosition == Vector3.zero)
+        {
+            returnPosition = transform.position;
         }
 
         lowFreqCoroutine = StartCoroutine(LowFrequencyUpdate());

@@ -84,10 +84,19 @@ public class TroopTrainingSlotUI : MonoBehaviour
             return;
         }
 
-        // 3. CHẾ ĐỘ HOÀN THÀNH ✅
+        // 3. CHẾ ĐỘ HOÀN THÀNH ✅ (Đã chứa lính)
         if (data.isCompleted)
         {
-            if (completedStateObj != null) completedStateObj.SetActive(true);
+            if (completedStateObj != null)
+            {
+                completedStateObj.SetActive(true);
+                TextMeshProUGUI compTMP = completedStateObj.GetComponentInChildren<TextMeshProUGUI>();
+                if (compTMP != null)
+                {
+                    compTMP.text = GetTroopDisplayName(data.troopType);
+                }
+            }
+            if (troopNameTMP != null) troopNameTMP.text = GetTroopDisplayName(data.troopType);
             return;
         }
 
@@ -103,24 +112,42 @@ public class TroopTrainingSlotUI : MonoBehaviour
         if (!currentSlotData.isUnlocked)
         {
             int reqLevel = GetRequiredBarracksLevelForSlot(currentSlotData.slotIndex);
+            string warnMsg = $"Trại Lính Cấp 1 chỉ mở 3 ô huấn luyện. Hãy nâng cấp Trại Lính lên Lv.{reqLevel} để mở thêm ô!";
+            if (UIManager.Ins != null) UIManager.Ins.ShowWarning(warnMsg);
             Debug.Log($"[TroopTrainingSlotUI] Ô {currentSlotData.slotIndex + 1} đang bị khóa. Yêu cầu Trại Lính Lv.{reqLevel}.");
             return;
         }
 
         if (currentSlotData.isTraining)
         {
-            Debug.Log($"[TroopTrainingSlotUI] Ô {currentSlotData.slotIndex + 1} đang huấn luyện {GetTroopDisplayName(currentSlotData.troopType)}. Còn {currentSlotData.remainingWaves} Ngày.");
+            string msg = $"Ô {currentSlotData.slotIndex + 1} đang huấn luyện {GetTroopDisplayName(currentSlotData.troopType)}. Còn {currentSlotData.remainingWaves} Ngày.";
+            if (UIManager.Ins != null) UIManager.Ins.ShowWarning(msg);
+            Debug.Log($"[TroopTrainingSlotUI] {msg}");
+            return;
+        }
+
+        if (currentSlotData.isCompleted)
+        {
+            string msg = $"Ô này đang chứa 1 Lính {GetTroopDisplayName(currentSlotData.troopType)}. Hãy nâng cấp Trại Lính để huấn luyện thêm lính!";
+            if (UIManager.Ins != null) UIManager.Ins.ShowWarning(msg);
+            Debug.Log($"[TroopTrainingSlotUI] Ô {currentSlotData.slotIndex + 1}: {msg}");
             return;
         }
 
         // Nếu là Ô trống, mở Bảng chọn loại lính để bắt đầu huấn luyện
-        if (TroopSelectionModalUI.Ins != null)
+        TroopSelectionModalUI modal = TroopSelectionModalUI.Ins;
+        if (modal == null)
         {
-            TroopSelectionModalUI.Ins.OpenModal(currentZone, currentSlotData.slotIndex);
+            modal = Object.FindFirstObjectByType<TroopSelectionModalUI>(FindObjectsInactive.Include);
+        }
+
+        if (modal != null)
+        {
+            modal.OpenModal(currentZone, currentSlotData.slotIndex);
         }
         else
         {
-            // Mặc định huấn luyện Kiếm sĩ nếu chưa có Modal
+            Debug.LogWarning("[TroopTrainingSlotUI] ⚠️ Không tìm thấy TroopSelectionModalUI trong Scene! Đang huấn luyện mặc định Kiếm Sĩ.");
             if (TroopTrainingManager.Ins != null)
             {
                 TroopTrainingManager.Ins.StartTraining(currentZone, currentSlotData.slotIndex, BuildingType.BarracksMelee);

@@ -96,6 +96,29 @@ public class JsonDataManager : Singleton<JsonDataManager>
         if (amount > 0) TotalGoldCollected += amount;
         OnGoldChanged?.Invoke(gold);
     }
+
+    /// <summary>
+    /// Giảm 50% toàn bộ tài nguyên (dùng khi Phòng Thủ căn cứ bị thua)
+    /// </summary>
+    public void HalveAllResources()
+    {
+        int halfWood = Mathf.FloorToInt(wood * 0.5f);
+        int halfStone = Mathf.FloorToInt(stone * 0.5f);
+        int halfFood = Mathf.FloorToInt(food * 0.5f);
+        int halfGold = Mathf.FloorToInt(gold * 0.5f);
+
+        AddWood(-halfWood);
+        AddStone(-halfStone);
+        AddFood(-halfFood);
+        AddGold(-halfGold);
+
+        BuildingSystem buildingSys = BuildingSystem.Ins != null ? BuildingSystem.Ins : UnityEngine.Object.FindFirstObjectByType<BuildingSystem>();
+        if (buildingSys != null)
+        {
+            buildingSys.SaveBuildingsToSlot(1);
+        }
+        Debug.Log($"[JsonDataManager] 💀 PHÒNG THỦ THUA -> Bị cướp 50% tài nguyên! (-{halfWood} Gỗ, -{halfStone} Đá, -{halfFood} Lương, -{halfGold} Vàng)");
+    }
     // ──────────────────────────────────────────────
     // CHI TIÊU TÀI NGUYÊN AN TOÀN (không cho phép âm)
     // ──────────────────────────────────────────────

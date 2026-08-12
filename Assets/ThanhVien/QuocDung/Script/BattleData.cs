@@ -298,6 +298,8 @@ public static class BattleData
         SavedSoldierMarches.Clear();
     }
 
+    public static bool IsAttackingExpedition = false; // true = Xâm Chiếm / Chinh Phạt | false = Phòng Thủ Căn Cứ Nhà
+
     /// <summary>
     /// Áp dụng kết quả trận đấu khi quay lại Scene chính
     /// </summary>
@@ -306,20 +308,37 @@ public static class BattleData
         if (!HasResult) return;
 
         LastBattleWasVictory = IsPlayerVictory;
-        Debug.Log($"[BattleData] 🔥 Đang áp dụng kết quả trận đấu vào Scene chính ({MainSceneName}): Victory = {IsPlayerVictory}, SurvivingSoldiers = {SurvivingSoldiersCount}");
+        Debug.Log($"[BattleData] 🔥 Áp dụng kết quả trận đấu: IsAttackingExpedition = {IsAttackingExpedition}, Victory = {IsPlayerVictory}");
 
-        if (IsPlayerVictory)
+        if (IsAttackingExpedition)
         {
-            ApplyVictoryResult(SurvivingSoldiersCount);
+            // === THỜI ĐIỂM ĐI XÂM CHIẾM / CHINH PHẠT CĂN CỨ ĐỊCH ===
+            if (IsPlayerVictory)
+            {
+                ApplyExpeditionVictoryResult();
+            }
+            else
+            {
+                ApplyExpeditionDefeatResult();
+            }
         }
         else
         {
-            ApplyDefeatResult();
+            // === THỜI ĐIỂM PHÒNG THỦ CĂN CỨ NHÀ CHỐNG ĐỊCH TẤN CÔNG ===
+            if (IsPlayerVictory)
+            {
+                Debug.Log("[BattleData] 🛡️ PHÒNG THỦ THẮNG! Bảo toàn 100% căn cứ và tài nguyên.");
+            }
+            else
+            {
+                ApplyDefenseDefeatResult();
+            }
         }
 
         HasResult = false;
+        IsAttackingExpedition = false;
 
-        // 🔥 Lưu lại trạng thái công trình sau trận đấu vào Save Slot 1
+        // Lưu lại trạng thái công trình sau trận đấu vào Save Slot 1
         BuildingSystem buildingSys = BuildingSystem.Ins != null ? BuildingSystem.Ins : Object.FindFirstObjectByType<BuildingSystem>();
         if (buildingSys != null)
         {
@@ -327,54 +346,12 @@ public static class BattleData
         }
     }
 
-    private static void ApplyVictoryResult(int survivingCount)
+    /// <summary>
+    /// Xâm chiếm Thắng: Không mất lính, lính xuất trận trở về an toàn & Giải phóng Vùng đất
+    /// </summary>
+    private static void ApplyExpeditionVictoryResult()
     {
-        SpawnSoldier[] spawners = Object.FindObjectsByType<SpawnSoldier>(FindObjectsSortMode.None);
-        HashSet<GameObject> processedBuildings = new HashSet<GameObject>();
-        int remainingToAssign = survivingCount;
-
-        foreach (var spawner in spawners)
-        {
-            if (spawner == null || !spawner.gameObject.activeInHierarchy) continue;
-
-            UpgradeableBuilding building = spawner.GetComponent<UpgradeableBuilding>();
-            if (building == null) building = spawner.GetComponentInParent<UpgradeableBuilding>();
-            if (building == null) building = spawner.GetComponentInChildren<UpgradeableBuilding>();
-
-            GameObject bObj = building != null ? building.gameObject : spawner.transform.root.gameObject;
-            if (processedBuildings.Contains(bObj)) continue;
-            processedBuildings.Add(bObj);
-
-            if (building != null && building.IsRuined)
-            {
-                spawner.LoadAndSpawnSoldiers(0, building.CurrentLevel);
-                continue;
-            }
-
-            int level = spawner.CurrentLevel;
-            int maxForLevel = spawner.GetMaxSoldiersForLevel(level);
-
-            int assignCount = Mathf.Min(remainingToAssign, maxForLevel);
-            spawner.LoadAndSpawnSoldiers(assignCount, level - 1);
-            remainingToAssign -= assignCount;
-        }
-
-        UnitController[] activeUnits = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
-        if (activeUnits.Length > survivingCount)
-        {
-            int extraToRemove = activeUnits.Length - survivingCount;
-            for (int i = activeUnits.Length - 1; i >= 0 && extraToRemove > 0; i--)
-            {
-                if (activeUnits[i] != null && activeUnits[i].gameObject.activeInHierarchy)
-                {
-                    if (activeUnits[i].isExpeditionMarching) continue;
-                    Object.Destroy(activeUnits[i].gameObject);
-                    extraToRemove--;
-                }
-            }
-        }
-
-        // 🔥 CHINH PHỤC VÙNG ĐẤT: TIÊU DIỆT CĂN CỨ ĐỊCH TRÊN SETTLEMENT ZONE KHI GIẢI PHÓNG THÀNH CÔNG
+        // 🔓 CHINH PHỤC VÙNG ĐẤT: Giải phóng Căn cứ Địch trên SettlementZone
         SettlementZone conqueredZone = null;
         if (!string.IsNullOrEmpty(TargetedSettlementZoneName))
         {
@@ -406,51 +383,88 @@ public static class BattleData
         {
             conqueredZone.OnEnemyOutpostDestroyed();
             conqueredZone.SaveSettlementState();
-            Debug.Log($"[BattleData] 🏆 CHINH PHỤC THÀNH CÔNG! Đã giải phóng vùng đất '{conqueredZone.settlementName}'. Người chơi hiện có thể xây dựng công trình trên ô đất tại đây!");
+            Debug.Log($"[BattleData] 🏆 XÂM CHIẾM THẮNG! Đã giải phóng vùng đất '{conqueredZone.settlementName}'. Lính xuất trận trở về an toàn!");
         }
 
         TargetedSettlementZoneName = "";
-        Debug.Log($"[BattleData] 🏆 Thắng trận! Đã cập nhật {survivingCount} lính còn sống trên Scene chính.");
     }
 
-    private static void ApplyDefeatResult()
+    /// <summary>
+    /// Xâm chiếm Thua: Mất toàn bộ số lính đã cử đi xâm chiếm ngay lập tức khi quay về Scene. Lính ở nhà không bị mất.
+    /// </summary>
+    private static void ApplyExpeditionDefeatResult()
     {
-        UpgradeableBuilding[] buildings = Object.FindObjectsByType<UpgradeableBuilding>(FindObjectsSortMode.None);
-
-        foreach (var b in buildings)
-        {
-            if (b == null || !b.gameObject.activeInHierarchy) continue;
-
-            if (IsBarracksOrTower(b.buildingType))
-            {
-                b.TriggerDestructionSequence();
-
-                SpawnSoldier spawner = b.GetComponent<SpawnSoldier>();
-                if (spawner == null) spawner = b.GetComponentInChildren<SpawnSoldier>();
-                if (spawner != null)
-                {
-                    spawner.LoadAndSpawnSoldiers(0, b.CurrentLevel);
-                }
-
-                HPTower hpTower = b.GetComponent<HPTower>();
-                if (hpTower == null) hpTower = b.GetComponentInChildren<HPTower>();
-                if (hpTower != null)
-                {
-                    hpTower.SetRuinedHealth();
-                }
-            }
-        }
-
+        // Tiêu diệt các đoàn lính đang hành quân xuất trận
         UnitController[] activeUnits = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
         foreach (var u in activeUnits)
         {
-            if (u != null && u.gameObject.activeInHierarchy)
+            if (u != null && u.gameObject.activeInHierarchy && u.isExpeditionMarching)
             {
                 Object.Destroy(u.gameObject);
             }
         }
 
-        Debug.Log("[BattleData] 💀 Thua trận! Tất cả công trình Barracks & Tower đã bị phá hủy bên Scene chính.");
+        // Xóa dữ liệu lính của Spawner và ô slot của vùng xuất trận
+        if (!string.IsNullOrEmpty(TargetedSettlementZoneName))
+        {
+            SettlementZone zone = SettlementManager.Ins != null ? SettlementManager.Ins.GetZoneByName(TargetedSettlementZoneName) : null;
+            if (zone != null)
+            {
+                SpawnSoldier[] spawners = zone.GetComponentsInChildren<SpawnSoldier>(true);
+                foreach (var s in spawners)
+                {
+                    if (s != null) s.DestroyAllSoldiers();
+                }
+                if (TroopTrainingManager.Ins != null)
+                {
+                    TroopTrainingManager.Ins.ClearZoneTrainingSlots(zone.settlementName);
+                }
+            }
+        }
+
+        TargetedSettlementZoneName = "";
+        Debug.Log("[BattleData] 💀 XÂM CHIẾM THUA! Mất toàn bộ lực lượng lính đã cử đi xâm chiếm. Lính tại căn cứ nhà giữ nguyên.");
+    }
+
+    /// <summary>
+    /// Phòng thủ Thua: Mất toàn bộ lính thuộc về Vùng đất bị tấn công và MẤT 1 NỬA (50%) TÀI NGUYÊN!
+    /// </summary>
+    private static void ApplyDefenseDefeatResult()
+    {
+        SettlementZone targetZone = null;
+        if (!string.IsNullOrEmpty(TargetedSettlementZoneName))
+        {
+            if (SettlementManager.Ins != null) targetZone = SettlementManager.Ins.GetZoneByName(TargetedSettlementZoneName);
+        }
+
+        if (targetZone != null)
+        {
+            SpawnSoldier[] zoneSpawners = targetZone.GetComponentsInChildren<SpawnSoldier>(true);
+            foreach (var spawner in zoneSpawners)
+            {
+                if (spawner != null) spawner.DestroyAllSoldiers();
+            }
+            if (TroopTrainingManager.Ins != null)
+            {
+                TroopTrainingManager.Ins.ClearZoneTrainingSlots(targetZone.settlementName);
+            }
+        }
+
+        if (EnemyInvasionManager.Ins != null)
+        {
+            EnemyInvasionManager.Ins.TriggerDefenseDefeat(targetZone);
+        }
+        else
+        {
+            JsonDataManager jdm = JsonDataManager.Ins != null ? JsonDataManager.Ins : Object.FindFirstObjectByType<JsonDataManager>();
+            if (jdm != null)
+            {
+                jdm.HalveAllResources();
+            }
+        }
+
+        TargetedSettlementZoneName = "";
+        Debug.Log("[BattleData] 💀 PHÒNG THỦ THUA! Đã mất lính của Vùng đất bị tấn công và bị địch cướp 50% tài nguyên!");
     }
 
     public static bool IsBarracksOrTower(BuildingType type)

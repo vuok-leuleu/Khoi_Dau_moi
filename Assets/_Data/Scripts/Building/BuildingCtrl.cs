@@ -81,6 +81,11 @@ public class BuildingCtrl : MonoBehaviour
         UpgradeableBuilding ub = GetComponent<UpgradeableBuilding>();
         if (ub == null) ub = GetComponentInChildren<UpgradeableBuilding>();
 
+        SpawnSoldier spawner = GetComponent<SpawnSoldier>();
+        if (spawner == null) spawner = GetComponentInChildren<SpawnSoldier>();
+
+        int sCount = spawner != null ? spawner.GetCurrentActiveSoldierCount() : 0;
+
         return new BuildingState
         {
             buildingType = buildingType,
@@ -93,7 +98,8 @@ public class BuildingCtrl : MonoBehaviour
             currentWorkers = CurrentWorkerCount,
             maxWorkers = maxWorkers,
             level = ub != null ? ub.CurrentLevel : 0,
-            slotIndex = ub != null ? ub.slotIndex : -1
+            slotIndex = ub != null ? ub.slotIndex : -1,
+            soldierCount = sCount
         };
     }
 
@@ -120,6 +126,14 @@ public class BuildingCtrl : MonoBehaviour
         if (ub != null)
         {
             ub.slotIndex = state.slotIndex;
+        }
+
+        SpawnSoldier spawner = GetComponent<SpawnSoldier>();
+        if (spawner == null) spawner = GetComponentInChildren<SpawnSoldier>();
+        if (spawner != null && state.soldierCount > 0)
+        {
+            int lvl = ub != null ? ub.CurrentLevel + 1 : 1;
+            spawner.LoadAndSpawnSoldiers(state.soldierCount, lvl - 1);
         }
     }
 

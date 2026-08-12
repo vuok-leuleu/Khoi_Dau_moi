@@ -20,28 +20,54 @@ public class TroopSelectionModalUI : MonoBehaviour
 
     private SettlementZone targetZone;
     private int targetSlotIndex;
+    private bool isInitialized = false;
 
     private void Awake()
     {
         if (Ins == null) Ins = this;
-        else Destroy(gameObject);
+        InitListeners();
     }
 
-    private void Start()
+    private void InitListeners()
     {
-        if (trainMeleeBtn != null) trainMeleeBtn.onClick.AddListener(() => OnSelectTroop(BuildingType.BarracksMelee));
-        if (trainArcherBtn != null) trainArcherBtn.onClick.AddListener(() => OnSelectTroop(BuildingType.BarracksArcher));
-        if (trainSpearBtn != null) trainSpearBtn.onClick.AddListener(() => OnSelectTroop(BuildingType.BarracksSpear));
-        if (closeBtn != null) closeBtn.onClick.AddListener(CloseModal);
+        if (isInitialized) return;
+        isInitialized = true;
 
-        gameObject.SetActive(false);
+        if (trainMeleeBtn != null)
+        {
+            trainMeleeBtn.onClick.RemoveAllListeners();
+            trainMeleeBtn.onClick.AddListener(() => OnSelectTroop(BuildingType.BarracksMelee));
+        }
+
+        if (trainArcherBtn != null)
+        {
+            trainArcherBtn.onClick.RemoveAllListeners();
+            trainArcherBtn.onClick.AddListener(() => OnSelectTroop(BuildingType.BarracksArcher));
+        }
+
+        if (trainSpearBtn != null)
+        {
+            trainSpearBtn.onClick.RemoveAllListeners();
+            trainSpearBtn.onClick.AddListener(() => OnSelectTroop(BuildingType.BarracksSpear));
+        }
+
+        if (closeBtn != null)
+        {
+            closeBtn.onClick.RemoveAllListeners();
+            closeBtn.onClick.AddListener(CloseModal);
+        }
     }
 
     public void OpenModal(SettlementZone zone, int slotIndex)
     {
+        if (Ins == null) Ins = this;
+        InitListeners();
+
         targetZone = zone;
         targetSlotIndex = slotIndex;
+
         gameObject.SetActive(true);
+        transform.SetAsLastSibling(); // Đưa Popup lên trên cùng của Canvas để không bị che bởi các UI khác
     }
 
     public void CloseModal()

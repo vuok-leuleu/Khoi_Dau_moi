@@ -42,4 +42,5 @@ public class BuildingState
     public bool startAsRuined;
     public bool isInitialBuildNeeded;
     public int slotIndex = -1;           // Index của ô Slot 3D (0, 1, 2, 3...)
+    public int soldierCount = 0;         // Số lượng lính riêng thuộc về Doanh Trại này
 }
