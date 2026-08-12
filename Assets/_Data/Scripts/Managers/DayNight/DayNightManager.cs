@@ -109,7 +109,7 @@ public class DayNightManager : Singleton<DayNightManager>
         // Tự động kết nối sự kiện OnClick cho nút Skip Wave nếu được kéo thả trong Inspector
         if (skipWaveButton != null)
         {
-            skipWaveButton.onClick.RemoveAllListeners();
+            skipWaveButton.onClick.RemoveListener(SkipPreparation);
             skipWaveButton.onClick.AddListener(SkipPreparation);
         }
 
@@ -300,6 +300,10 @@ public class DayNightManager : Singleton<DayNightManager>
         // 💾 TỰ ĐỘNG LƯU DỮ LIỆU TOÀN BỘ GAME MỖI KHI QUA 1 NGÀY / WAVE MỚI
         if (BuildingSystem.Ins != null) BuildingSystem.Ins.SaveBuildingsToSlot(1);
         if (SettlementManager.Ins != null) SettlementManager.Ins.SaveAllSettlementsState();
+        
+        UILinh uiLinh = UILinh.Ins != null ? UILinh.Ins : UnityEngine.Object.FindFirstObjectByType<UILinh>();
+        if (uiLinh != null) uiLinh.SaveGame();
+
         PlayerPrefs.Save();
         Debug.Log($"[DayNightManager] 💾 Đã TỰ ĐỘNG LƯU TOÀN BỘ GAME khi trôi qua Ngày {currentWave}!");
 

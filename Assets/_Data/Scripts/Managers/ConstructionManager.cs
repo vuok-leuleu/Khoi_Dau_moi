@@ -159,7 +159,8 @@ public class ConstructionManager : Singleton<ConstructionManager>
             if (ub == null) ub = spawned.GetComponentInChildren<UpgradeableBuilding>();
             if (ub != null)
             {
-                ub.IsInitialBuildNeeded = false;
+                // 🔥 Kích hoạt tiến trình THI CÔNG XÂY DỰNG BAN ĐẦU cho công trình vừa sinh từ slot
+                ub.StartInitialBuildProcess();
                 if (SettlementManager.Ins != null && SettlementManager.Ins.CurrentSettlement != null)
                 {
                     var zone = SettlementManager.Ins.CurrentSettlement;

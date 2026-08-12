@@ -359,70 +359,48 @@ public class EnemySpawn : MonoBehaviour
     }
 
     /// <summary>
-    /// Tìm hoặc lấy mục tiêu tấn công (Nhà Chính / Nhachinhs / Town Hall)
+    /// Tìm hoặc lấy mục tiêu tấn công: Lựa chọn NGẪU NHIÊN 1 Prefab Nhà Chính (Town Hall / House) đang hoạt động trong Scene.
+    /// Tuyệt đối KHÔNG nhắm vào Transform rỗng (townHallPoint) hoặc Vùng Đất.
     /// </summary>
     public Transform GetOrFindAttackTarget()
     {
         if (attackTarget != null && attackTarget.gameObject.activeInHierarchy)
         {
+            UpgradeableBuilding targetUb = attackTarget.GetComponent<UpgradeableBuilding>();
+            if (targetUb == null) targetUb = attackTarget.GetComponentInChildren<UpgradeableBuilding>();
+            if (targetUb != null && (targetUb.buildingType == BuildingType.House || SettlementZone.IsTownHallBuilding(targetUb, null)))
+            {
+                return attackTarget;
+            }
+        }
+
+        // Tìm tất cả các Prefab công trình Nhà chính đang hoạt động thực tế trong Scene
+        List<UpgradeableBuilding> activeTownHallBuildings = new List<UpgradeableBuilding>();
+        UpgradeableBuilding[] allUbs = Object.FindObjectsByType<UpgradeableBuilding>(FindObjectsSortMode.None);
+        
+        foreach (var ub in allUbs)
+        {
+            if (ub != null && ub.gameObject.activeInHierarchy && (ub.buildingType == BuildingType.House || SettlementZone.IsTownHallBuilding(ub, null)))
+            {
+                activeTownHallBuildings.Add(ub);
+            }
+        }
+
+        // Chọn NGẪU NHIÊN 1 Prefab Nhà Chính trong danh sách các Nhà Chính đang có trong Scene
+        if (activeTownHallBuildings.Count > 0)
+        {
+            int randomIndex = Random.Range(0, activeTownHallBuildings.Count);
+            attackTarget = activeTownHallBuildings[randomIndex].transform;
             return attackTarget;
         }
 
-        // 1. Tìm theo SettlementZone chứa Spawner này
-        SettlementZone parentZone = GetComponentInParent<SettlementZone>();
-        if (parentZone != null)
-        {
-            if (parentZone.townHallBuilding != null && parentZone.townHallBuilding.gameObject.activeInHierarchy)
-            {
-                attackTarget = parentZone.townHallBuilding.transform;
-                return attackTarget;
-            }
-            if (parentZone.townHallPoint != null)
-            {
-                attackTarget = parentZone.townHallPoint;
-                return attackTarget;
-            }
-        }
-
-        // 2. Tìm theo SettlementManager
-        if (SettlementManager.Ins != null && SettlementManager.Ins.CurrentSettlement != null)
-        {
-            var curZone = SettlementManager.Ins.CurrentSettlement;
-            if (curZone.townHallBuilding != null && curZone.townHallBuilding.gameObject.activeInHierarchy)
-            {
-                attackTarget = curZone.townHallBuilding.transform;
-                return attackTarget;
-            }
-            if (curZone.townHallPoint != null)
-            {
-                attackTarget = curZone.townHallPoint;
-                return attackTarget;
-            }
-        }
-
-        // 3. Tìm theo tên GameObject Nhachinhs hoặc Nhachinh
+        // Fallback: Tìm theo tên GameObject "Nhachinhs" hoặc "Nhachinh" nếu chưa tìm thấy qua UpgradeableBuilding
         GameObject nhaChinh = GameObject.Find("Nhachinhs");
         if (nhaChinh == null) nhaChinh = GameObject.Find("Nhachinh");
         if (nhaChinh != null)
         {
             attackTarget = nhaChinh.transform;
             return attackTarget;
-        }
-
-        // 4. Tìm theo bất kỳ SettlementZone nào trong Scene
-        SettlementZone anyZone = Object.FindFirstObjectByType<SettlementZone>();
-        if (anyZone != null)
-        {
-            if (anyZone.townHallBuilding != null && anyZone.townHallBuilding.gameObject.activeInHierarchy)
-            {
-                attackTarget = anyZone.townHallBuilding.transform;
-                return attackTarget;
-            }
-            if (anyZone.townHallPoint != null)
-            {
-                attackTarget = anyZone.townHallPoint;
-                return attackTarget;
-            }
         }
 
         return null;

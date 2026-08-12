@@ -159,7 +159,7 @@ MonoBehaviour:
   m_text: "d\u0169ng ngu"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
-  m_sharedMaterial: {fileID: 0}
+  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -183,12 +183,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20
+  m_fontSize: 18
   m_fontSizeBase: 20
   m_fontWeight: 400
-  m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_enableAutoSizing: 1
+  m_fontSizeMin: 14
+  m_fontSizeMax: 18
   m_fontStyle: 1
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 256
@@ -510,9 +510,12 @@ MonoBehaviour:
   rewardAreaContainer: {fileID: 2908458169820241118}
   rewardItemPrefab: {fileID: 547489616136399246, guid: 5a6bf30a66da7cb4fbf4d339d5121669, type: 3}
   goldIcon: {fileID: -364938375, guid: b08b8d18cd628fe4a800e4c155b48c1c, type: 3}
-  expIcon: {fileID: -1371487347, guid: b08b8d18cd628fe4a800e4c155b48c1c, type: 3}
   woodIcon: {fileID: -2025151088, guid: b08b8d18cd628fe4a800e4c155b48c1c, type: 3}
   stoneIcon: {fileID: 1350962331, guid: b08b8d18cd628fe4a800e4c155b48c1c, type: 3}
+  foodIcon: {fileID: -1018307774, guid: b08b8d18cd628fe4a800e4c155b48c1c, type: 3}
+  expIcon: {fileID: -1371487347, guid: b08b8d18cd628fe4a800e4c155b48c1c, type: 3}
+  gemIcon: {fileID: 0}
+  valorIcon: {fileID: 0}
   claimableTextStr: "Nh\u1EADn"
   notClaimableTextStr: "CH\u01AFA XONG"
   claimedTextStr: "\u0110\xE3 nh\u1EADn"
@@ -911,7 +914,7 @@ MonoBehaviour:
   m_text: "d\u0169ng ngu 5 l\u1EA7n"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
-  m_sharedMaterial: {fileID: 0}
+  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -935,12 +938,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 12
+  m_fontSize: 14
   m_fontSizeBase: 15
   m_fontWeight: 400
   m_enableAutoSizing: 1
-  m_fontSizeMin: 10
-  m_fontSizeMax: 12
+  m_fontSizeMin: 12
+  m_fontSizeMax: 14
   m_fontStyle: 0
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 256
@@ -1048,7 +1051,7 @@ MonoBehaviour:
   m_text: 3/5
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
-  m_sharedMaterial: {fileID: 0}
+  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1302,7 +1305,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
   m_AnchoredPosition: {x: 45, y: 0}
-  m_SizeDelta: {x: 60, y: 60}
+  m_SizeDelta: {x: 45, y: 45}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!222 &7013460036135042808
 CanvasRenderer:
@@ -1332,7 +1335,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: -770498727, guid: 9f8b2456802cfb04baf093db43f5d85e, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1

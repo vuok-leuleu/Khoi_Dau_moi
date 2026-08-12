@@ -27,9 +27,12 @@ public class QuestItemUI : MonoBehaviour
 
     [Header("Default Reward Icons")]
     [SerializeField] private Sprite goldIcon;
-    [SerializeField] private Sprite expIcon;
     [SerializeField] private Sprite woodIcon;
     [SerializeField] private Sprite stoneIcon;
+    [SerializeField] private Sprite foodIcon;
+    [SerializeField] private Sprite expIcon;
+    [SerializeField] private Sprite gemIcon;
+    [SerializeField] private Sprite valorIcon;
 
     [Header("Text Strings Config")]
     [SerializeField] private string claimableTextStr = "NHẬN";
@@ -79,7 +82,18 @@ public class QuestItemUI : MonoBehaviour
     {
         EnsureReferences();
 
-        if (questIcon != null && icon != null) questIcon.sprite = icon;
+        if (questIcon != null)
+        {
+            if (icon != null)
+            {
+                questIcon.sprite = icon;
+                questIcon.gameObject.SetActive(true);
+            }
+            else
+            {
+                questIcon.gameObject.SetActive(false); // Tự động ẩn ô vuông trắng khi chưa có hình
+            }
+        }
         if (questTitleText != null) questTitleText.text = title;
         if (questDescriptionText != null) questDescriptionText.text = description;
         if (progressText != null) progressText.text = string.Format("{0}/{1}", currentProgress, maxProgress);
@@ -164,10 +178,13 @@ public class QuestItemUI : MonoBehaviour
     {
         switch (type)
         {
-            case RewardType.Gold:  return goldIcon;
-            case RewardType.Exp:   return expIcon;
-            case RewardType.Wood:  return woodIcon;
-            case RewardType.Stone: return stoneIcon;
+            case RewardType.Gold:         return goldIcon;
+            case RewardType.Wood:         return woodIcon;
+            case RewardType.Stone:        return stoneIcon;
+            case RewardType.Food:         return foodIcon;
+            case RewardType.Exp:          return expIcon;
+            case RewardType.Gem:          return gemIcon;
+            case RewardType.Valor:        return valorIcon;
             default: return null;
         }
     }

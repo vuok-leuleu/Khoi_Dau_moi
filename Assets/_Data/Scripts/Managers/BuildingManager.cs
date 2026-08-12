@@ -244,7 +244,9 @@ public class BuildingManager : Singleton<BuildingManager>
                 BuildingCtrl bCtrl = targetUb.GetComponent<BuildingCtrl>();
                 if (bCtrl != null) bCtrl.FromState(state);
 
-                targetUb.LoadBuildingData(state.level, state.isRuined, state.isInitialBuildNeeded);
+                bool isReturningFromBattle = BattleData.HasData || BattleData.HasResult || BattleData.LastBattleWasVictory;
+                bool initBuildNeeded = isReturningFromBattle ? false : state.isInitialBuildNeeded;
+                targetUb.LoadBuildingData(state.level, state.isRuined, initBuildNeeded);
 
                 if (targetZone != null)
                 {
@@ -288,10 +290,14 @@ public class BuildingManager : Singleton<BuildingManager>
                     if (upgradeable != null)
                     {
                         upgradeable.slotIndex = state.slotIndex;
-                        upgradeable.LoadBuildingData(state.level, state.isRuined, state.isInitialBuildNeeded);
+
+                        bool isReturningFromBattle = BattleData.HasData || BattleData.HasResult || BattleData.LastBattleWasVictory;
+                        bool initBuildNeeded = isReturningFromBattle ? false : state.isInitialBuildNeeded;
+                        upgradeable.LoadBuildingData(state.level, state.isRuined, initBuildNeeded);
 
                         if (targetZone != null)
                         {
+                            targetZone.LoadSettlementState();
                             upgradeable.transform.SetParent(targetZone.transform, true);
                             if (SettlementZone.IsTownHallBuilding(upgradeable, targetZone))
                             {

@@ -709,80 +709,9 @@ public class BattleManager : MonoBehaviour
         if (leftSpawnPoint == null) return;
 
         Vector3 originLeft = leftSpawnPoint.position;
+        Vector3 soldierFrontOrigin = originLeft + Vector3.right * 6f;
 
-        // Phân loại công trình: Tháp Canh (Đứng sau cùng) và Tháp Tấn Công / Doanh Trại (Đứng phía trước Tháp Canh)
-        List<BattleData.BuildingInfo> watchTowers = new List<BattleData.BuildingInfo>();
-        List<BattleData.BuildingInfo> attackBuildings = new List<BattleData.BuildingInfo>();
-
-        foreach (var b in BattleData.PlayerBuildings)
-        {
-            if (b.buildingType == BuildingType.WatchTower)
-            {
-                watchTowers.Add(b);
-            }
-            else if (IsCombatBuilding(b.buildingType))
-            {
-                attackBuildings.Add(b);
-            }
-        }
-
-        Vector3 playerAreaCenter = originLeft + Vector3.right * 6f;
-
-        // Tháp Canh (WatchTower) đứng ở HÀNG SAU CÙNG
-        Vector3 watchTowerOrigin = playerAreaCenter + Vector3.left * 3f;
-
-        // Các công trình tấn công (Tháp Cung, Pháo, Doanh Trại) đứng PHÍA TRƯỚC Tháp Canh
-        Vector3 attackBuildingOrigin = watchTowers.Count > 0 ? (playerAreaCenter + Vector3.right * 2f) : playerAreaCenter;
-
-        // Lính đứng PHÍA TRƯỚC toàn bộ công trình
-        Vector3 soldierFrontOrigin = attackBuildingOrigin + Vector3.right * 5f;
-
-        float actualBuildingSpacing = Mathf.Max(6.0f, buildingSpacing);
         int soldierTotalSpawned = 0;
-
-        // 1. Spawn Tháp Canh (Hàng sau cùng)
-        for (int i = 0; i < watchTowers.Count; i++)
-        {
-            var info = watchTowers[i];
-            GameObject prefab = GetBuildingPrefab(info.buildingType);
-            if (prefab != null)
-            {
-                float offsetZ = (i - (watchTowers.Count - 1) * 0.5f) * actualBuildingSpacing;
-                Vector3 pos = watchTowerOrigin + Vector3.forward * offsetZ;
-                Quaternion rot = Quaternion.Euler(0, 90, 0);
-
-                GameObject spawned = Instantiate(prefab, pos, rot);
-                spawned.name = $"Player_{info.buildingType}_Lv{info.level}";
-                spawnedPlayerObjects.Add(spawned);
-
-                SetupSpawnedBuildingState(spawned, info.level);
-            }
-        }
-
-        // 2. Spawn các Công trình Tấn Công (ĐỨNG PHÍA TRƯỚC THÁP CANH)
-        int buildingsPerRow = 3;
-        for (int i = 0; i < attackBuildings.Count; i++)
-        {
-            var info = attackBuildings[i];
-            GameObject prefab = GetBuildingPrefab(info.buildingType);
-            if (prefab != null)
-            {
-                int bRow = i / buildingsPerRow;
-                int bCol = i % buildingsPerRow;
-                int countInRow = Mathf.Min(buildingsPerRow, attackBuildings.Count - bRow * buildingsPerRow);
-
-                float offsetZ = (bCol - (countInRow - 1) * 0.5f) * actualBuildingSpacing;
-                // bRow tăng tiến về phía trước theo hướng right (hướng enemy) hoặc lùi dần
-                Vector3 pos = attackBuildingOrigin + Vector3.right * (bRow * 4f) + Vector3.forward * offsetZ;
-                Quaternion rot = Quaternion.Euler(0, 90, 0);
-
-                GameObject spawned = Instantiate(prefab, pos, rot);
-                spawned.name = $"Player_{info.buildingType}_Lv{info.level}";
-                spawnedPlayerObjects.Add(spawned);
-
-                SetupSpawnedBuildingState(spawned, info.level);
-            }
-        }
 
         // 2. Spawn toàn bộ Lính trong căn cứ
         foreach (var buildingInfo in BattleData.PlayerBuildings)

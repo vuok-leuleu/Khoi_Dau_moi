@@ -7,6 +7,8 @@ using UnityEngine.SceneManagement; // 🔥 THÊM: Để reload lại đúng Scen
 
 public class UILinh : MonoBehaviour
 {
+    public static UILinh Ins { get; private set; }
+
     [Header("UI Reference")]
     public TMP_Text textCount;
 
@@ -40,6 +42,7 @@ public class UILinh : MonoBehaviour
 
     void Awake()
     {
+        if (Ins == null) Ins = this;
         savePath = Path.Combine(Application.persistentDataPath, saveFileName);
     }
 
@@ -121,7 +124,7 @@ public class UILinh : MonoBehaviour
                 entry.buildingName = building.gameObject.name;
                 entry.level = building.CurrentLevel;
                 entry.isRuined = building.IsRuined;
-                entry.isInitialBuildNeeded = building.IsInitialBuildNeeded;
+                entry.isInitialBuildNeeded = (building.CurrentLevel > 0) ? false : building.IsInitialBuildNeeded;
 
                 SpawnSoldier spawner = building.GetComponentInChildren<SpawnSoldier>();
                 if (spawner != null)
@@ -159,12 +162,15 @@ public class UILinh : MonoBehaviour
 
                 UpgradeableBuilding[] sceneBuildings = FindObjectsOfType<UpgradeableBuilding>();
 
+                bool isReturningFromBattle = BattleData.HasData || BattleData.HasResult || BattleData.LastBattleWasVictory;
+
                 foreach (BuildingSaveEntry entry in saveData.buildings)
                 {
                     UpgradeableBuilding building = Array.Find(sceneBuildings, b => b.gameObject.name == entry.buildingName);
                     if (building != null)
                     {
-                        building.LoadBuildingData(entry.level, entry.isRuined, entry.isInitialBuildNeeded);
+                        bool initBuildNeeded = isReturningFromBattle ? false : entry.isInitialBuildNeeded;
+                        building.LoadBuildingData(entry.level, entry.isRuined, initBuildNeeded);
 
                         SpawnSoldier spawner = building.GetComponentInChildren<SpawnSoldier>();
                         if (spawner != null)

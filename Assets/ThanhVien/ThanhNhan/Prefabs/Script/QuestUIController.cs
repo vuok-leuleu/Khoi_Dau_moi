@@ -1,29 +1,41 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using DG.Tweening;
+using TMPro;
 
 public enum QuestType
 {
-    MainQuest,      // Tab_Quest
-    Combat,         // Tab_Combat
-    Achievement,    // Tab_Achievement
-    Settings        // Tab_Settings
+    Chapter1,       // Tab 1: Chương 1
+    Chapter2,       // Tab 2: Chương 2
+    Chapter3,       // Tab 3: Chương 3
+    Daily,          // Tab 4: Nhiệm vụ Hằng Ngày
+
+    // Giữ tương thích ngược với Unity Inspector cũ
+    ActStory = Chapter1,
+    MainQuest = Chapter1,
+    Combat = Chapter2,
+    Settings = Chapter3,
+    Weekly = Chapter3,
+    Achievement = Daily
 }
 
 public enum RewardType
 {
-    Gold,
-    Exp,
-    Wood,
-    Stone
+    Gold,           // Vàng
+    Wood,           // Gỗ
+    Stone,          // Đá
+    Food,           // Lúa / Thức ăn
+    Exp,            // Kinh nghiệm
+    Gem,            // Đá quý
+    Valor,          // Dũng khí
+    SilverShield = Gold
 }
 
 [System.Serializable]
 public class QuestReward
 {
     public RewardType rewardType;
-    public Sprite customIcon; // Để None nếu muốn dùng Icon mặc định
+    public Sprite customIcon;
     public int amount;
 }
 
@@ -39,13 +51,34 @@ public class QuestDataDemo
     public int maxProgress;
     public bool isClaimed;
 
-    // Danh sách phần thưởng linh hoạt (thích để 1, 2, 3 hay 4 item tùy ý)
+    public List<QuestReward> rewards = new List<QuestReward>();
+}
+
+[System.Serializable]
+public class EventMilestoneData
+{
+    public string milestoneID;
+    public string title;
+    public int requiredGold;
+    public bool isClaimed;
     public List<QuestReward> rewards = new List<QuestReward>();
 }
 
 public class QuestUIController : MonoBehaviour
 {
+    public static QuestUIController Instance { get; private set; }
+
+    [Header("⚔️ DEMACIA RISING EVENT HEADER")]
+    [SerializeField] private string actTitle = "HỒI 1: KHỞI NGUYÊN DEMACIA";
+    [SerializeField] private TextMeshProUGUI actTitleText;
+    [SerializeField] private TextMeshProUGUI goldProgressText;
+    [SerializeField] private Slider actProgressBar;
+    [SerializeField] private int totalGoldEarned = 0;
+    [SerializeField] private int maxActGold = 3000;
+    [SerializeField] private List<EventMilestoneData> eventMilestones = new List<EventMilestoneData>();
+
     [Header("UI References")]
+    [SerializeField] private GameObject windowPanel;   // Bảng giao diện chính cần Ẩn/Hiện (nếu bỏ trống sẽ dùng gameObject này)
     [SerializeField] private Transform contentArea;
     [SerializeField] private GameObject questItemPrefab;
     [SerializeField] private Button closeButton;
@@ -59,37 +92,19 @@ public class QuestUIController : MonoBehaviour
     [SerializeField] private KeyCode toggleHotkey = KeyCode.Q;
 
     [Header("Tab Buttons")]
-    [SerializeField] private Button tabQuestBtn;
-    [SerializeField] private Button tabCombatBtn;
-    [SerializeField] private Button tabAchievementBtn;
-    [SerializeField] private Button tabSettingsBtn;
+    [SerializeField] private Button tabChapter1Btn;    // Nút Tab 1: Chương 1
+    [SerializeField] private Button tabChapter2Btn;    // Nút Tab 2: Chương 2
+    [SerializeField] private Button tabChapter3Btn;    // Nút Tab 3: Chương 3
+    [SerializeField] private Button tabDailyBtn;       // Nút Tab 4: Nhiệm vụ Hằng Ngày
+
+    // Aliases tương thích Unity Inspector cũ
+    [SerializeField] private Button tabQuestBtn;       
+    [SerializeField] private Button tabCombatBtn;      
+    [SerializeField] private Button tabSettingsBtn;    
+    [SerializeField] private Button tabAchievementBtn; 
 
     [Header("Data List")]
     [SerializeField] private List<QuestDataDemo> questList = new List<QuestDataDemo>();
-
-    [Header("✨ ANIMATION SETTINGS (BẬT/TẮT TỤY CHỈNH)")]
-    [Tooltip("Công tắc tổng cho tất cả hiệu ứng")]
-    [SerializeField] private bool enableAnimations = true;
-    [Tooltip("Khung Panel chính của bảng Quest (để trống sẽ tự lấy Transform của script)")]
-    [SerializeField] private Transform panelContainer;
-    [Tooltip("Bật/tắt hiệu ứng Mở/Đóng cửa sổ (Pop-up)")]
-    [SerializeField] private bool useWindowPopupAnim = true;
-    [SerializeField] private float windowAnimDuration = 0.25f;
-    [SerializeField] private Ease windowOpenEase = Ease.OutBack;
-    [SerializeField] private Ease windowCloseEase = Ease.InBack;
-
-    [Tooltip("Bật/tắt hiệu ứng Thẻ Quest xuất hiện lần lượt (Staggered Entry)")]
-    [SerializeField] private bool useStaggeredCardAnim = true;
-    [SerializeField] private float cardStaggerDelay = 0.05f;
-    [SerializeField] private float cardAnimDuration = 0.25f;
-
-    [Tooltip("Bật/tắt hiệu ứng Chấm Đỏ Nhịp Thở (Notification Pulse)")]
-    [SerializeField] private bool useNotificationPulse = true;
-    [SerializeField] private float pulseScaleMultiplier = 1.18f;
-    [SerializeField] private float pulseDuration = 0.6f;
-
-    [Tooltip("Bật/tắt hiệu ứng Phóng To Tab Đang Chọn")]
-    [SerializeField] private bool useTabHighlightAnim = true;
 
     [Header("🛠️ DEBUG / TEST SETTINGS")]
     [SerializeField] private bool enableDebugHotkeys = true;
@@ -97,204 +112,16 @@ public class QuestUIController : MonoBehaviour
     [SerializeField] private KeyCode completeAllHotkey = KeyCode.Y;
     [SerializeField] private KeyCode resetAllHotkey = KeyCode.R;
 
-    private QuestType currentTab = QuestType.MainQuest;
+    private QuestType currentTab = QuestType.Chapter1;
+
+    public int TotalGoldEarned => totalGoldEarned;
+    public QuestType CurrentTab => currentTab;
+    public bool IsWindowOpen => windowPanel != null ? windowPanel.activeSelf : gameObject.activeSelf;
 
     private void Awake()
     {
-        if (panelContainer == null) panelContainer = transform;
-
-        if (questList == null || questList.Count == 0)
-        {
-            InitDefaultQuests();
-        }
-    }
-
-    private void Reset()
-    {
-        InitDefaultQuests();
-    }
-
-    [ContextMenu("🛠️ Add Default Quests")]
-    public void InitDefaultQuests()
-    {
-        questList = new List<QuestDataDemo>
-        {
-            new QuestDataDemo
-            {
-                questID = "main_01",
-                questType = QuestType.MainQuest,
-                title = "Khởi Đầu Hành Trình",
-                description = "Trò chuyện với Trưởng Làng để tiếp nhận nhiệm vụ hướng dẫn khai hoang ban đầu.",
-                currentProgress = 1,
-                maxProgress = 1,
-                isClaimed = false,
-                rewards = new List<QuestReward>
-                {
-                    new QuestReward { rewardType = RewardType.Gold, amount = 500 },
-                    new QuestReward { rewardType = RewardType.Exp, amount = 200 },
-                    new QuestReward { rewardType = RewardType.Wood, amount = 50 }
-                }
-            },
-            new QuestDataDemo
-            {
-                questID = "main_02",
-                questType = QuestType.MainQuest,
-                title = "Khai Thác Gỗ Xây Dựng",
-                description = "Chặt các rặng cây xung quanh làng để thu thập đủ 100 Gỗ làm vật liệu.",
-                currentProgress = 60,
-                maxProgress = 100,
-                isClaimed = false,
-                rewards = new List<QuestReward>
-                {
-                    new QuestReward { rewardType = RewardType.Gold, amount = 300 },
-                    new QuestReward { rewardType = RewardType.Wood, amount = 100 },
-                    new QuestReward { rewardType = RewardType.Exp, amount = 250 }
-                }
-            },
-            new QuestDataDemo
-            {
-                questID = "main_03",
-                questType = QuestType.MainQuest,
-                title = "Xây Dựng Nơi Cư Trú",
-                description = "Dựng 1 Căn Nhà Gỗ đầu tiên để tạo chỗ ở và thu hút dân làng mới.",
-                currentProgress = 0,
-                maxProgress = 1,
-                isClaimed = false,
-                rewards = new List<QuestReward>
-                {
-                    new QuestReward { rewardType = RewardType.Gold, amount = 800 },
-                    new QuestReward { rewardType = RewardType.Wood, amount = 100 },
-                    new QuestReward { rewardType = RewardType.Exp, amount = 400 }
-                }
-            },
-            new QuestDataDemo
-            {
-                questID = "main_04",
-                questType = QuestType.MainQuest,
-                title = "Khai Thác Đá Mỏ",
-                description = "Khai phá mỏ thạch anh xung quanh căn cứ để tích lũy đủ 80 Đá xây dựng.",
-                currentProgress = 35,
-                maxProgress = 80,
-                isClaimed = false,
-                rewards = new List<QuestReward>
-                {
-                    new QuestReward { rewardType = RewardType.Gold, amount = 500 },
-                    new QuestReward { rewardType = RewardType.Stone, amount = 80 },
-                    new QuestReward { rewardType = RewardType.Exp, amount = 300 }
-                }
-            },
-            new QuestDataDemo
-            {
-                questID = "main_05",
-                questType = QuestType.MainQuest,
-                title = "Tích Lương Trồng Trọt",
-                description = "Thu hoạch 120 Lúa lương thực đảm bảo nguồn thức ăn dự trữ cho làng.",
-                currentProgress = 120,
-                maxProgress = 120,
-                isClaimed = false,
-                rewards = new List<QuestReward>
-                {
-                    new QuestReward { rewardType = RewardType.Gold, amount = 1000 },
-                    new QuestReward { rewardType = RewardType.Wood, amount = 80 },
-                    new QuestReward { rewardType = RewardType.Exp, amount = 350 }
-                }
-            },
-            new QuestDataDemo
-            {
-                questID = "main_06",
-                questType = QuestType.MainQuest,
-                title = "Mộ Quân Dân Làng",
-                description = "Tuyển dụng 3 Người Dân Làng để gia tăng năng suất khai thác tài nguyên.",
-                currentProgress = 1,
-                maxProgress = 3,
-                isClaimed = false,
-                rewards = new List<QuestReward>
-                {
-                    new QuestReward { rewardType = RewardType.Gold, amount = 1200 },
-                    new QuestReward { rewardType = RewardType.Stone, amount = 60 },
-                    new QuestReward { rewardType = RewardType.Exp, amount = 500 }
-                }
-            },
-            new QuestDataDemo
-            {
-                questID = "main_07",
-                questType = QuestType.MainQuest,
-                title = "Mở Rộng Lãnh Thổ",
-                description = "Chinh phục và khai phá thêm 1 Ô Đất Mới để mở rộng quy mô căn cứ.",
-                currentProgress = 0,
-                maxProgress = 1,
-                isClaimed = false,
-                rewards = new List<QuestReward>
-                {
-                    new QuestReward { rewardType = RewardType.Gold, amount = 1500 },
-                    new QuestReward { rewardType = RewardType.Wood, amount = 150 },
-                    new QuestReward { rewardType = RewardType.Stone, amount = 100 }
-                }
-            },
-            new QuestDataDemo
-            {
-                questID = "main_08",
-                questType = QuestType.MainQuest,
-                title = "Gia Cố Hàng Rào Căn Cứ",
-                description = "Xây dựng hệ thống rào chắn chắc chắn để chống lại các đợt tấn công ban đêm.",
-                currentProgress = 0,
-                maxProgress = 1,
-                isClaimed = false,
-                rewards = new List<QuestReward>
-                {
-                    new QuestReward { rewardType = RewardType.Gold, amount = 2000 },
-                    new QuestReward { rewardType = RewardType.Wood, amount = 200 },
-                    new QuestReward { rewardType = RewardType.Exp, amount = 800 }
-                }
-            },
-            new QuestDataDemo
-            {
-                questID = "combat_01",
-                questType = QuestType.Combat,
-                title = "Dọn Dẹp Quái Vật",
-                description = "Hạ gục 10 Quái Thạch Quỷ đang hoành hành xung quanh căn cứ.",
-                currentProgress = 4,
-                maxProgress = 10,
-                isClaimed = false,
-                rewards = new List<QuestReward>
-                {
-                    new QuestReward { rewardType = RewardType.Exp, amount = 500 },
-                    new QuestReward { rewardType = RewardType.Gold, amount = 1000 },
-                    new QuestReward { rewardType = RewardType.Stone, amount = 30 }
-                }
-            },
-            new QuestDataDemo
-            {
-                questID = "achieve_01",
-                questType = QuestType.Achievement,
-                title = "Nhà Thu Hoạch Tài Ba",
-                description = "Khai thác và tích lũy đủ 100 Gỗ và 50 Đá từ tài nguyên ngoài bản đồ.",
-                currentProgress = 65,
-                maxProgress = 100,
-                isClaimed = false,
-                rewards = new List<QuestReward>
-                {
-                    new QuestReward { rewardType = RewardType.Wood, amount = 100 },
-                    new QuestReward { rewardType = RewardType.Stone, amount = 50 },
-                    new QuestReward { rewardType = RewardType.Gold, amount = 1500 }
-                }
-            },
-            new QuestDataDemo
-            {
-                questID = "settings_01",
-                questType = QuestType.Settings,
-                title = "Thiết Lập & Bảo Mật",
-                description = "Tùy chỉnh cấu hình âm thanh, đồ họa và liên kết tài khoản để nhận quà.",
-                currentProgress = 1,
-                maxProgress = 1,
-                isClaimed = false,
-                rewards = new List<QuestReward>
-                {
-                    new QuestReward { rewardType = RewardType.Gold, amount = 2000 },
-                    new QuestReward { rewardType = RewardType.Exp, amount = 300 }
-                }
-            }
-        };
+        if (Instance == null) Instance = this;
+        else Destroy(gameObject);
     }
 
     private void Start()
@@ -303,13 +130,26 @@ public class QuestUIController : MonoBehaviour
         if (backgroundOverlayButton != null) backgroundOverlayButton.onClick.AddListener(CloseWindow);
         if (openQuestButton != null) openQuestButton.onClick.AddListener(ToggleWindow);
 
-        if (tabQuestBtn != null) tabQuestBtn.onClick.AddListener(() => SwitchTab(QuestType.MainQuest));
-        if (tabCombatBtn != null) tabCombatBtn.onClick.AddListener(() => SwitchTab(QuestType.Combat));
-        if (tabAchievementBtn != null) tabAchievementBtn.onClick.AddListener(() => SwitchTab(QuestType.Achievement));
-        if (tabSettingsBtn != null) tabSettingsBtn.onClick.AddListener(() => SwitchTab(QuestType.Settings));
+        Button b1 = tabChapter1Btn != null ? tabChapter1Btn : tabQuestBtn;
+        Button b2 = tabChapter2Btn != null ? tabChapter2Btn : tabCombatBtn;
+        Button b3 = tabChapter3Btn != null ? tabChapter3Btn : tabSettingsBtn;
+        Button b4 = tabDailyBtn != null ? tabDailyBtn : tabAchievementBtn;
 
-        SwitchTab(QuestType.MainQuest);
+        if (b1 != null) b1.onClick.AddListener(() => SwitchTab(QuestType.Chapter1));
+        if (b2 != null) b2.onClick.AddListener(() => SwitchTab(QuestType.Chapter2));
+        if (b3 != null) b3.onClick.AddListener(() => SwitchTab(QuestType.Chapter3));
+        if (b4 != null) b4.onClick.AddListener(() => SwitchTab(QuestType.Daily));
+
+        InitDemoDemaciaQuests();
+        UpdateEventProgressUI();
+        SwitchTab(QuestType.Chapter1);
         CheckNotification();
+
+        // Ẩn windowPanel khi vừa khởi chạy nếu được gán
+        if (windowPanel != null)
+        {
+            windowPanel.SetActive(false);
+        }
     }
 
     private void Update()
@@ -326,48 +166,38 @@ public class QuestUIController : MonoBehaviour
 
     public void ToggleWindow()
     {
-        if (gameObject.activeSelf) CloseWindow();
+        if (IsWindowOpen) CloseWindow();
         else OpenWindow();
     }
 
     public void SwitchTab(QuestType newTab)
     {
         currentTab = newTab;
-        AnimateTabButtons();
-        RefreshQuestList(animateStagger: true);
+        RefreshQuestList();
     }
 
-    private void AnimateTabButtons()
+    public void UpdateEventProgressUI()
     {
-        if (!enableAnimations || !useTabHighlightAnim) return;
+        if (actTitleText != null) actTitleText.text = actTitle;
 
-        AnimateSingleTab(tabQuestBtn, currentTab == QuestType.MainQuest);
-        AnimateSingleTab(tabCombatBtn, currentTab == QuestType.Combat);
-        AnimateSingleTab(tabAchievementBtn, currentTab == QuestType.Achievement);
-        AnimateSingleTab(tabSettingsBtn, currentTab == QuestType.Settings);
+        if (goldProgressText != null) goldProgressText.text = $"{totalGoldEarned} / {maxActGold} Vàng";
+
+        if (actProgressBar != null)
+        {
+            actProgressBar.maxValue = maxActGold;
+            actProgressBar.value = totalGoldEarned;
+        }
     }
 
-    private void AnimateSingleTab(Button btn, bool isActive)
-    {
-        if (btn == null) return;
-        DOTween.Kill(btn.transform);
-        Vector3 targetScale = isActive ? Vector3.one * 1.1f : Vector3.one;
-        btn.transform.DOScale(targetScale, 0.15f).SetEase(Ease.OutQuad).SetUpdate(true);
-    }
-
-    public void RefreshQuestList(bool animateStagger = false)
+    public void RefreshQuestList()
     {
         if (contentArea == null || questItemPrefab == null) return;
 
-        // Xóa các thẻ Quest cũ trên Content Area
         foreach (Transform child in contentArea)
         {
             Destroy(child.gameObject);
         }
 
-        int cardIndex = 0;
-
-        // Lọc và Instantiate các Quest thuộc Tab hiện tại
         foreach (var quest in questList)
         {
             if (quest.isClaimed || quest.questType != currentTab) continue;
@@ -385,87 +215,77 @@ public class QuestUIController : MonoBehaviour
                     quest.maxProgress,
                     quest.rewards,
                     quest.isClaimed,
-                    () => OnClaimReward(quest, itemUI)
+                    () => OnClaimReward(quest)
                 );
             }
-
-            // Hiệu ứng thẻ xuất hiện lần lượt (Staggered Entry - chỉ chạy khi chuyển Tab hoặc Mở Bảng)
-            if (animateStagger && enableAnimations && useStaggeredCardAnim)
-            {
-                cardObj.transform.localScale = Vector3.zero;
-                float delay = cardIndex * cardStaggerDelay;
-                cardObj.transform.DOScale(Vector3.one, cardAnimDuration)
-                    .SetDelay(delay)
-                    .SetEase(Ease.OutBack)
-                    .SetUpdate(true);
-            }
-            else
-            {
-                cardObj.transform.localScale = Vector3.one;
-            }
-
-            cardIndex++;
         }
 
         CheckNotification();
-    }
 
-    private void OnClaimReward(QuestDataDemo quest, QuestItemUI itemUI)
-    {
-        if (quest == null || quest.isClaimed) return;
-
-        Debug.Log($"[QuestSystem] Đã nhận thưởng nhiệm vụ: {quest.title}");
-
-        if (itemUI != null)
+        // Đồng bộ với HUD Canvas ngoài màn hình
+        if (QuestHUDTracker.Instance != null)
         {
-            itemUI.PlayClaimFX(() => ProcessClaimReward(quest));
-        }
-        else
-        {
-            ProcessClaimReward(quest);
+            QuestHUDTracker.Instance.UpdateHUD();
         }
     }
 
-    private void ProcessClaimReward(QuestDataDemo quest)
+    private void OnClaimReward(QuestDataDemo quest)
     {
-        if (quest.rewards != null)
-        {
-            foreach (var reward in quest.rewards)
-            {
-                GiveReward(reward);
-            }
-        }
-
         quest.isClaimed = true;
-        RefreshQuestList(animateStagger: false);
-    }
 
-    private void GiveReward(QuestReward reward)
-    {
-        if (reward == null || reward.amount <= 0) return;
-
-        if (JsonDataManager.Ins != null)
+        foreach (var reward in quest.rewards)
         {
-            switch (reward.rewardType)
+            if (reward.rewardType == RewardType.Gold)
             {
-                case RewardType.Gold:
-                    JsonDataManager.Ins.AddGold(reward.amount);
-                    break;
-                case RewardType.Wood:
-                    JsonDataManager.Ins.AddWood(reward.amount);
-                    break;
-                case RewardType.Stone:
-                    JsonDataManager.Ins.AddStone(reward.amount);
-                    break;
-                case RewardType.Exp:
-                    Debug.Log($"[QuestSystem] Nhận {reward.amount} Exp");
-                    break;
+                totalGoldEarned += reward.amount;
+            }
+
+            if (JsonDataManager.Ins != null)
+            {
+                switch (reward.rewardType)
+                {
+                    case RewardType.Wood:  JsonDataManager.Ins.AddWood(reward.amount); break;
+                    case RewardType.Stone: JsonDataManager.Ins.AddStone(reward.amount); break;
+                    case RewardType.Food:  JsonDataManager.Ins.AddFood(reward.amount); break;
+                }
             }
         }
-        else
+
+        UpdateEventProgressUI();
+        RefreshQuestList();
+    }
+
+    public void AddQuestProgress(string questID, int amount)
+    {
+        foreach (var quest in questList)
         {
-            Debug.LogWarning($"[QuestSystem] JsonDataManager.Ins chưa khởi tạo! Không thể cộng quà {reward.rewardType} (+{reward.amount})");
+            if (!quest.isClaimed && quest.questID == questID)
+            {
+                quest.currentProgress = Mathf.Min(quest.currentProgress + amount, quest.maxProgress);
+
+                if (gameObject.activeSelf)
+                    RefreshQuestList();
+                else
+                {
+                    CheckNotification();
+                    if (QuestHUDTracker.Instance != null) QuestHUDTracker.Instance.UpdateHUD();
+                }
+
+                break;
+            }
         }
+    }
+
+    public QuestDataDemo GetFirstActiveQuest()
+    {
+        foreach (var quest in questList)
+        {
+            if (!quest.isClaimed && quest.questType == currentTab)
+            {
+                return quest;
+            }
+        }
+        return null;
     }
 
     public void CheckNotification()
@@ -483,69 +303,59 @@ public class QuestUIController : MonoBehaviour
         }
 
         notificationIcon.SetActive(hasClaimableQuest);
-
-        if (hasClaimableQuest && enableAnimations && useNotificationPulse)
-        {
-            DOTween.Kill(notificationIcon.transform);
-            notificationIcon.transform.localScale = Vector3.one;
-            notificationIcon.transform.DOScale(Vector3.one * pulseScaleMultiplier, pulseDuration)
-                .SetLoops(-1, LoopType.Yoyo)
-                .SetEase(Ease.InOutSine)
-                .SetUpdate(true);
-        }
-        else if (notificationIcon != null)
-        {
-            DOTween.Kill(notificationIcon.transform);
-            notificationIcon.transform.localScale = Vector3.one;
-        }
     }
 
     public void OpenWindow()
     {
         gameObject.SetActive(true);
-        RefreshQuestList(animateStagger: true);
-        AnimateTabButtons();
-
-        if (enableAnimations && useWindowPopupAnim && panelContainer != null)
-        {
-            DOTween.Kill(panelContainer);
-            panelContainer.localScale = Vector3.zero;
-            panelContainer.DOScale(Vector3.one, windowAnimDuration)
-                .SetEase(windowOpenEase)
-                .SetUpdate(true);
-        }
-        else if (panelContainer != null)
-        {
-            panelContainer.localScale = Vector3.one;
-        }
+        UpdateEventProgressUI();
+        RefreshQuestList();
     }
 
     public void CloseWindow()
     {
-        if (enableAnimations && useWindowPopupAnim && panelContainer != null)
-        {
-            DOTween.Kill(panelContainer);
-            panelContainer.DOScale(Vector3.zero, windowAnimDuration * 0.8f)
-                .SetEase(windowCloseEase)
-                .SetUpdate(true)
-                .OnComplete(() =>
-                {
-                    gameObject.SetActive(false);
-                    CheckNotification();
-                });
-        }
-        else
-        {
-            gameObject.SetActive(false);
-            CheckNotification();
-        }
+        gameObject.SetActive(false);
+        CheckNotification();
     }
 
-    // ========================================================================
-    // 🛠️ DEBUG METHODS (Phím T / Y / R)
-    // ========================================================================
+    private void InitDemoDemaciaQuests()
+    {
+        if (questList.Count > 0) return;
 
-    [ContextMenu("TEST: +1 Progress First Quest")]
+        questList.Add(new QuestDataDemo
+        {
+            questID = "ch1_farm",
+            questType = QuestType.Chapter1,
+            title = "[Chương 1] Xây Nông Trại Zeffira",
+            description = "Establish a new Settlement near Vaskasia.",
+            currentProgress = 0,
+            maxProgress = 1,
+            isClaimed = false,
+            rewards = new List<QuestReward>
+            {
+                new QuestReward { rewardType = RewardType.Gold, amount = 150 },
+                new QuestReward { rewardType = RewardType.Food, amount = 50 }
+            }
+        });
+
+        questList.Add(new QuestDataDemo
+        {
+            questID = "ch1_research",
+            questType = QuestType.Chapter1,
+            title = "[Chương 1] Nghiên Cứu Cung Thủ",
+            description = "Mở khóa đơn vị quân Cung Thủ (Archers) trong bảng Nghiên Cứu.",
+            currentProgress = 0,
+            maxProgress = 1,
+            isClaimed = false,
+            rewards = new List<QuestReward>
+            {
+                new QuestReward { rewardType = RewardType.Gold, amount = 150 },
+                new QuestReward { rewardType = RewardType.Wood, amount = 50 }
+            }
+        });
+    }
+
+    // DEBUG HOTKEYS (T / Y / R)
     public void Test_AddProgress()
     {
         if (questList.Count > 0)
@@ -556,21 +366,21 @@ public class QuestUIController : MonoBehaviour
         }
     }
 
-    [ContextMenu("TEST: Complete All Quests")]
     public void Test_CompleteAll()
     {
         foreach (var q in questList) q.currentProgress = q.maxProgress;
         RefreshQuestList();
     }
 
-    [ContextMenu("TEST: Reset All Quests")]
     public void Test_ResetAll()
     {
+        totalGoldEarned = 0;
         foreach (var q in questList)
         {
             q.currentProgress = 0;
             q.isClaimed = false;
         }
+        UpdateEventProgressUI();
         RefreshQuestList();
     }
 }

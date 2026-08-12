@@ -50,6 +50,21 @@ public class SettlementManager : Singleton<SettlementManager>
     }
 
     /// <summary>
+    /// Tìm Vùng đất theo Tên (settlementName)
+    /// </summary>
+    public SettlementZone GetZoneByName(string name)
+    {
+        if (allSettlements != null)
+        {
+            foreach (var z in allSettlements)
+            {
+                if (z != null && z.settlementName == name) return z;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
     /// Lưu trạng thái PlayerPrefs cho TẤT CẢ các Vùng đất hiện có
     /// </summary>
     public void SaveAllSettlementsState()

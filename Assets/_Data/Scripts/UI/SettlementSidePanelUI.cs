@@ -32,7 +32,12 @@ public class SettlementSidePanelUI : MonoBehaviour
     [SerializeField] private GameObject slotItemPrefab;
     [SerializeField] private int totalSlotsCount = 12; // Tổng số ô hiển thị trong Panel
 
+    [Header("=== CONTAINER CHỨA 8 Ô HUẤN LUYỆN LÍNH ===")]
+    [SerializeField] private Transform troopTrainingContainer;
+    [SerializeField] private GameObject troopTrainingSlotPrefab;
+
     private List<SettlementSlotItemUI> activeSlotUIItems = new List<SettlementSlotItemUI>();
+    private List<TroopTrainingSlotUI> activeTrainingSlotUIItems = new List<TroopTrainingSlotUI>();
 
     private void Awake()
     {
@@ -266,6 +271,78 @@ public class SettlementSidePanelUI : MonoBehaviour
         {
             if (activeSlotUIItems[i] != null) activeSlotUIItems[i].gameObject.SetActive(false);
         }
+
+        // Cập nhật hiển thị 8 Ô Huấn Luyện Lính
+        RefreshTroopTrainingSlots();
+    }
+
+    /// <summary>
+    /// Làm mới hiển thị cho khu vực 8 Ô Huấn Luyện Lính
+    /// </summary>
+    public void RefreshTroopTrainingSlots()
+    {
+        if (troopTrainingContainer == null) return;
+
+        SettlementZone currentZone = (SettlementManager.Ins != null) ? SettlementManager.Ins.CurrentSettlement : null;
+        if (currentZone == null) currentZone = Object.FindFirstObjectByType<SettlementZone>();
+
+        if (currentZone == null || TroopTrainingManager.Ins == null)
+        {
+            troopTrainingContainer.gameObject.SetActive(false);
+            return;
+        }
+
+        troopTrainingContainer.gameObject.SetActive(true);
+        TroopTrainingSlotData[] slots = TroopTrainingManager.Ins.GetSlotsForZone(currentZone);
+
+        for (int i = 0; i < TroopTrainingManager.MAX_TRAINING_SLOTS; i++)
+        {
+            TroopTrainingSlotUI slotUI = GetOrCreateTrainingSlotUI(i);
+            if (slotUI == null) continue;
+
+            slotUI.SetData(slots[i], currentZone);
+        }
+
+        for (int i = TroopTrainingManager.MAX_TRAINING_SLOTS; i < activeTrainingSlotUIItems.Count; i++)
+        {
+            if (activeTrainingSlotUIItems[i] != null)
+            {
+                activeTrainingSlotUIItems[i].gameObject.SetActive(false);
+            }
+        }
+    }
+
+    private TroopTrainingSlotUI GetOrCreateTrainingSlotUI(int index)
+    {
+        if (index >= 0 && index < activeTrainingSlotUIItems.Count && activeTrainingSlotUIItems[index] != null)
+        {
+            return activeTrainingSlotUIItems[index];
+        }
+
+        if (troopTrainingSlotPrefab != null && troopTrainingContainer != null)
+        {
+            GameObject obj = Instantiate(troopTrainingSlotPrefab, troopTrainingContainer);
+            TroopTrainingSlotUI itemUI = obj.GetComponent<TroopTrainingSlotUI>();
+            if (itemUI != null)
+            {
+                activeTrainingSlotUIItems.Add(itemUI);
+                return itemUI;
+            }
+        }
+        else if (troopTrainingContainer != null)
+        {
+            TroopTrainingSlotUI[] existingSlots = troopTrainingContainer.GetComponentsInChildren<TroopTrainingSlotUI>(true);
+            if (index < existingSlots.Length)
+            {
+                if (!activeTrainingSlotUIItems.Contains(existingSlots[index]))
+                {
+                    activeTrainingSlotUIItems.Add(existingSlots[index]);
+                }
+                return existingSlots[index];
+            }
+        }
+
+        return null;
     }
 
     private SettlementSlotItemUI GetOrCreateSlotUI(int index)

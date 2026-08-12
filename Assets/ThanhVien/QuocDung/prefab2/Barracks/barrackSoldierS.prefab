@@ -491,6 +491,7 @@ MonoBehaviour:
   isInitialBuildNeeded: 1
   startAsRuined: 0
   initialBuildDuration: 5
+  slotIndex: -1
   buildingType: 0
   buildingName: "Nh\xE0 Ch\xEDnh"
   visualModels:
@@ -1167,9 +1168,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 485d2a5022bd6934c9f803e1d0cb66c6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UpgradeableBuilding
-  isInitialBuildNeeded: 1
+  isInitialBuildNeeded: 0
   startAsRuined: 0
   initialBuildDuration: 1
+  slotIndex: -1
   buildingType: 11
   buildingName: "Tr\u1EA1i L\xEDnh Ki\u1EBFm"
   visualModels:
@@ -1896,6 +1898,7 @@ MonoBehaviour:
   isInitialBuildNeeded: 1
   startAsRuined: 0
   initialBuildDuration: 5
+  slotIndex: -1
   buildingType: 0
   buildingName: "Nh\xE0 Ch\xEDnh"
   visualModels:

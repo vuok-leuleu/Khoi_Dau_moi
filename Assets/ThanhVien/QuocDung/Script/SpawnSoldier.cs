@@ -121,6 +121,9 @@ public class SpawnSoldier : MonoBehaviour
         ClearHolograms();
     }
 
+    [Header("Training Control")]
+    public bool autoSpawnOnBuild = false; // 🔥 Mặc định false: Lính sẽ được huấn luyện thông qua Ô Huấn Luyện
+
     private void SyncLevel()
     {
         if (upgradeableBuilding != null)
@@ -145,8 +148,54 @@ public class SpawnSoldier : MonoBehaviour
             }
         }
 
-        int count = GetMaxSoldiersForLevel(currentLevel);
-        SpawnSoldiers(count);
+        if (autoSpawnOnBuild)
+        {
+            int count = GetMaxSoldiersForLevel(currentLevel);
+            SpawnSoldiers(count);
+        }
+    }
+
+    /// <summary>
+    /// Sinh 1 lính đã hoàn tất huấn luyện tại Doanh Trại này
+    /// </summary>
+    public GameObject SpawnOneTrainedSoldier(GameObject customPrefab = null)
+    {
+        GameObject prefabToUse = customPrefab != null ? customPrefab : soldierPrefab;
+        if (prefabToUse == null)
+        {
+            Debug.LogWarning($"[SpawnSoldier] ⚠️ Chưa gán Prefab lính cho {gameObject.name}!");
+            return null;
+        }
+
+        Vector3 baseSpawnCenter = transform.position + transform.forward * spawnForwardOffset;
+        Vector2 randomCircle = Random.insideUnitCircle * spawnRadius;
+        Vector3 rawPosition = new Vector3(
+            baseSpawnCenter.x + randomCircle.x,
+            baseSpawnCenter.y,
+            baseSpawnCenter.z + randomCircle.y
+        );
+
+        Vector3 spawnPosition = rawPosition;
+        if (UnityEngine.AI.NavMesh.SamplePosition(rawPosition, out UnityEngine.AI.NavMeshHit hit, 10f, UnityEngine.AI.NavMesh.AllAreas))
+        {
+            spawnPosition = hit.position;
+        }
+
+        GameObject newSoldier = Instantiate(prefabToUse, spawnPosition, transform.rotation);
+        newSoldier.transform.SetParent(transform, true);
+
+        // Gán thông số Level và Damage
+        float damage = GetDamageForLevel(currentLevel);
+        UnitController unit = newSoldier.GetComponent<UnitController>();
+        if (unit == null) unit = newSoldier.GetComponentInChildren<UnitController>();
+        if (unit != null)
+        {
+            unit.SetAttackDamage(damage);
+        }
+
+        spawnedSoldiers.Add(newSoldier);
+        Debug.Log($"[SpawnSoldier] 🎉 Đã sinh 1 lính mới từ Ô Huấn Luyện tại {gameObject.name} (Lv {currentLevel})!");
+        return newSoldier;
     }
 
     private void HandleUpgradeStart()

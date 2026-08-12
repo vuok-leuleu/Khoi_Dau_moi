@@ -136,57 +136,10 @@ public class SettlementZone : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Kiểm tra chuẩn xác một UpgradeableBuilding có phải là Nhà Chính (House / Town Hall) của Vùng đất hay không.
-    /// (Nhà chính có BuildingType = BuildingType.House)
-    /// </summary>
-    /// <summary>
-    /// Kiểm tra chuẩn xác một UpgradeableBuilding có phải là Nhà Chính (House / Town Hall) của Vùng đất hay không.
-    /// (Nhà chính có BuildingType = BuildingType.House)
-    /// </summary>
-    public static bool IsTownHallBuilding(UpgradeableBuilding ub, SettlementZone zone = null)
-    {
-        if (ub == null) return false;
-        if (zone != null && ub == zone.townHallBuilding) return true;
-
-        string name = !string.IsNullOrEmpty(ub.buildingName) ? ub.buildingName.ToLower() : "";
-        string goName = ub.gameObject.name.ToLower();
-
-        // 🛑 LOẠI TRỪ TẤT CẢ CÁC NHÀ KHO VÀ TRẠI LÍNH (Tránh nhầm Warehouse/Storage/Barracks thành TownHall)
-        if (name.Contains("warehouse") || goName.Contains("warehouse") || 
-            name.Contains("storage") || goName.Contains("storage") || 
-            name.Contains("barrack") || goName.Contains("barrack"))
-        {
-            return false;
-        }
-
-        if (ub.buildingType == BuildingType.House) return true;
-
-        if (name.Contains("nhà chính") || name.Contains("town hall") || name.Contains("townhall")) return true;
-        if (goName.Contains("nhà chính") || goName.Contains("townhall") || goName.Contains("nhachinh")) return true;
-
-        return false;
-    }
-
     private void Awake()
     {
         if (townHallPoint == null) townHallPoint = transform;
-
-        // Tự động đồng bộ settlementName theo tên GameObject nếu tên bị trùng mặc định
-        if (string.IsNullOrEmpty(settlementName) || (settlementName == "ZEFFIRA" && !gameObject.name.Equals("ZEFFIRA", System.StringComparison.OrdinalIgnoreCase)))
-        {
-            settlementName = gameObject.name;
-        }
-
-        // 💾 Load ngay trạng thái từ PlayerPrefs trong Awake() để tránh bị BuildingManager đè dữ liệu cũ khi LoadScene
         LoadSettlementState();
-
-        // Bậc 0 (ZEFFIRA) luôn là vùng đất chính của người chơi, tuyệt đối không bao giờ có Địch
-        if (GetEffectiveTier() == 0 || settlementName.Equals("ZEFFIRA", System.StringComparison.OrdinalIgnoreCase))
-        {
-            hasEnemyOutpost = false;
-            isUnlocked = true;
-        }
     }
 
     private void Start()
@@ -196,55 +149,7 @@ public class SettlementZone : MonoBehaviour
         InstantiateEnemyOutpost();
         EnsureTownHallInstantiated();
         InstantiatePrebuiltBuildings();
-        EnsureAllBuildingsRegistered();
         Update3DSlotVisibility();
-    }
-
-    public void EnsureAllBuildingsRegistered()
-    {
-        UpgradeableBuilding[] localUbs = GetComponentsInChildren<UpgradeableBuilding>(true);
-        List<UpgradeableBuilding> allLocalList = new List<UpgradeableBuilding>(localUbs);
-        Vector3 originPos = (townHallPoint != null) ? townHallPoint.position : transform.position;
-
-        UpgradeableBuilding[] sceneUbs = Object.FindObjectsByType<UpgradeableBuilding>(FindObjectsSortMode.None);
-        foreach (var ub in sceneUbs)
-        {
-            if (ub == null || !ub.gameObject.activeSelf || allLocalList.Contains(ub)) continue;
-
-            SettlementZone otherZone = ub.GetComponentInParent<SettlementZone>();
-            if (otherZone != null && otherZone != this) continue;
-
-            float dist = Vector3.Distance(ub.transform.position, originPos);
-            if (dist < 18.0f)
-            {
-                ub.transform.SetParent(this.transform, true);
-                allLocalList.Add(ub);
-            }
-        }
-
-        foreach (var ub in allLocalList)
-        {
-            if (ub == null || !ub.gameObject.activeSelf) continue;
-
-            if (IsTownHallBuilding(ub, this))
-            {
-                townHallBuilding = ub;
-                int currentLvl = ub.CurrentLevel + 1;
-                if (currentLvl != settlementLevel)
-                {
-                    settlementLevel = currentLvl;
-                    SaveSettlementState();
-                }
-            }
-            else
-            {
-                if (ub.slotIndex < 0)
-                {
-                    ub.slotIndex = GetSlotIndexAtPosition(ub.transform.position);
-                }
-                RegisterBuilding(ub);
-            }
-        }
     }
 
     public int GetEffectiveTier()
@@ -357,43 +262,17 @@ public class SettlementZone : MonoBehaviour
 
     public void LoadSettlementState()
     {
-        if (GetEffectiveTier() == 0 || settlementName.Equals("ZEFFIRA", System.StringComparison.OrdinalIgnoreCase))
-        {
-            hasEnemyOutpost = false;
-            isUnlocked = true;
-            return;
-        }
-
         if (PlayerPrefs.HasKey($"Settlement_{settlementName}_Level"))
         {
-            int savedLevel = PlayerPrefs.GetInt($"Settlement_{settlementName}_Level", settlementLevel);
-            if (savedLevel > settlementLevel) settlementLevel = savedLevel;
-        }
-
-        if (PlayerPrefs.HasKey($"Settlement_{settlementName}_Unlocked"))
-        {
-            isUnlocked = PlayerPrefs.GetInt($"Settlement_{settlementName}_Unlocked", isUnlocked ? 1 : 0) == 1;
-        }
-
-        if (PlayerPrefs.HasKey($"Settlement_{settlementName}_TownHallEstablished"))
-        {
-            isTownHallEstablished = PlayerPrefs.GetInt($"Settlement_{settlementName}_TownHallEstablished", isTownHallEstablished ? 1 : 0) == 1;
-        }
-
-        if (PlayerPrefs.HasKey($"Settlement_{settlementName}_HasEnemyOutpost"))
-        {
-            hasEnemyOutpost = PlayerPrefs.GetInt($"Settlement_{settlementName}_HasEnemyOutpost", hasEnemyOutpost ? 1 : 0) == 1;
-        }
-
-        if (!hasEnemyOutpost && spawnedEnemyOutpostInstance != null)
-        {
-            GameObject outpostObj = spawnedEnemyOutpostInstance;
-            spawnedEnemyOutpostInstance = null;
-            if (outpostObj != null)
+            settlementLevel = PlayerPrefs.GetInt($"Settlement_{settlementName}_Level", settlementLevel);
+            if (GetEffectiveTier() > 0 && PlayerPrefs.HasKey($"Settlement_{settlementName}_Unlocked"))
             {
-                outpostObj.SetActive(false);
-                if (Application.isPlaying) Destroy(outpostObj);
-                else DestroyImmediate(outpostObj);
+                isUnlocked = PlayerPrefs.GetInt($"Settlement_{settlementName}_Unlocked", isUnlocked ? 1 : 0) == 1;
+            }
+            isTownHallEstablished = PlayerPrefs.GetInt($"Settlement_{settlementName}_TownHallEstablished", isTownHallEstablished ? 1 : 0) == 1;
+            if (PlayerPrefs.HasKey($"Settlement_{settlementName}_HasEnemyOutpost"))
+            {
+                hasEnemyOutpost = PlayerPrefs.GetInt($"Settlement_{settlementName}_HasEnemyOutpost", hasEnemyOutpost ? 1 : 0) == 1;
             }
         }
     }
@@ -461,15 +340,7 @@ public class SettlementZone : MonoBehaviour
         {
             var th = TownHallBuilding;
             if (th != null && isTownHallEstablished)
-            {
-                int lvl = th.CurrentLevel + 1;
-                if (lvl != settlementLevel)
-                {
-                    settlementLevel = lvl;
-                    SaveSettlementState();
-                }
-                return settlementLevel;
-            }
+                return th.CurrentLevel + 1;
             return settlementLevel;
         }
     }
@@ -493,6 +364,10 @@ public class SettlementZone : MonoBehaviour
                 SettlementSidePanelUI.Ins.UpdateHeaderVisual();
                 SettlementSidePanelUI.Ins.RefreshPanel();
             }
+        }
+        else if (hasEnemyOutpost && spawnedEnemyOutpostInstance == null && !isTownHallEstablished)
+        {
+            OnEnemyOutpostDestroyed();
         }
 
         var th = TownHallBuilding;
@@ -606,27 +481,7 @@ public class SettlementZone : MonoBehaviour
     /// </summary>
     public void InstantiateEnemyOutpost()
     {
-        if (GetEffectiveTier() == 0 || settlementName.Equals("ZEFFIRA", System.StringComparison.OrdinalIgnoreCase))
-        {
-            hasEnemyOutpost = false;
-            return;
-        }
-
-        if (!hasEnemyOutpost)
-        {
-            if (spawnedEnemyOutpostInstance != null)
-            {
-                GameObject outpostObj = spawnedEnemyOutpostInstance;
-                spawnedEnemyOutpostInstance = null;
-                if (outpostObj != null)
-                {
-                    outpostObj.SetActive(false);
-                    if (Application.isPlaying) Destroy(outpostObj);
-                    else DestroyImmediate(outpostObj);
-                }
-            }
-            return;
-        }
+        if (!hasEnemyOutpost) return;
 
         // 1. Xác định vị trí spawn chuẩn của Vùng đất này
         Vector3 spawnPosition = (enemySpawnPoint != null) ? enemySpawnPoint.position : ((townHallPoint != null) ? townHallPoint.position : transform.position);
@@ -677,13 +532,13 @@ public class SettlementZone : MonoBehaviour
     public void OnEnemyOutpostDestroyed()
     {
         hasEnemyOutpost = false;
+        isUnlocked = true;
+        SaveSettlementState();
         if (spawnedEnemyOutpostInstance != null)
         {
             Destroy(spawnedEnemyOutpostInstance);
             spawnedEnemyOutpostInstance = null;
         }
-
-        SaveSettlementState();
 
         Debug.Log($"[SettlementZone] 🎉 CHINH PHỤC THÀNH CÔNG! Đã tiêu diệt Căn cứ Địch tại vùng đất {settlementName}!");
 
@@ -729,7 +584,6 @@ public class SettlementZone : MonoBehaviour
 
         isTownHallEstablished = true;
         settlementLevel = 1;
-        SaveSettlementState();
 
         InstantiateTownHallObject();
 
@@ -813,54 +667,6 @@ public class SettlementZone : MonoBehaviour
     }
 
     /// <summary>
-    /// Tìm công trình đã xây tương ứng với chỉ số ô Slot (0, 1, 2, 3...)
-    /// </summary>
-    public UpgradeableBuilding GetBuildingAtSlot(int slotIndex)
-    {
-        foreach (var b in builtStructures)
-        {
-            if (b != null && b.gameObject.activeInHierarchy && b.slotIndex == slotIndex)
-            {
-                return b;
-            }
-        }
-
-        // Fallback kiểm tra vị trí 3D nếu slotIndex chưa gán
-        Vector3 slotPos = GetSlotWorldPosition(slotIndex);
-        foreach (var b in builtStructures)
-        {
-            if (b != null && b.gameObject.activeInHierarchy && b.slotIndex < 0)
-            {
-                if (Vector3.Distance(b.transform.position, slotPos) < 3.5f)
-                {
-                    b.slotIndex = slotIndex;
-                    return b;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Lấy chỉ số ô Slot (0, 1, 2, 3...) gần nhất với vị trí 3D truyền vào
-    /// </summary>
-    public int GetSlotIndexAtPosition(Vector3 position)
-    {
-        for (int i = 0; i < slotPoints.Count; i++)
-        {
-            if (slotPoints[i] != null)
-            {
-                if (Vector3.Distance(slotPoints[i].position, position) < 3.5f)
-                {
-                    return i;
-                }
-            }
-        }
-        return -1;
-    }
-
-    /// <summary>
     /// Định vị tự động các công trình đã xây lên vị trí 3D slot chuẩn nếu bị trùng lặp tại (0,0,0)
     /// </summary>
     public void AlignBuildingsToSlotPositions()
@@ -869,13 +675,78 @@ public class SettlementZone : MonoBehaviour
         {
             if (builtStructures[i] == null) continue;
 
-            if (builtStructures[i].slotIndex >= 0)
-            {
-                builtStructures[i].transform.position = GetSlotWorldPosition(builtStructures[i].slotIndex);
-            }
-            else if (builtStructures[i].transform.position == Vector3.zero)
+            // Nếu nhà chưa có vị trí chuẩn (đang ở Vector3.zero)
+            if (builtStructures[i].transform.position == Vector3.zero)
             {
                 builtStructures[i].transform.position = GetSlotWorldPosition(i);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Kiểm tra xem một UpgradeableBuilding có phải là Nhà Chính của Vùng đất hay không.
+    /// </summary>
+    public static bool IsTownHallBuilding(UpgradeableBuilding ub, SettlementZone zone)
+    {
+        if (ub == null) return false;
+        if (zone != null && zone.townHallBuilding == ub) return true;
+        if (ub.buildingType == BuildingType.House || ub.buildingName.ToLower().Contains("nhà chính") || ub.buildingName.ToLower().Contains("town hall") || ub.buildingName.ToLower().Contains("townhall")) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Lấy chỉ số Slot (0, 1, 2...) tại vị trí 3D cho trước.
+    /// </summary>
+    public int GetSlotIndexAtPosition(Vector3 pos)
+    {
+        float minDistance = float.MaxValue;
+        int closestSlotIndex = -1;
+
+        for (int i = 0; i < slotPoints.Count; i++)
+        {
+            if (slotPoints[i] == null) continue;
+            float dist = Vector3.Distance(pos, slotPoints[i].position);
+            if (dist < minDistance)
+            {
+                minDistance = dist;
+                closestSlotIndex = i;
+            }
+        }
+
+        if (minDistance < 8.0f) return closestSlotIndex;
+
+        return -1;
+    }
+
+    /// <summary>
+    /// Lấy công trình đang ở slot tương ứng.
+    /// </summary>
+    public UpgradeableBuilding GetBuildingAtSlot(int slotIndex)
+    {
+        if (slotIndex < 0) return townHallBuilding;
+
+        foreach (var b in builtStructures)
+        {
+            if (b != null && b.slotIndex == slotIndex)
+            {
+                return b;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Đảm bảo tất cả các công trình thuộc Transform này đều được đăng ký đầy đủ.
+    /// </summary>
+    public void EnsureAllBuildingsRegistered()
+    {
+        UpgradeableBuilding[] childUbs = GetComponentsInChildren<UpgradeableBuilding>(true);
+        foreach (var ub in childUbs)
+        {
+            if (ub != null)
+            {
+                RegisterBuilding(ub);
             }
         }
     }

@@ -211,11 +211,6 @@ public static class BattleData
 
         TotalSoldiersInBase = realActiveSoldierCount;
         HasData = true;
-
-        if (BuildingSystem.Ins != null) BuildingSystem.Ins.SaveBuildingsToSlot(1);
-        if (SettlementManager.Ins != null) SettlementManager.Ins.SaveAllSettlementsState();
-        PlayerPrefs.Save();
-
         Debug.Log($"[BattleData] Đã lưu dữ liệu Trận Đấu: MainScene = {MainSceneName}, CurrentWave = {SavedCurrentWave}, Enemy Wave Count = {EnemyWaveCount}, Quái hành quân = {SavedEnemyMarches.Count}, Lính xuất trận = {SavedSoldierMarches.Count}");
     }
 
@@ -380,25 +375,38 @@ public static class BattleData
         }
 
         // 🔥 CHINH PHỤC VÙNG ĐẤT: TIÊU DIỆT CĂN CỨ ĐỊCH TRÊN SETTLEMENT ZONE KHI GIẢI PHÓNG THÀNH CÔNG
+        SettlementZone conqueredZone = null;
         if (!string.IsNullOrEmpty(TargetedSettlementZoneName))
         {
-            // 💾 1. Ép lưu PlayerPrefs lập tức kể cả khi GameObject chưa Active
-            PlayerPrefs.SetInt($"Settlement_{TargetedSettlementZoneName}_HasEnemyOutpost", 0);
-            PlayerPrefs.Save();
-
-            // 🔍 2. Tìm Vùng đất (kể cả đang bị ẩn/inactive)
-            SettlementZone[] allZones = Object.FindObjectsByType<SettlementZone>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            SettlementZone[] allZones = Object.FindObjectsByType<SettlementZone>(FindObjectsSortMode.None);
             foreach (var z in allZones)
             {
-                if (z != null && z.settlementName.Equals(TargetedSettlementZoneName, System.StringComparison.OrdinalIgnoreCase))
+                if (z != null && z.settlementName == TargetedSettlementZoneName)
                 {
-                    z.hasEnemyOutpost = false;
-                    z.OnEnemyOutpostDestroyed();
-                    z.SaveSettlementState();
-                    Debug.Log($"[BattleData] 🏆 CHINH PHỤC THÀNH CÔNG! Đã giải phóng vùng đất '{z.settlementName}' (Bỏ tích Has Enemy Outpost).");
+                    conqueredZone = z;
                     break;
                 }
             }
+        }
+
+        if (conqueredZone == null)
+        {
+            SettlementZone[] allZones = Object.FindObjectsByType<SettlementZone>(FindObjectsSortMode.None);
+            foreach (var z in allZones)
+            {
+                if (z != null && z.hasEnemyOutpost)
+                {
+                    conqueredZone = z;
+                    break;
+                }
+            }
+        }
+
+        if (conqueredZone != null)
+        {
+            conqueredZone.OnEnemyOutpostDestroyed();
+            conqueredZone.SaveSettlementState();
+            Debug.Log($"[BattleData] 🏆 CHINH PHỤC THÀNH CÔNG! Đã giải phóng vùng đất '{conqueredZone.settlementName}'. Người chơi hiện có thể xây dựng công trình trên ô đất tại đây!");
         }
 
         TargetedSettlementZoneName = "";
