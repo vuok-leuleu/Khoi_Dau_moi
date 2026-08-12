@@ -56,37 +56,38 @@ public class QuestUIManager : MonoBehaviour
 
     private void HandleHotkeys()
     {
-        // Phím ESC: Ưu tiên đóng bất kỳ bảng nào đang mở
+        // Phím ESC: Đóng Bảng Main Quest đang mở
         if (Input.GetKeyDown(closeAllKey))
         {
+            if (ChapterQuestController.Instance != null && ChapterQuestController.Instance.gameObject.activeSelf)
+            {
+                CloseChapterPanel();
+                return;
+            }
             if (chapterVerticalWindow != null && chapterVerticalWindow.activeSelf)
             {
                 CloseChapterPanel();
                 return;
             }
-            if (horizontalQuestLog != null && horizontalQuestLog.activeSelf)
-            {
-                CloseJournalPanel();
-                return;
-            }
         }
 
-        // Phím Q: Bật/Tắt Bảng Dọc Chapter
+        // Phím Q: Bật/Tắt Bảng Dọc Chapter (Main Quest)
         if (Input.GetKeyDown(toggleChapterKey))
         {
-            if (chapterVerticalWindow != null && chapterVerticalWindow.activeSelf)
-                CloseChapterPanel();
-            else
-                OpenChapterPanel();
-        }
-
-        // Phím L: Bật/Tắt Bảng Ngang Sổ Tay
-        if (Input.GetKeyDown(toggleJournalKey))
-        {
-            if (horizontalQuestLog != null && horizontalQuestLog.activeSelf)
-                CloseJournalPanel();
-            else
-                OpenJournalPanel();
+            if (ChapterQuestController.Instance != null)
+            {
+                if (ChapterQuestController.Instance.gameObject.activeSelf)
+                    CloseChapterPanel();
+                else
+                    OpenChapterPanel();
+            }
+            else if (chapterVerticalWindow != null)
+            {
+                if (chapterVerticalWindow.activeSelf)
+                    CloseChapterPanel();
+                else
+                    OpenChapterPanel();
+            }
         }
     }
 
@@ -95,9 +96,14 @@ public class QuestUIManager : MonoBehaviour
     /// </summary>
     public void SetDefaultHUDState()
     {
-        if (questTrackerHUD != null) questTrackerHUD.SetActive(true);
-        if (chapterVerticalWindow != null) chapterVerticalWindow.SetActive(false);
-        if (horizontalQuestLog != null) horizontalQuestLog.SetActive(false);
+        if (QuestTrackerHUD.Instance != null) QuestTrackerHUD.Instance.ShowTracker();
+        else if (questTrackerHUD != null) questTrackerHUD.SetActive(true);
+
+        if (ChapterQuestController.Instance != null) ChapterQuestController.Instance.CloseWindow();
+        else if (chapterVerticalWindow != null) chapterVerticalWindow.SetActive(false);
+
+        if (QuestUIController.Instance != null) QuestUIController.Instance.CloseWindow();
+        else if (horizontalQuestLog != null) horizontalQuestLog.SetActive(false);
     }
 
     /// <summary>
@@ -105,17 +111,19 @@ public class QuestUIManager : MonoBehaviour
     /// </summary>
     public void OpenChapterPanel()
     {
-        if (horizontalQuestLog != null) horizontalQuestLog.SetActive(false);
-        if (questTrackerHUD != null) questTrackerHUD.SetActive(false);
+        if (QuestUIController.Instance != null) QuestUIController.Instance.CloseWindow();
+        else if (horizontalQuestLog != null) horizontalQuestLog.SetActive(false);
 
-        if (chapterVerticalWindow != null)
+        if (QuestTrackerHUD.Instance != null) QuestTrackerHUD.Instance.HideTracker();
+        else if (questTrackerHUD != null) questTrackerHUD.SetActive(false);
+
+        if (ChapterQuestController.Instance != null)
+        {
+            ChapterQuestController.Instance.OpenWindow();
+        }
+        else if (chapterVerticalWindow != null)
         {
             chapterVerticalWindow.SetActive(true);
-            // Kích hoạt render lại dữ liệu chương nếu có Controller
-            if (ChapterQuestTestController.Instance != null)
-            {
-                ChapterQuestTestController.Instance.DisplayChapter(0);
-            }
         }
     }
 
@@ -124,8 +132,17 @@ public class QuestUIManager : MonoBehaviour
     /// </summary>
     public void CloseChapterPanel()
     {
-        if (chapterVerticalWindow != null) chapterVerticalWindow.SetActive(false);
-        if (questTrackerHUD != null) questTrackerHUD.SetActive(true);
+        if (ChapterQuestController.Instance != null)
+        {
+            ChapterQuestController.Instance.CloseWindow();
+        }
+        else if (chapterVerticalWindow != null)
+        {
+            chapterVerticalWindow.SetActive(false);
+        }
+
+        if (QuestTrackerHUD.Instance != null) QuestTrackerHUD.Instance.ShowTracker();
+        else if (questTrackerHUD != null) questTrackerHUD.SetActive(true);
     }
 
     /// <summary>
@@ -133,8 +150,20 @@ public class QuestUIManager : MonoBehaviour
     /// </summary>
     public void OpenJournalPanel()
     {
-        if (chapterVerticalWindow != null) chapterVerticalWindow.SetActive(false);
-        if (horizontalQuestLog != null) horizontalQuestLog.SetActive(true);
+        if (ChapterQuestController.Instance != null) ChapterQuestController.Instance.CloseWindow();
+        else if (chapterVerticalWindow != null) chapterVerticalWindow.SetActive(false);
+
+        if (QuestTrackerHUD.Instance != null) QuestTrackerHUD.Instance.HideTracker();
+        else if (questTrackerHUD != null) questTrackerHUD.SetActive(false);
+
+        if (QuestUIController.Instance != null)
+        {
+            QuestUIController.Instance.OpenWindow();
+        }
+        else if (horizontalQuestLog != null)
+        {
+            horizontalQuestLog.SetActive(true);
+        }
     }
 
     /// <summary>
@@ -142,7 +171,16 @@ public class QuestUIManager : MonoBehaviour
     /// </summary>
     public void CloseJournalPanel()
     {
-        if (horizontalQuestLog != null) horizontalQuestLog.SetActive(false);
-        if (questTrackerHUD != null) questTrackerHUD.SetActive(true);
+        if (QuestUIController.Instance != null)
+        {
+            QuestUIController.Instance.CloseWindow();
+        }
+        else if (horizontalQuestLog != null)
+        {
+            horizontalQuestLog.SetActive(false);
+        }
+
+        if (QuestTrackerHUD.Instance != null) QuestTrackerHUD.Instance.ShowTracker();
+        else if (questTrackerHUD != null) questTrackerHUD.SetActive(true);
     }
 }
