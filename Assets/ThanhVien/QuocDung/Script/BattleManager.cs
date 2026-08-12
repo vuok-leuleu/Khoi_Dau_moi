@@ -1,5 +1,7 @@
 using UnityEngine;
+using UnityEngine.UI;
 using System.Collections.Generic;
+using TMPro;
 
 public class BattleManager : MonoBehaviour
 {
@@ -57,10 +59,43 @@ public class BattleManager : MonoBehaviour
 
     [Header("Battle Result & Transition Settings")]
     [SerializeField] private float battleEndDelay = 2.0f;
-    private bool isBattleOver = false;
 
+    [Header("Demacia Battle UI Settings")]
+    [Tooltip("Bật/Tắt thanh máu Demacia Rising trên đỉnh camera")]
+    [SerializeField] private bool enableDemaciaUI = true;
+    [Tooltip("Kích thước thanh UI Máu Demacia (Chiều rộng, Chiều cao)")]
+    [SerializeField] private Vector2 uiBarSize = new Vector2(680f, 38f);
+    [Tooltip("Khoảng cách mép trên màn hình xuống thanh UI")]
+    [SerializeField] private float topPadding = 25f;
+    [Tooltip("Màu thanh máu Phe Lính (Bên Trái)")]
+    [SerializeField] private Color playerBarColor = new Color(0.9f, 0.15f, 0.15f, 1f);
+    [Tooltip("Màu thanh máu Phe Enemy (Bên Phải)")]
+    [SerializeField] private Color enemyBarColor = new Color(0.75f, 0.10f, 0.10f, 1f);
+    [Tooltip("Màu viền khung kim loại Demacia")]
+    [SerializeField] private Color frameColor = new Color(0.85f, 0.70f, 0.25f, 1f);
+    [Tooltip("Màu vạch chia đôi & viên kim cương ở giữa")]
+    [SerializeField] private Color centerDividerColor = new Color(1f, 0.88f, 0.35f, 1f);
+    [SerializeField] private Sprite customFrameSprite;
+    [SerializeField] private Sprite customFillSprite;
+
+    private bool isBattleOver = false;
     private List<GameObject> spawnedPlayerObjects = new List<GameObject>();
     private List<GameObject> spawnedEnemyObjects = new List<GameObject>();
+
+    // Demacia Runtime UI Components & Variables
+    private Canvas demaciaCanvas;
+    private Image playerFillImage;
+    private Image enemyFillImage;
+    private TextMeshProUGUI playerPercentText;
+    private TextMeshProUGUI enemyPercentText;
+
+    private float initialMaxPlayerHP = 0f;
+    private float initialMaxEnemyHP = 0f;
+    private float targetPlayerFill = 1f;
+    private float targetEnemyFill = 1f;
+    private float currentDisplayPlayerFill = 1f;
+    private float currentDisplayEnemyFill = 1f;
+    private Sprite defaultWhiteSprite;
 
     public static BattleManager Ins { get; private set; }
 
@@ -90,10 +125,13 @@ public class BattleManager : MonoBehaviour
         // 4. Thiết lập vị trí Camera tại giao tranh
         SetupBattleCamera();
 
-        // 5. Cho lính và Enemy lập tức bay vào đánh nhau
+        // 5. Khởi tạo thanh UI Máu Demacia Rising ở mép trên màn hình
+        InitializeDemaciaUI();
+
+        // 6. Cho lính và Enemy lập tức bay vào đánh nhau
         StartCoroutine(TriggerImmediateCombatRoutine());
 
-        // 6. Theo dõi kết quả giao tranh và tự động chuyển về Scene chính
+        // 7. Theo dõi kết quả giao tranh và tự động chuyển về Scene chính
         StartCoroutine(MonitorBattleRoutine());
 
         Debug.Log($"[BattleManager] 🔥 Trận đấu khởi tạo thành công! " +
@@ -157,8 +195,11 @@ public class BattleManager : MonoBehaviour
                 }
             }
 
-            // 3. Đánh giá kết quả giao tranh:
-            if (livingEnemies == 0)
+            // 3. Lấy trạng thái tổng máu của cả 2 phe
+            GetBattleHealthState(out float curPlayerHP, out _, out float curEnemyHP, out _);
+
+            // 4. Đánh giá kết quả giao tranh (khi số đơn vị = 0 HOẶC vạch máu phe nào rút hết về 0 trước):
+            if (livingEnemies == 0 || curEnemyHP <= 0f)
             {
                 // Phe Lính THẮNG!
                 isBattleOver = true;
@@ -174,7 +215,7 @@ public class BattleManager : MonoBehaviour
                 UnityEngine.SceneManagement.SceneManager.LoadScene(returnScene);
                 yield break;
             }
-            else if (livingSoldiers == 0)
+            else if (livingSoldiers == 0 || curPlayerHP <= 0f)
             {
                 // Phe Lính THUA!
                 isBattleOver = true;
@@ -190,6 +231,297 @@ public class BattleManager : MonoBehaviour
                 UnityEngine.SceneManagement.SceneManager.LoadScene(returnScene);
                 yield break;
             }
+        }
+    }
+
+    private void Update()
+    {
+        UpdateDemaciaUI();
+    }
+
+    /// <summary>
+    /// Tính toán tổng HP hiện tại và tổng HP tối đa của cả Phe Lính (Player) và Phe Enemy
+    /// </summary>
+    public void GetBattleHealthState(out float currentSoldierHP, out float maxSoldierHP, out float currentEnemyHP, out float maxEnemyHP)
+    {
+        currentSoldierHP = 0f;
+        maxSoldierHP = 0f;
+        foreach (var playerObj in spawnedPlayerObjects)
+        {
+            if (playerObj == null || !playerObj.activeInHierarchy) continue;
+
+            UnitController unit = playerObj.GetComponent<UnitController>();
+            if (unit == null) unit = playerObj.GetComponentInChildren<UnitController>();
+
+            if (unit != null)
+            {
+                HPSoldier hp = unit.GetComponent<HPSoldier>();
+                if (hp == null) hp = unit.GetComponentInChildren<HPSoldier>();
+
+                if (hp != null)
+                {
+                    if (!hp.IsDead && hp.CurrentHealth > 0f)
+                    {
+                        currentSoldierHP += hp.CurrentHealth;
+                    }
+                    maxSoldierHP += hp.MaxHealth;
+                }
+                else
+                {
+                    currentSoldierHP += 100f;
+                    maxSoldierHP += 100f;
+                }
+            }
+        }
+
+        currentEnemyHP = 0f;
+        maxEnemyHP = 0f;
+        foreach (var enemyObj in spawnedEnemyObjects)
+        {
+            if (enemyObj == null || !enemyObj.activeInHierarchy) continue;
+
+            EnemyHealth hp = enemyObj.GetComponent<EnemyHealth>();
+            if (hp == null) hp = enemyObj.GetComponentInChildren<EnemyHealth>();
+
+            if (hp != null)
+            {
+                if (!hp.IsDead && hp.CurrentHealth > 0f)
+                {
+                    currentEnemyHP += hp.CurrentHealth;
+                }
+                maxEnemyHP += hp.MaxHealth;
+            }
+            else
+            {
+                currentEnemyHP += 100f;
+                maxEnemyHP += 100f;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Khởi tạo toàn bộ giao diện Demacia Rising Top UI Bar bằng Code (Screen Space - Overlay)
+    /// </summary>
+    private void InitializeDemaciaUI()
+    {
+        if (!enableDemaciaUI) return;
+
+        // 1. Lấy trạng thái máu ban đầu để tính % chuẩn xác
+        GetBattleHealthState(out float curPlayerHP, out initialMaxPlayerHP, out float curEnemyHP, out initialMaxEnemyHP);
+
+        if (initialMaxPlayerHP <= 0f) initialMaxPlayerHP = Mathf.Max(1f, curPlayerHP);
+        if (initialMaxEnemyHP <= 0f) initialMaxEnemyHP = Mathf.Max(1f, curEnemyHP);
+
+        // 2. Tạo Sprite trắng mặc định nếu chưa có
+        Texture2D whiteTex = new Texture2D(1, 1);
+        whiteTex.SetPixel(0, 0, Color.white);
+        whiteTex.Apply();
+        defaultWhiteSprite = Sprite.Create(whiteTex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
+
+        // 3. Tạo Canvas Overlay đỉnh màn hình
+        GameObject canvasObj = new GameObject("DemaciaBattleUI_Canvas");
+        demaciaCanvas = canvasObj.AddComponent<Canvas>();
+        demaciaCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        demaciaCanvas.sortingOrder = 100;
+
+        CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        canvasObj.AddComponent<GraphicRaycaster>();
+
+        // 4. Panel chính chứa thanh Demacia (Căn giữa mép trên)
+        GameObject mainPanel = new GameObject("DemaciaUI_MainPanel");
+        mainPanel.transform.SetParent(canvasObj.transform, false);
+
+        RectTransform panelRect = mainPanel.AddComponent<RectTransform>();
+        panelRect.anchorMin = new Vector2(0.5f, 1f);
+        panelRect.anchorMax = new Vector2(0.5f, 1f);
+        panelRect.pivot = new Vector2(0.5f, 1f);
+        panelRect.anchoredPosition = new Vector2(0f, -topPadding);
+        panelRect.sizeDelta = uiBarSize;
+
+        // Background nền tối kim loại
+        GameObject bgObj = new GameObject("Background");
+        bgObj.transform.SetParent(mainPanel.transform, false);
+        RectTransform bgRect = bgObj.AddComponent<RectTransform>();
+        bgRect.anchorMin = Vector2.zero;
+        bgRect.anchorMax = Vector2.one;
+        bgRect.sizeDelta = Vector2.zero;
+        Image bgImg = bgObj.AddComponent<Image>();
+        bgImg.sprite = customFrameSprite != null ? customFrameSprite : defaultWhiteSprite;
+        bgImg.color = new Color(0.06f, 0.06f, 0.08f, 0.92f);
+
+        // Viền Vàng Hoàng Gia Demacia (Top & Bottom Frame)
+        GameObject topFrame = new GameObject("Frame_Top");
+        topFrame.transform.SetParent(mainPanel.transform, false);
+        RectTransform topRect = topFrame.AddComponent<RectTransform>();
+        topRect.anchorMin = new Vector2(0f, 1f);
+        topRect.anchorMax = new Vector2(1f, 1f);
+        topRect.pivot = new Vector2(0.5f, 1f);
+        topRect.anchoredPosition = Vector2.zero;
+        topRect.sizeDelta = new Vector2(0f, 3.5f);
+        Image topImg = topFrame.AddComponent<Image>();
+        topImg.sprite = defaultWhiteSprite;
+        topImg.color = frameColor;
+
+        GameObject botFrame = new GameObject("Frame_Bottom");
+        botFrame.transform.SetParent(mainPanel.transform, false);
+        RectTransform botRect = botFrame.AddComponent<RectTransform>();
+        botRect.anchorMin = new Vector2(0f, 0f);
+        botRect.anchorMax = new Vector2(1f, 0f);
+        botRect.pivot = new Vector2(0.5f, 0f);
+        botRect.anchoredPosition = Vector2.zero;
+        botRect.sizeDelta = new Vector2(0f, 3.5f);
+        Image botImg = botFrame.AddComponent<Image>();
+        botImg.sprite = defaultWhiteSprite;
+        botImg.color = frameColor;
+
+        // 5. Thanh máu Phe Lính (BÊN TRÁI - Fills right to left from center)
+        GameObject leftHolder = new GameObject("PlayerHP_Holder");
+        leftHolder.transform.SetParent(mainPanel.transform, false);
+        RectTransform leftHolderRect = leftHolder.AddComponent<RectTransform>();
+        leftHolderRect.anchorMin = new Vector2(0.005f, 0.12f);
+        leftHolderRect.anchorMax = new Vector2(0.495f, 0.88f);
+        leftHolderRect.sizeDelta = Vector2.zero;
+
+        GameObject leftFillObj = new GameObject("PlayerHP_Fill");
+        leftFillObj.transform.SetParent(leftHolder.transform, false);
+        RectTransform leftFillRect = leftFillObj.AddComponent<RectTransform>();
+        leftFillRect.anchorMin = Vector2.zero;
+        leftFillRect.anchorMax = Vector2.one;
+        leftFillRect.sizeDelta = Vector2.zero;
+
+        playerFillImage = leftFillObj.AddComponent<Image>();
+        playerFillImage.sprite = customFillSprite != null ? customFillSprite : defaultWhiteSprite;
+        playerFillImage.color = playerBarColor;
+        playerFillImage.type = Image.Type.Filled;
+        playerFillImage.fillMethod = Image.FillMethod.Horizontal;
+        playerFillImage.fillOrigin = (int)Image.OriginHorizontal.Right; // Touch center divider at 100%!
+
+        // 6. Thanh máu Phe Enemy (BÊN PHẢI - Fills left to right from center)
+        GameObject rightHolder = new GameObject("EnemyHP_Holder");
+        rightHolder.transform.SetParent(mainPanel.transform, false);
+        RectTransform rightHolderRect = rightHolder.AddComponent<RectTransform>();
+        rightHolderRect.anchorMin = new Vector2(0.505f, 0.12f);
+        rightHolderRect.anchorMax = new Vector2(0.995f, 0.88f);
+        rightHolderRect.sizeDelta = Vector2.zero;
+
+        GameObject rightFillObj = new GameObject("EnemyHP_Fill");
+        rightFillObj.transform.SetParent(rightHolder.transform, false);
+        RectTransform rightFillRect = rightFillObj.AddComponent<RectTransform>();
+        rightFillRect.anchorMin = Vector2.zero;
+        rightFillRect.anchorMax = Vector2.one;
+        rightFillRect.sizeDelta = Vector2.zero;
+
+        enemyFillImage = rightFillObj.AddComponent<Image>();
+        enemyFillImage.sprite = customFillSprite != null ? customFillSprite : defaultWhiteSprite;
+        enemyFillImage.color = enemyBarColor;
+        enemyFillImage.type = Image.Type.Filled;
+        enemyFillImage.fillMethod = Image.FillMethod.Horizontal;
+        enemyFillImage.fillOrigin = (int)Image.OriginHorizontal.Left; // Touch center divider at 100%!
+
+        // 7. Vạch chia đôi trung tâm (Center Divider & Diamond Ornament)
+        GameObject centerLine = new GameObject("CenterDivider_Line");
+        centerLine.transform.SetParent(mainPanel.transform, false);
+        RectTransform lineRect = centerLine.AddComponent<RectTransform>();
+        lineRect.anchorMin = new Vector2(0.5f, 0f);
+        lineRect.anchorMax = new Vector2(0.5f, 1f);
+        lineRect.sizeDelta = new Vector2(4f, 10f);
+        Image lineImg = centerLine.AddComponent<Image>();
+        lineImg.sprite = defaultWhiteSprite;
+        lineImg.color = centerDividerColor;
+
+        GameObject diamondObj = new GameObject("CenterDivider_Diamond");
+        diamondObj.transform.SetParent(mainPanel.transform, false);
+        RectTransform diamondRect = diamondObj.AddComponent<RectTransform>();
+        diamondRect.anchorMin = new Vector2(0.5f, 0.5f);
+        diamondRect.anchorMax = new Vector2(0.5f, 0.5f);
+        diamondRect.sizeDelta = new Vector2(16f, 16f);
+        diamondRect.localRotation = Quaternion.Euler(0, 0, 45f);
+        Image diamondImg = diamondObj.AddComponent<Image>();
+        diamondImg.sprite = defaultWhiteSprite;
+        diamondImg.color = centerDividerColor;
+
+        // 8. Nhãn Văn Bản % Máu (TMP)
+        GameObject pTextObj = new GameObject("PlayerText");
+        pTextObj.transform.SetParent(mainPanel.transform, false);
+        RectTransform pTextRect = pTextObj.AddComponent<RectTransform>();
+        pTextRect.anchorMin = new Vector2(0.01f, 1f);
+        pTextRect.anchorMax = new Vector2(0.4f, 1f);
+        pTextRect.pivot = new Vector2(0f, 0f);
+        pTextRect.anchoredPosition = new Vector2(0f, 4f);
+        pTextRect.sizeDelta = new Vector2(200f, 24f);
+
+        playerPercentText = pTextObj.AddComponent<TextMeshProUGUI>();
+        playerPercentText.text = "LÍNH: 100%";
+        playerPercentText.fontSize = 15f;
+        playerPercentText.fontStyle = FontStyles.Bold;
+        playerPercentText.color = new Color(1f, 0.95f, 0.85f, 1f);
+        playerPercentText.alignment = TextAlignmentOptions.Left;
+
+        GameObject eTextObj = new GameObject("EnemyText");
+        eTextObj.transform.SetParent(mainPanel.transform, false);
+        RectTransform eTextRect = eTextObj.AddComponent<RectTransform>();
+        eTextRect.anchorMin = new Vector2(0.6f, 1f);
+        eTextRect.anchorMax = new Vector2(0.99f, 1f);
+        eTextRect.pivot = new Vector2(1f, 0f);
+        eTextRect.anchoredPosition = new Vector2(0f, 4f);
+        eTextRect.sizeDelta = new Vector2(200f, 24f);
+
+        enemyPercentText = eTextObj.AddComponent<TextMeshProUGUI>();
+        enemyPercentText.text = "ENEMY: 100%";
+        enemyPercentText.fontSize = 15f;
+        enemyPercentText.fontStyle = FontStyles.Bold;
+        enemyPercentText.color = new Color(1f, 0.95f, 0.85f, 1f);
+        enemyPercentText.alignment = TextAlignmentOptions.Right;
+
+        GameObject titleObj = new GameObject("CenterTitle");
+        titleObj.transform.SetParent(mainPanel.transform, false);
+        RectTransform titleRect = titleObj.AddComponent<RectTransform>();
+        titleRect.anchorMin = new Vector2(0.35f, 1f);
+        titleRect.anchorMax = new Vector2(0.65f, 1f);
+        titleRect.pivot = new Vector2(0.5f, 0f);
+        titleRect.anchoredPosition = new Vector2(0f, 4f);
+        titleRect.sizeDelta = new Vector2(250f, 24f);
+
+        TextMeshProUGUI titleTMP = titleObj.AddComponent<TextMeshProUGUI>();
+        titleTMP.text = "FOR DEMACIA!";
+        titleTMP.fontSize = 16f;
+        titleTMP.fontStyle = FontStyles.Bold;
+        titleTMP.color = centerDividerColor;
+        titleTMP.alignment = TextAlignmentOptions.Center;
+    }
+
+    /// <summary>
+    /// Cập nhật hiệu ứng rút máu mượt mà (Lerp) liên tục theo thời gian thực
+    /// </summary>
+    private void UpdateDemaciaUI()
+    {
+        if (!enableDemaciaUI || playerFillImage == null || enemyFillImage == null) return;
+
+        GetBattleHealthState(out float curPlayerHP, out float curMaxPlayerHP, out float curEnemyHP, out float curMaxEnemyHP);
+
+        float maxP = initialMaxPlayerHP > 0f ? initialMaxPlayerHP : Mathf.Max(1f, curMaxPlayerHP);
+        float maxE = initialMaxEnemyHP > 0f ? initialMaxEnemyHP : Mathf.Max(1f, curMaxEnemyHP);
+
+        targetPlayerFill = Mathf.Clamp01(curPlayerHP / maxP);
+        targetEnemyFill = Mathf.Clamp01(curEnemyHP / maxE);
+
+        currentDisplayPlayerFill = Mathf.Lerp(currentDisplayPlayerFill, targetPlayerFill, Time.deltaTime * 6f);
+        currentDisplayEnemyFill = Mathf.Lerp(currentDisplayEnemyFill, targetEnemyFill, Time.deltaTime * 6f);
+
+        playerFillImage.fillAmount = currentDisplayPlayerFill;
+        enemyFillImage.fillAmount = currentDisplayEnemyFill;
+
+        if (playerPercentText != null)
+        {
+            playerPercentText.text = $"LÍNH: {Mathf.CeilToInt(currentDisplayPlayerFill * 100)}%";
+        }
+        if (enemyPercentText != null)
+        {
+            enemyPercentText.text = $"ENEMY: {Mathf.CeilToInt(currentDisplayEnemyFill * 100)}%";
         }
     }
 
