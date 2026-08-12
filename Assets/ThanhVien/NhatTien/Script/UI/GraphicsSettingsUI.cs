@@ -148,16 +148,13 @@ public class GraphicsSettingsUI : MonoBehaviour
     {
         int totalLevels = QualitySettings.names.Length;
         int unityIndex = Mathf.Clamp(Mathf.RoundToInt(dropdownIndex / 3f * (totalLevels - 1)), 0, totalLevels - 1);
-        QualitySettings.SetQualityLevel(unityIndex, applyExpensiveChanges: true);
+        
+        // Đặt false để Unity KHÔNG làm sập/re-init lại toàn bộ Render Pipeline & Canvas UI
+        QualitySettings.SetQualityLevel(unityIndex, applyExpensiveChanges: false);
 
-        // Hỗ trợ URP (Universal Render Pipeline) nếu project đang dùng URP
-        #if UNITY_PIPELINE_URP || true
-        // Điều chỉnh Shadow Distance theo chất lượng
         float[] shadowDistances = { 15f, 40f, 80f, 150f };
         QualitySettings.shadowDistance = shadowDistances[dropdownIndex];
-        #endif
 
-        // Lưu lựa chọn
         PlayerPrefs.SetInt("Settings_GraphicsQuality", dropdownIndex);
         PlayerPrefs.Save();
 

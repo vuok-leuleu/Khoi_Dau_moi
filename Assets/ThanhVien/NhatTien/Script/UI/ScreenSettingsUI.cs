@@ -40,53 +40,69 @@ public class ScreenSettingsUI : MonoBehaviour
     private static readonly int[] DropdownToSettingMode = { 2, 1, 0 };
     private static readonly int[] SettingModeToDropdown = { 2, 1, 0 };
 
+    private bool _initialized = false;
+
+    void Awake()
+    {
+        Init();
+    }
+
     void OnEnable()
     {
-        SetupDropdown();
-        SetupMouseSpeedSlider();
+        Init();
+        SyncUI();
     }
 
-    void Start()
+    void Init()
     {
-        SetupDropdown();
-        SetupMouseSpeedSlider();
-    }
+        if (_initialized) return;
+        _initialized = true;
 
-    // ──────────────────────────────────────────────
-    // DROPDOWN MÀN HÌNH
-    // ──────────────────────────────────────────────
-
-    void SetupDropdown()
-    {
-        if (screenModeDropdown == null)
+        if (screenModeDropdown != null)
         {
-            Debug.LogWarning("[ScreenSettingsUI] Chưa gán Dropdown trong Inspector!");
-            return;
+            screenModeDropdown.onValueChanged.RemoveAllListeners();
+            screenModeDropdown.onValueChanged.AddListener(OnDropdownChanged);
         }
 
+        if (mouseSpeedSlider != null)
+        {
+            mouseSpeedSlider.minValue = 0.1f;
+            mouseSpeedSlider.maxValue = 10f;
+            mouseSpeedSlider.onValueChanged.RemoveAllListeners();
+            mouseSpeedSlider.onValueChanged.AddListener(OnMouseSpeedChanged);
+        }
+    }
+
+    void SyncUI()
+    {
         if (SettingManager.Ins == null) return;
 
-        // Xóa listener cũ để tránh đăng ký trùng lặp
-        screenModeDropdown.onValueChanged.RemoveListener(OnDropdownChanged);
+        if (screenModeDropdown != null)
+        {
+            int currentSettingMode = SettingManager.Ins.screenModeIndex;
+            int dropdownIndex = SettingModeToDropdown[Mathf.Clamp(currentSettingMode, 0, 2)];
+            screenModeDropdown.SetValueWithoutNotify(dropdownIndex);
+        }
 
-        // Đồng bộ giá trị hiện tại từ SettingManager lên Dropdown
-        int currentSettingMode = SettingManager.Ins.screenModeIndex;
-        int dropdownIndex = SettingModeToDropdown[currentSettingMode];
-        screenModeDropdown.SetValueWithoutNotify(dropdownIndex);
-
-        // Đăng ký sự kiện thay đổi
-        screenModeDropdown.onValueChanged.AddListener(OnDropdownChanged);
+        if (mouseSpeedSlider != null)
+        {
+            float currentSpeed = SettingManager.Ins.mouseSpeed;
+            mouseSpeedSlider.SetValueWithoutNotify(currentSpeed);
+            UpdateMouseSpeedText(currentSpeed);
+        }
     }
 
     void OnDropdownChanged(int dropdownIndex)
     {
         if (SettingManager.Ins == null) return;
 
-        // Map dropdown index → SettingManager mode
         int settingMode = DropdownToSettingMode[dropdownIndex];
-        SettingManager.Ins.SetScreenMode(settingMode);
 
-        Debug.Log($"[ScreenSettingsUI] Đổi chế độ màn hình: Dropdown[{dropdownIndex}] → SettingMode[{settingMode}]");
+        // Nếu chế độ chọn giống hệt chế độ hiện tại thì không làm gì để tránh làm giật/tắt UI
+        if (SettingManager.Ins.screenModeIndex == settingMode) return;
+
+        SettingManager.Ins.SetScreenMode(settingMode);
+        Debug.Log($"[ScreenSettingsUI] ✅ Đã đổi chế độ màn hình sang Mode [{settingMode}]");
     }
 
     // ──────────────────────────────────────────────
@@ -135,13 +151,12 @@ public class ScreenSettingsUI : MonoBehaviour
             mouseSpeedValueText.text = value.ToString("F1");
     }
 
-    void OnDisable()
+    void OnDestroy()
     {
-        // Dọn listener khi panel bị ẩn để tránh memory leak
         if (screenModeDropdown != null)
-            screenModeDropdown.onValueChanged.RemoveListener(OnDropdownChanged);
+            screenModeDropdown.onValueChanged.RemoveAllListeners();
 
         if (mouseSpeedSlider != null)
-            mouseSpeedSlider.onValueChanged.RemoveListener(OnMouseSpeedChanged);
+            mouseSpeedSlider.onValueChanged.RemoveAllListeners();
     }
 }
