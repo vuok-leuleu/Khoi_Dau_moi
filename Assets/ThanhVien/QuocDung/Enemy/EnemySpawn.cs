@@ -69,6 +69,10 @@ public class EnemySpawn : MonoBehaviour
     [SerializeField] private bool showAttackButton = true;
     [SerializeField] private GameObject warningIconPrefab;
     [SerializeField] private float warningIconHeightOffset = 3f;
+    [Header("Manual Route UI")]
+    [Tooltip("Prefab Canvas World Space do bạn tự tạo. Prefab cần EnemyRouteWarningUI.")]
+    [SerializeField] private GameObject routeWarningUIPrefab;
+    [SerializeField] private float routeWarningHeightOffset = 0.75f;
 
     [Header("Cài Đặt Kích Thước Mũi Tên & Cảnh Báo (Spawn Warning Arrow)")]
     [Tooltip("Điều chỉnh chiều rộng mũi tên dưới chân Enemy")]
@@ -79,6 +83,9 @@ public class EnemySpawn : MonoBehaviour
 
     [Tooltip("Độ dài cộng thêm cố định (mét) cho mũi tên")]
     public float warningArrowExtraLength = 0.0f;
+
+    [Tooltip("Độ cao mũi tên tuyến đường trên terrain để không bị chìm.")]
+    [Range(0.01f, 5f)] public float warningArrowGroundOffset = 0.75f;
 
     [Tooltip("Điều chỉnh kích thước chữ đếm ngược")]
     [Range(0.1f, 5f)] public float warningTimerTextScale = 1.0f;
@@ -91,6 +98,15 @@ public class EnemySpawn : MonoBehaviour
     [SerializeField] private bool exitPlayModeWhenNoBuildings = false;
 
     private Coroutine waveSpawnCoroutine;
+    private EnemyRouteWarningUI activeRouteWarning;
+
+    public void SetAttackTarget(Transform target)
+    {
+        if (target != null)
+        {
+            attackTarget = target;
+        }
+    }
 
     private bool IsTutorialActive()
     {
@@ -270,7 +286,7 @@ public class EnemySpawn : MonoBehaviour
         }
 
         // Gắn Mũi Tên & Cảnh Báo cho con Thủ Lĩnh (Lead Enemy) - Luôn nằm ở HÀNG ĐẦU VÀ VỊ TRÍ Ở GIỮA
-        if (showAttackButton && spawnedWaveEnemies.Count > 0)
+        if (spawnedWaveEnemies.Count > 0)
         {
             Quaternion spawnRot = (sources.Count > 0 && sources[0] != null) ? sources[0].rotation : transform.rotation;
             Vector3 spawnCenter = (sources.Count > 0 && sources[0] != null) ? sources[0].position : transform.position;
@@ -286,15 +302,20 @@ public class EnemySpawn : MonoBehaviour
                 leadAI.squadEnemies.Insert(0, leadAI);
             }
 
-            EnemySpawnWarningArrow arrow = EnemySpawnWarningArrow.Create(leadEnemy);
-            if (arrow != null)
+            if (routeWarningUIPrefab != null)
             {
-                arrow.arrowSize = warningArrowSize;
-                arrow.arrowLengthMultiplier = warningArrowLengthMultiplier;
-                arrow.arrowExtraLength = warningArrowExtraLength;
-                arrow.timerTextScale = warningTimerTextScale;
-                arrow.textHeightOffset = warningTextHeightOffset;
-                arrow.UpdateVisuals();
+                Transform routeStart = (sources.Count > 0 && sources[0] != null) ? sources[0] : GetSpawnPoint();
+                if (activeRouteWarning == null)
+                {
+                    GameObject uiObject = Instantiate(routeWarningUIPrefab);
+                    activeRouteWarning = uiObject.GetComponent<EnemyRouteWarningUI>();
+                }
+
+                if (activeRouteWarning != null)
+                {
+                    Transform routeTarget = attackTarget != null ? attackTarget : GetOrFindAttackTarget();
+                    activeRouteWarning.Setup(routeStart, routeTarget, leadEnemy, routeWarningHeightOffset);
+                }
             }
         }
     }

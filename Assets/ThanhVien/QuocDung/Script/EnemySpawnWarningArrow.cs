@@ -7,6 +7,8 @@ public class EnemySpawnWarningArrow : MonoBehaviour
 {
     [Header("Target & Tracking")]
     public Transform targetEnemy;
+    [Tooltip("Điểm bắt đầu cố định của tuyến cảnh báo. Gán từ EnemySpawn để mũi tên không chạy theo Enemy.")]
+    public Transform routeStart;
 
     [Header("Mũi Tên Dưới Chân (Ground Arrow)")]
     [Tooltip("Bật/Tắt hiển thị mũi tên dưới chân Enemy này")]
@@ -27,8 +29,8 @@ public class EnemySpawnWarningArrow : MonoBehaviour
     public float arrowExtraLength = 0.0f;
 
     [Tooltip("Độ cao của mũi tên sát mặt đất (tránh bị chìm dưới terrain)")]
-    [Range(0.01f, 0.5f)]
-    public float arrowGroundOffset = 0.05f;
+    [Range(0.01f, 5f)]
+    public float arrowGroundOffset = 0.75f;
 
     [Tooltip("Màu sắc của mũi tên dưới chân")]
     public Color arrowColor = new Color(1f, 0.2f, 0.2f, 0.95f);
@@ -53,12 +55,16 @@ public class EnemySpawnWarningArrow : MonoBehaviour
     private static Material sharedArrowMaterial;
     private static Texture2D sharedArrowTexture;
 
-    public static EnemySpawnWarningArrow Create(Transform leadEnemy)
+    public static EnemySpawnWarningArrow Create(Transform leadEnemy, Transform startPoint = null)
     {
         if (leadEnemy == null) return null;
 
         EnemySpawnWarningArrow existing = leadEnemy.GetComponentInChildren<EnemySpawnWarningArrow>();
-        if (existing != null) return existing;
+        if (existing != null)
+        {
+            if (startPoint != null) existing.routeStart = startPoint;
+            return existing;
+        }
 
         GameObject warningObj = new GameObject("EnemySpawnWarning_WorldSpace");
         warningObj.transform.SetParent(leadEnemy, false);
@@ -67,6 +73,7 @@ public class EnemySpawnWarningArrow : MonoBehaviour
 
         EnemySpawnWarningArrow arrowComp = warningObj.AddComponent<EnemySpawnWarningArrow>();
         arrowComp.targetEnemy = leadEnemy;
+        arrowComp.routeStart = startPoint;
         arrowComp.BuildWorldUI();
 
         return arrowComp;
@@ -276,7 +283,7 @@ public class EnemySpawnWarningArrow : MonoBehaviour
             timerText.alignment = TextAlignmentOptions.Center;
             timerText.rectTransform.sizeDelta = new Vector2(250f, 60f);
             timerText.rectTransform.localScale = Vector3.one * (baseScale * timerTextScale);
-            timerText.rectTransform.localPosition = new Vector3(0f, textHeightOffset, 0f);
+            timerText.rectTransform.localPosition = Vector3.zero;
         }
     }
 
@@ -422,10 +429,13 @@ public class EnemySpawnWarningArrow : MonoBehaviour
             return;
         }
 
-        Vector3 enemyPos = targetEnemy.position;
+        // The marker is a route indicator, so its tail stays at the spawner instead of moving with the leader.
+        Vector3 routeStartPos = routeStart != null ? routeStart.position : targetEnemy.position;
+        routeStartPos.y = GetGroundHeight(routeStartPos) + arrowGroundOffset;
         Vector3 targetFeetPos = GetTargetFeetPosition(target);
+        targetFeetPos.y = routeStartPos.y;
 
-        Vector3 dir = targetFeetPos - enemyPos;
+        Vector3 dir = targetFeetPos - routeStartPos;
         dir.y = 0f;
         float dist = dir.magnitude;
 
@@ -445,12 +455,24 @@ public class EnemySpawnWarningArrow : MonoBehaviour
             dir.Normalize();
             Quaternion rot = Quaternion.LookRotation(dir, Vector3.up) * Quaternion.Euler(90f, 0f, 0f);
 
-            arrowQuadObj.transform.position = enemyPos + Vector3.up * arrowGroundOffset;
+            arrowQuadObj.transform.position = routeStartPos;
             arrowQuadObj.transform.rotation = rot;
 
             float totalLength = Mathf.Max(0.5f, dist * arrowLengthMultiplier + arrowExtraLength);
             arrowQuadObj.transform.localScale = new Vector3(arrowSize, totalLength, 1f);
         }
+    }
+
+    private float GetGroundHeight(Vector3 position)
+    {
+        // Sample from above so the route visual remains visible over terrain and props.
+        Ray ray = new Ray(position + Vector3.up * 100f, Vector3.down);
+        if (Physics.Raycast(ray, out RaycastHit hit, 250f, ~0, QueryTriggerInteraction.Ignore))
+        {
+            return hit.point.y;
+        }
+
+        return position.y;
     }
 
     private void UpdateTimerText()
@@ -483,5 +505,9 @@ public class EnemySpawnWarningArrow : MonoBehaviour
             int showWaves = Mathf.Max(1, remainingWaves);
             timerText.text = $"Còn {showWaves} Wave";
         }
+
+        Vector3 labelPosition = routeStart != null ? routeStart.position : targetEnemy.position;
+        labelPosition.y = GetGroundHeight(labelPosition) + arrowGroundOffset + textHeightOffset;
+        timerText.transform.position = labelPosition;
     }
 }

@@ -511,6 +511,12 @@ public class SettlementZone : MonoBehaviour
             enemySpawn = GetComponentInChildren<EnemySpawn>();
         }
 
+        // The town hall is spawned at runtime, so give the local outpost a scene-valid target.
+        if (enemySpawn != null && townHallBuilding != null && townHallBuilding.gameObject.activeInHierarchy)
+        {
+            enemySpawn.SetAttackTarget(townHallBuilding.transform);
+        }
+
         // 4. Đăng ký sự kiện tiêu diệt Căn cứ Địch
         if (spawnedEnemyOutpostInstance != null)
         {

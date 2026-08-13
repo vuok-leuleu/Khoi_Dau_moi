@@ -266,13 +266,11 @@ public class EnemyAI : MonoBehaviour
 
     public void EnsureWarningArrow()
     {
-        if (showGroundArrow && globalShowEnemyGroundArrow)
+        // Route UI is owned by EnemySpawn now. Remove any old child created by older scenes.
+        EnemySpawnWarningArrow warningComp = GetComponentInChildren<EnemySpawnWarningArrow>();
+        if (warningComp != null)
         {
-            EnemySpawnWarningArrow warningComp = EnemySpawnWarningArrow.Create(transform);
-            if (warningComp != null)
-            {
-                warningComp.showGroundArrow = showGroundArrow;
-            }
+            Destroy(warningComp.gameObject);
         }
     }
 
@@ -288,7 +286,6 @@ public class EnemyAI : MonoBehaviour
         }
 
         SubscribeToWaveEvents();
-        EnsureWarningArrow();
     }
 
     private void OnDisable()
@@ -1651,4 +1648,3 @@ public class EnemyAI : MonoBehaviour
         return targetPos;
     }
 }
-

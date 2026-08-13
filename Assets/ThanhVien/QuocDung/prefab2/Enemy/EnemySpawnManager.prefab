@@ -82,8 +82,6 @@ MonoBehaviour:
   spawnOnStart: 1
   spawnPoints:
   - {fileID: 267864803989536797}
-  - {fileID: 0}
-  - {fileID: 0}
   spawnForwardOffset: 3.5
   attackTarget: {fileID: 0}
   useGridSpawn: 1
@@ -97,9 +95,12 @@ MonoBehaviour:
   showAttackButton: 1
   warningIconPrefab: {fileID: 0}
   warningIconHeightOffset: 3
+  routeWarningUIPrefab: {fileID: 8903762805063960052, guid: 5a07a48f39dbe2e44ba491c3f5fbfe2e, type: 3}
+  routeWarningHeightOffset: 0.75
   warningArrowSize: 1
   warningArrowLengthMultiplier: 1
   warningArrowExtraLength: 0
+  warningArrowGroundOffset: 0.75
   warningTimerTextScale: 1
   warningTextHeightOffset: 1.8
   exitPlayModeWhenNoBuildings: 0
