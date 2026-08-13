@@ -88,13 +88,35 @@ public class UISceneBattle : MonoBehaviour
     [Tooltip("Bật phím tắt test trong Editor: V (Victory), F (Defeat), H (Hide)")]
     public bool enableDebugKeys = true;
 
+    [Header("--- Sound & Audio Effects ---")]
+    [Tooltip("File âm thanh tùy chọn khi bấm nút Return (AudioClip)")]
+    public AudioClip returnButtonSFX;
+    [Tooltip("Component AudioSource dùng để phát âm thanh (tự động lấy nếu để trống)")]
+    public AudioSource audioSource;
+
     public static UISceneBattle Instance { get; private set; }
     private bool hasShownResultUI = false;
+    private bool isReturning = false;
 
     private void Awake()
     {
         Instance = this;
 
+        if (audioSource == null)
+            audioSource = GetComponent<AudioSource>();
+
+        SetupReturnButtons();
+    }
+
+    private void Start()
+    {
+        HideAll();
+        SetupReturnButtons();
+        CheckAndShowBattleDataResult();
+    }
+
+    private void SetupReturnButtons()
+    {
         // Tự động tìm Nút Return trong Panel nếu quên gán trong Inspector
         if (victoryReturnButton == null && victoryPanel != null)
             victoryReturnButton = victoryPanel.GetComponentInChildren<Button>();
@@ -103,17 +125,18 @@ public class UISceneBattle : MonoBehaviour
             defeatReturnButton = defeatPanel.GetComponentInChildren<Button>();
 
         if (victoryReturnButton != null)
+        {
+            victoryReturnButton.interactable = true;
+            victoryReturnButton.onClick.RemoveAllListeners();
             victoryReturnButton.onClick.AddListener(OnReturnButtonClicked);
+        }
 
-        if (defeatReturnButton != null)
+        if (defeatReturnButton != null && defeatReturnButton != victoryReturnButton)
+        {
+            defeatReturnButton.interactable = true;
+            defeatReturnButton.onClick.RemoveAllListeners();
             defeatReturnButton.onClick.AddListener(OnReturnButtonClicked);
-    }
-
-    private void Start()
-    {
-        HideAll();
-
-        CheckAndShowBattleDataResult();
+        }
     }
 
     private void Update()
@@ -167,8 +190,11 @@ public class UISceneBattle : MonoBehaviour
     public void ShowVictory(List<RewardItem> rewards = null, List<UnitLostItem> unitsLost = null)
     {
         hasShownResultUI = true;
+        isReturning = false;
         if (defeatPanel != null) defeatPanel.SetActive(false);
         if (victoryPanel != null) victoryPanel.SetActive(true);
+
+        SetupReturnButtons();
 
         PopulateRewards(rewards ?? sampleRewards);
         PopulateUnitsLost(victoryUnitsLostContainer, unitsLost ?? sampleUnitsLost);
@@ -180,8 +206,11 @@ public class UISceneBattle : MonoBehaviour
     public void ShowDefeat(List<UnitLostItem> unitsLost = null, string tipMessage = "")
     {
         hasShownResultUI = true;
+        isReturning = false;
         if (victoryPanel != null) victoryPanel.SetActive(false);
         if (defeatPanel != null) defeatPanel.SetActive(true);
+
+        SetupReturnButtons();
 
         if (defeatTipText != null)
         {
@@ -201,18 +230,51 @@ public class UISceneBattle : MonoBehaviour
     }
 
     /// <summary>
-    /// Chuyển về Scene chính khi bấm nút RETURN
+    /// Chuyển về Scene chính khi bấm nút RETURN (ngay lập tức không chờ đợi)
     /// </summary>
     public void OnReturnButtonClicked()
     {
-        string targetScene = !string.IsNullOrEmpty(BattleData.MainSceneName) ? BattleData.MainSceneName : returnSceneName;
-        if (!string.IsNullOrEmpty(targetScene))
+        if (isReturning) return;
+        isReturning = true;
+
+        // Reset TimeScale để chắc chắn game không bị pause
+        Time.timeScale = 1f;
+
+        // Vô hiệu hóa nút bấm ngay lập tức để tránh click nhiều lần
+        if (victoryReturnButton != null) victoryReturnButton.interactable = false;
+        if (defeatReturnButton != null) defeatReturnButton.interactable = false;
+
+        PlayReturnSound();
+
+        // Ẩn panel UI kết quả ngay lập tức để phản hồi tức thì
+        HideAll();
+
+        string targetScene = (BattleData.HasData && !string.IsNullOrEmpty(BattleData.MainSceneName)) ? BattleData.MainSceneName : returnSceneName;
+        if (string.IsNullOrEmpty(targetScene)) targetScene = "MainScene";
+
+        Debug.Log($"[UISceneBattle] 🚀 Bấm nút RETURN -> Chuyển về Scene '{targetScene}' ngay lập tức!");
+        SceneManager.LoadScene(targetScene);
+    }
+
+    private void PlayReturnSound()
+    {
+        // 1. Phát âm thanh returnButtonSFX tùy chọn nếu gán trong Inspector
+        if (returnButtonSFX != null)
         {
-            SceneManager.LoadScene(targetScene);
+            if (audioSource != null)
+            {
+                audioSource.PlayOneShot(returnButtonSFX);
+            }
+            else
+            {
+                AudioSource.PlayClipAtPoint(returnButtonSFX, Camera.main != null ? Camera.main.transform.position : Vector3.zero);
+            }
         }
-        else
+
+        // 2. Tự động tương thích hệ thống UISoundManager chung của game (nếu có)
+        if (UISoundManager.Instance != null)
         {
-            Debug.LogWarning("[UISceneBattle] Chưa cài đặt tên Target Scene để Return!");
+            UISoundManager.Instance.PlayClickSound();
         }
     }
 

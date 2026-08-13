@@ -24,9 +24,15 @@ public class DayNightManager : Singleton<DayNightManager>
     public bool IsWaveActive => isWaveActive;
 
 
-    [Header("--- CẤU HÌNH SKIP WAVE ---")]
+    [Header("--- CẤU HÌNH SKIP WAVE & TÀI NGUYÊN ---")]
+    [Tooltip("Số vàng trừ khi bấm nút Skip ngày (Mặc định: 10 vàng)")]
+    public int skipGoldCost = 10;
+
+    [Tooltip("Số vàng cộng thêm mỗi khi trôi qua ngày mới (Mặc định: 5 vàng)")]
+    public int dayIncrementGoldReward = 5;
+
     [Tooltip("Thưởng vàng/tài nguyên khi Skip Wave sớm")]
-    public bool enableSkipBonus = false;
+    public bool enableSkipBonus = true;
 
     [Tooltip("Số vàng thưởng cho mỗi giây skip sớm")]
     public int bonusPerSecondSkipped = 0;
@@ -50,6 +56,16 @@ public class DayNightManager : Singleton<DayNightManager>
 
     [Tooltip("Cường độ ánh sáng tối thiểu ở giữa chu kỳ ban đêm (0.15 = tối nhẹ)")]
     public float minLightIntensity = 0.15f;
+
+    [Header("--- ÂM THANH QUA NGÀY ---")]
+    [Tooltip("File âm thanh (Audio Clip) phát khi bắt đầu hiệu ứng xoay ánh sáng qua ngày")]
+    public AudioClip dayTransitionSFX;
+
+    [Tooltip("AudioSource dùng để phát âm thanh (tự động lấy hoặc tạo mới trên GameObject này nếu để trống)")]
+    public AudioSource dayTransitionAudioSource;
+
+    [Tooltip("Âm lượng phát file âm thanh qua ngày (0 = tắt, 1 = tối đa)")]
+    [Range(0f, 1f)] public float dayTransitionVolume = 1.0f;
 
     [Header("--- HIỆU ỨNG ĐÁM MÂY CHE MÀN HÌNH (CLOUD TRANSITION) ---")]
     [Tooltip("Bật/tắt hiệu ứng đám mây kéo che màn hình khi Skip Day")]
@@ -133,6 +149,10 @@ public class DayNightManager : Singleton<DayNightManager>
     private void Update()
     {
         if (Ins != this) return;
+        if (currentWaveState == WaveState.Preparation && !isLightAnimating)
+        {
+            timer += Time.deltaTime;
+        }
     }
 
     /// <summary>
@@ -141,13 +161,61 @@ public class DayNightManager : Singleton<DayNightManager>
     /// </summary>
     public void SkipPreparation()
     {
-        if (isLightAnimating) return; // Tránh bấm liên tục khi ánh sáng đang xoay 3s
+        // Chặn click / gọi hàm nhiều lần trong cùng thời điểm chuyển ngày.
+        // Quan trọng: TriggerLightTransitionEffect cũng tự khóa để tránh tạo nhiều Coroutine.
+        if (isLightAnimating) return;
 
-        // NẾU WAVE ĐANG DIỄN RỦA: Kết thúc Wave hiện tại trước khi quay ánh sáng cho Wave mới
+        int requiredGold = skipGoldCost > 0 ? skipGoldCost : 10;
+
+        // Phải có JsonDataManager để quản lý tài nguyên.
+        if (JsonDataManager.Ins == null)
+        {
+            Debug.LogError("[DayNightManager] ❌ Không tìm thấy JsonDataManager!");
+            return;
+        }
+
+        // Kiểm tra vàng trước khi thực hiện bất kỳ thay đổi Wave nào.
+        if (JsonDataManager.Ins.gold < requiredGold)
+        {
+            Debug.LogWarning(
+                $"[DayNightManager] ⛔ KHÔNG ĐỦ VÀNG! Cần {requiredGold}, " +
+                $"hiện tại {JsonDataManager.Ins.gold}."
+            );
+
+            if (UIManager.Ins != null)
+            {
+                UIManager.Ins.ShowWarning(
+                    $"Không đủ {requiredGold} vàng để Skip qua ngày!"
+                );
+            }
+
+            return;
+        }
+
+        // Trừ vàng và kiểm tra kết quả.
+        bool spent = JsonDataManager.Ins.TrySpendGold(requiredGold);
+        if (!spent)
+        {
+            Debug.LogWarning(
+                $"[DayNightManager] ❌ TrySpendGold thất bại! " +
+                $"Không chuyển Wave và không chạy hiệu ứng."
+            );
+            return;
+        }
+
+        Debug.Log(
+            $"[DayNightManager] 💸 -{requiredGold} vàng. " +
+            $"Vàng còn lại: {JsonDataManager.Ins.gold}"
+        );
+
+        // Nếu Wave đang Combat: kết thúc Wave hiện tại trước khi chuyển tiếp.
         if (currentWaveState == WaveState.Combat)
         {
-            Debug.Log($"[WaveManager] ⚡ SKIP WAVE {currentWave}! Bắt đầu chu kỳ chuyển sang Day/Wave tiếp theo.");
-            
+            Debug.Log(
+                $"[WaveManager] ⚡ SKIP WAVE {currentWave}! " +
+                $"Bắt đầu chuyển sang Wave tiếp theo."
+            );
+
             isWaveActive = false;
             currentWaveState = WaveState.Preparation;
             OnWaveCompleted?.Invoke(currentWave);
@@ -155,19 +223,24 @@ public class DayNightManager : Singleton<DayNightManager>
         else
         {
             float timeSaved = timer;
-            int bonusReward = Mathf.FloorToInt(timeSaved * bonusPerSecondSkipped);
+            int bonusReward = Mathf.FloorToInt(
+                timeSaved * bonusPerSecondSkipped
+            );
 
-            Debug.Log($"[WaveManager] ⚡ NGƯỜI CHƠI BẤM START WAVE! Tiết kiệm {timeSaved:F1}s.");
+            Debug.Log(
+                $"[WaveManager] ⚡ START WAVE! Tiết kiệm {timeSaved:F1}s."
+            );
 
             OnWaveSkipped?.Invoke(currentWave + 1, timeSaved);
 
+            // Chỉ cộng bonus nếu Inspector đặt bonusPerSecondSkipped > 0.
             if (enableSkipBonus && bonusReward > 0)
             {
                 AddSkipBonusReward(bonusReward);
             }
         }
 
-        // Kích hoạt chu kỳ ánh sáng 3s (Hết 3s mới tăng Ngày & bắt đầu Wave)
+        // Chạy chuyển cảnh. Hàm này sẽ khóa ngay lập tức để không bị gọi 2 lần.
         TriggerLightTransitionEffect();
     }
 
@@ -186,6 +259,20 @@ public class DayNightManager : Singleton<DayNightManager>
     /// </summary>
     public void TriggerLightTransitionEffect()
     {
+        // QUAN TRỌNG: khóa NGAY tại đây, trước khi StartCoroutine().
+        // Trước đây isLightAnimating chỉ được set trong Coroutine, nên nếu
+        // TriggerLightTransitionEffect bị gọi 2 lần liên tiếp trong cùng frame,
+        // có thể tạo 2 Coroutine và ExecuteDayIncrementLogic() chạy 2 lần -> +5 vàng 2 lần.
+        if (isLightAnimating)
+        {
+            Debug.LogWarning(
+                "[DayNightManager] ⚠️ Bỏ qua yêu cầu chuyển ngày trùng lặp."
+            );
+            return;
+        }
+
+        isLightAnimating = true;
+
         if (directionalLight == null)
         {
             directionalLight = UnityEngine.Object.FindFirstObjectByType<Light>();
@@ -194,6 +281,7 @@ public class DayNightManager : Singleton<DayNightManager>
         if (lightTransitionCoroutine != null)
         {
             StopCoroutine(lightTransitionCoroutine);
+            lightTransitionCoroutine = null;
         }
 
         lightTransitionCoroutine = StartCoroutine(AnimateLightRotationRoutine());
@@ -201,10 +289,12 @@ public class DayNightManager : Singleton<DayNightManager>
 
     private System.Collections.IEnumerator AnimateLightRotationRoutine()
     {
+        // Đã được khóa ngay trong TriggerLightTransitionEffect().
         isLightAnimating = true;
         if (skipWaveButton != null) skipWaveButton.interactable = false;
 
         InitCloudPositions();
+        PlayDayTransitionSound();
 
         float elapsedTime = 0f;
         Vector3 startRot = directionalLight != null ? directionalLight.transform.localEulerAngles : Vector3.zero;
@@ -280,6 +370,26 @@ public class DayNightManager : Singleton<DayNightManager>
     }
 
     /// <summary>
+    /// Phát âm thanh qua ngày fit với hiệu ứng ánh sáng xoay và đám mây
+    /// </summary>
+    private void PlayDayTransitionSound()
+    {
+        if (dayTransitionSFX == null) return;
+
+        if (dayTransitionAudioSource == null)
+        {
+            dayTransitionAudioSource = GetComponent<AudioSource>();
+            if (dayTransitionAudioSource == null)
+            {
+                dayTransitionAudioSource = gameObject.AddComponent<AudioSource>();
+            }
+        }
+
+        dayTransitionAudioSource.playOnAwake = false;
+        dayTransitionAudioSource.PlayOneShot(dayTransitionSFX, dayTransitionVolume);
+    }
+
+    /// <summary>
     /// Thực hiện logic chính thức tăng Ngày / Wave khi màn hình đang được Đám mây che kín
     /// </summary>
     private void ExecuteDayIncrementLogic()
@@ -291,11 +401,15 @@ public class DayNightManager : Singleton<DayNightManager>
 
         Debug.Log($"[WaveManager] 🔥 ĐÁM MÂY CHE KÍN MÀN HÌNH! CHÍNH THỨC TĂNG LÊN DAY {currentWave} (WAVE {currentWave})!");
 
+        // 💰 Cộng 5 vàng thưởng qua ngày mới
+        if (dayIncrementGoldReward > 0 && JsonDataManager.Ins != null)
+        {
+            JsonDataManager.Ins.AddGold(dayIncrementGoldReward);
+            Debug.Log($"[DayNightManager] 💰 Thưởng +{dayIncrementGoldReward} vàng khi sang Ngày mới {currentWave}!");
+        }
+
         OnNightStart?.Invoke();
         OnWaveStart?.Invoke(currentWave);
-
-        // 🌾 Tự động cộng tài nguyên từ toàn bộ công trình sản xuất khi bắt đầu Wave mới
-        WaveResourceManager.CollectBuildingResourcesForWave(currentWave);
 
         // 💾 TỰ ĐỘNG LƯU DỮ LIỆU TOÀN BỘ GAME MỖI KHI QUA 1 NGÀY / WAVE MỚI
         if (BuildingSystem.Ins != null) BuildingSystem.Ins.SaveBuildingsToSlot(1);
@@ -547,6 +661,11 @@ public class DayNightManager : Singleton<DayNightManager>
 
     private void AddSkipBonusReward(int rewardAmount)
     {
+        if (rewardAmount <= 0) return;
         Debug.Log($"[WaveManager] 💰 Cộng thêm {rewardAmount} vàng thưởng Skip sớm.");
+        if (JsonDataManager.Ins != null)
+        {
+            JsonDataManager.Ins.AddGold(rewardAmount);
+        }
     }
 }

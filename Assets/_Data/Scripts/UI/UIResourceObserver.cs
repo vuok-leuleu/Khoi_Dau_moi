@@ -19,7 +19,12 @@ public class UIResourceObserver : MonoBehaviour
     {
         if (hud == null)
         {
-            Debug.LogError("[UIResourceObserver] HUDController chưa được gán trong Inspector!");
+            hud = HUDController.Instance != null ? HUDController.Instance : Object.FindFirstObjectByType<HUDController>();
+        }
+
+        if (hud == null)
+        {
+            Debug.LogWarning("[UIResourceObserver] Chưa tìm thấy HUDController trong Scene.");
             return;
         }
 
