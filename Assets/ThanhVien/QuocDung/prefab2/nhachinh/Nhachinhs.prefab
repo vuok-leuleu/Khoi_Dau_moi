@@ -2080,6 +2080,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 782953189943938080, guid: 491ce2fc266e38440a8ee84de2878263, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8971074521988646154}
+    - targetCorrespondingSourceObject: {fileID: 782953189943938080, guid: 491ce2fc266e38440a8ee84de2878263, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5162398367732918452}
   m_SourcePrefab: {fileID: 100100000, guid: 491ce2fc266e38440a8ee84de2878263, type: 3}
 --- !u!1 &2963115606417281310 stripped
 GameObject:
@@ -2120,6 +2123,27 @@ MonoBehaviour:
   carve: 1
   carveOnlyStationary: 0.5
   movementThreshold: 0.1
+--- !u!65 &5162398367732918452
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2963115606417281310}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 9, y: 7, z: 9}
+  m_Center: {x: 0, y: 3, z: 0}
 --- !u!4 &7383959481442157866 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5024779341042145300, guid: 491ce2fc266e38440a8ee84de2878263, type: 3}
@@ -2446,7 +2470,9 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 64576416051278554, guid: eabee8c9364b56f4fbde9fbc773f4fbf, type: 3}
+    - {fileID: 64377159062324168, guid: eabee8c9364b56f4fbde9fbc773f4fbf, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
