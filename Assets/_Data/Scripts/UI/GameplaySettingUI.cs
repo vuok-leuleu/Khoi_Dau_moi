@@ -88,7 +88,7 @@ public class GameplaySettingUI : MonoBehaviour
     public void BackToMainMenu()
     {
         Time.timeScale = 1f; // Đảm bảo trả timeScale về 1 trước khi chuyển Scene
-        SceneManager.LoadScene("MenuScene");
+        SceneManager.LoadScene("Menu");
     }
 
     public void QuitGame()
