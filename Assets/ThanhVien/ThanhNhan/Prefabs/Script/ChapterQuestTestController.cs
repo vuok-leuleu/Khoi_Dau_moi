@@ -279,22 +279,35 @@ public class ChapterQuestController : MonoBehaviour
         }
     }
 
-    public void CompleteObjective(int chapterIndex, int objectiveIndex)
+    public bool CompleteObjective(int chapterIndex, int objectiveIndex)
     {
-        if (chapterIndex < 0 || chapterIndex >= chapterList.Count) return;
+        if (chapterIndex < 0 || chapterIndex >= chapterList.Count) return false;
+
+        // Only the currently unlocked chapter can receive gameplay progress.
+        if (chapterIndex != highestUnlockedChapterIndex)
+        {
+            Debug.LogWarning($"[QUEST] Cannot complete an objective in locked Chapter {chapterIndex}.");
+            return false;
+        }
+
         var chapter = chapterList[chapterIndex];
-        if (objectiveIndex < 0 || objectiveIndex >= chapter.objectives.Count) return;
+        if (objectiveIndex < 0 || objectiveIndex >= chapter.objectives.Count) return false;
+
+        int activeObjectiveIndex = chapter.objectives.FindIndex(objective => !objective.isCompleted);
+        if (objectiveIndex != activeObjectiveIndex)
+        {
+            Debug.LogWarning($"[QUEST] Objective {objectiveIndex} is not the active objective for Chapter {chapterIndex}.");
+            return false;
+        }
 
         QuestObjective obj = chapter.objectives[objectiveIndex];
 
-        if (!obj.isCompleted)
-        {
-            obj.isCompleted = true;
+        obj.isCompleted = true;
 
-            GiveReward(obj.rewardGold, obj.rewardWood, obj.rewardStone, obj.rewardWheat);
-            CheckChapterProgress();
-            DisplayChapter(currentChapterIndex);
-        }
+        GiveReward(obj.rewardGold, obj.rewardWood, obj.rewardStone, obj.rewardWheat);
+        CheckChapterProgress();
+        DisplayChapter(currentChapterIndex);
+        return true;
     }
 
     private void CheckChapterProgress()
