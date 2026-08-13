@@ -131,7 +131,18 @@ public class BuildingManager : Singleton<BuildingManager>
             };
 
             // Lấy chính xác level hiện tại của từng công trình
-            state.level = ub.CurrentLevel;
+            SettlementZone parentZone = ub.GetComponentInParent<SettlementZone>();
+            if (parentZone == null) parentZone = FindClosestZone(ub.transform.position);
+
+            if (parentZone != null && SettlementZone.IsTownHallBuilding(ub, parentZone))
+            {
+                state.level = Mathf.Max(ub.CurrentLevel, parentZone.settlementLevel - 1);
+            }
+            else
+            {
+                state.level = ub.CurrentLevel;
+            }
+
             state.isRuined = ub.IsRuined;
             state.startAsRuined = ub.StartAsRuined;
             state.isInitialBuildNeeded = ub.IsInitialBuildNeeded;
@@ -246,7 +257,6 @@ public class BuildingManager : Singleton<BuildingManager>
 
                 bool isReturningFromBattle = BattleData.HasData || BattleData.HasResult || BattleData.LastBattleWasVictory;
                 bool initBuildNeeded = isReturningFromBattle ? false : state.isInitialBuildNeeded;
-                targetUb.LoadBuildingData(state.level, state.isRuined, initBuildNeeded);
 
                 if (targetZone != null)
                 {
@@ -254,11 +264,14 @@ public class BuildingManager : Singleton<BuildingManager>
                     if (SettlementZone.IsTownHallBuilding(targetUb, targetZone))
                     {
                         targetZone.townHallBuilding = targetUb;
-                        targetZone.settlementLevel = Mathf.Max(targetZone.settlementLevel, state.level + 1);
+                        int townHallLevel = Mathf.Max(targetZone.settlementLevel - 1, state.level);
+                        targetZone.settlementLevel = townHallLevel + 1;
+                        targetUb.LoadBuildingData(townHallLevel, state.isRuined, initBuildNeeded);
                         targetZone.SaveSettlementState();
                     }
                     else
                     {
+                        targetUb.LoadBuildingData(state.level, state.isRuined, initBuildNeeded);
                         targetUb.transform.SetParent(targetZone.transform, true);
                         if (state.slotIndex >= 0)
                         {
@@ -266,6 +279,10 @@ public class BuildingManager : Singleton<BuildingManager>
                         }
                         targetZone.RegisterBuilding(targetUb);
                     }
+                }
+                else
+                {
+                    targetUb.LoadBuildingData(state.level, state.isRuined, initBuildNeeded);
                 }
 
                 Debug.Log($"[BuildingManager] 🔄 Đã khôi phục dữ liệu cho {state.buildingType} tại {targetZone?.settlementName} slot {state.slotIndex} (Level {state.level}).");
@@ -293,7 +310,6 @@ public class BuildingManager : Singleton<BuildingManager>
 
                         bool isReturningFromBattle = BattleData.HasData || BattleData.HasResult || BattleData.LastBattleWasVictory;
                         bool initBuildNeeded = isReturningFromBattle ? false : state.isInitialBuildNeeded;
-                        upgradeable.LoadBuildingData(state.level, state.isRuined, initBuildNeeded);
 
                         if (targetZone != null)
                         {
@@ -302,13 +318,20 @@ public class BuildingManager : Singleton<BuildingManager>
                             if (SettlementZone.IsTownHallBuilding(upgradeable, targetZone))
                             {
                                 targetZone.townHallBuilding = upgradeable;
-                                targetZone.settlementLevel = Mathf.Max(targetZone.settlementLevel, state.level + 1);
+                                int townHallLevel = Mathf.Max(targetZone.settlementLevel - 1, state.level);
+                                targetZone.settlementLevel = townHallLevel + 1;
+                                upgradeable.LoadBuildingData(townHallLevel, state.isRuined, initBuildNeeded);
                                 targetZone.SaveSettlementState();
                             }
                             else
                             {
+                                upgradeable.LoadBuildingData(state.level, state.isRuined, initBuildNeeded);
                                 targetZone.RegisterBuilding(upgradeable);
                             }
+                        }
+                        else
+                        {
+                            upgradeable.LoadBuildingData(state.level, state.isRuined, initBuildNeeded);
                         }
                     }
                     Debug.Log($"[BuildingManager] ➕ Đã tái tạo mới {state.buildingType} tại {targetZone?.settlementName} slot {state.slotIndex}.");

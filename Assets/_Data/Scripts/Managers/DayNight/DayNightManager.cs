@@ -411,6 +411,9 @@ public class DayNightManager : Singleton<DayNightManager>
         OnNightStart?.Invoke();
         OnWaveStart?.Invoke(currentWave);
 
+        // 🌾 TỰ ĐỘNG THU HOẠCH TÀI NGUYÊN TỪ TẤT CẢ CÁC CÔNG TRÌNH (KHO GỖ, KHO ĐÁ, KHO LƯƠNG) KHI SANG NGÀY MỚI
+        WaveResourceManager.CollectBuildingResourcesForWave(currentWave);
+
         // 💾 TỰ ĐỘNG LƯU DỮ LIỆU TOÀN BỘ GAME MỖI KHI QUA 1 NGÀY / WAVE MỚI
         if (BuildingSystem.Ins != null) BuildingSystem.Ins.SaveBuildingsToSlot(1);
         if (SettlementManager.Ins != null) SettlementManager.Ins.SaveAllSettlementsState();

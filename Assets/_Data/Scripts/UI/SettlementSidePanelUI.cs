@@ -283,16 +283,21 @@ public class SettlementSidePanelUI : MonoBehaviour
     {
         if (troopTrainingContainer == null) return;
 
+        // Giữ cho Container chứa 8 Ô Huấn Luyện luôn luôn hiển thị (ACTIVE) trên UI
+        troopTrainingContainer.gameObject.SetActive(true);
+
         SettlementZone currentZone = (SettlementManager.Ins != null) ? SettlementManager.Ins.CurrentSettlement : null;
         if (currentZone == null) currentZone = Object.FindFirstObjectByType<SettlementZone>();
 
-        if (currentZone == null || TroopTrainingManager.Ins == null)
+        // Tự động bảo đảm singleton TroopTrainingManager tồn tại
+        if (TroopTrainingManager.Ins == null)
         {
-            troopTrainingContainer.gameObject.SetActive(false);
-            return;
+            GameObject managerObj = new GameObject("TroopTrainingManager");
+            managerObj.AddComponent<TroopTrainingManager>();
         }
 
-        troopTrainingContainer.gameObject.SetActive(true);
+        if (currentZone == null || TroopTrainingManager.Ins == null) return;
+
         TroopTrainingSlotData[] slots = TroopTrainingManager.Ins.GetSlotsForZone(currentZone);
 
         for (int i = 0; i < TroopTrainingManager.MAX_TRAINING_SLOTS; i++)
@@ -300,6 +305,7 @@ public class SettlementSidePanelUI : MonoBehaviour
             TroopTrainingSlotUI slotUI = GetOrCreateTrainingSlotUI(i);
             if (slotUI == null) continue;
 
+            slotUI.gameObject.SetActive(true);
             slotUI.SetData(slots[i], currentZone);
         }
 
@@ -319,27 +325,38 @@ public class SettlementSidePanelUI : MonoBehaviour
             return activeTrainingSlotUIItems[index];
         }
 
-        if (troopTrainingSlotPrefab != null && troopTrainingContainer != null)
+        if (troopTrainingContainer == null) return null;
+
+        // 1. Nếu đã có các child GameObject sẵn trong Hierarchy (TroopTrainingSlotItem_01 (0..7))
+        if (index < troopTrainingContainer.childCount)
         {
-            GameObject obj = Instantiate(troopTrainingSlotPrefab, troopTrainingContainer);
-            TroopTrainingSlotUI itemUI = obj.GetComponent<TroopTrainingSlotUI>();
-            if (itemUI != null)
+            Transform child = troopTrainingContainer.GetChild(index);
+            if (child != null)
             {
-                activeTrainingSlotUIItems.Add(itemUI);
+                child.gameObject.SetActive(true);
+                TroopTrainingSlotUI itemUI = child.GetComponent<TroopTrainingSlotUI>();
+                if (itemUI == null) itemUI = child.gameObject.AddComponent<TroopTrainingSlotUI>();
+
+                if (!activeTrainingSlotUIItems.Contains(itemUI))
+                {
+                    activeTrainingSlotUIItems.Add(itemUI);
+                }
                 return itemUI;
             }
         }
-        else if (troopTrainingContainer != null)
+
+        // 2. Nếu thiếu child GameObject và có Prefab gán sẵn
+        if (troopTrainingSlotPrefab != null)
         {
-            TroopTrainingSlotUI[] existingSlots = troopTrainingContainer.GetComponentsInChildren<TroopTrainingSlotUI>(true);
-            if (index < existingSlots.Length)
+            GameObject obj = Instantiate(troopTrainingSlotPrefab, troopTrainingContainer);
+            TroopTrainingSlotUI itemUI = obj.GetComponent<TroopTrainingSlotUI>();
+            if (itemUI == null) itemUI = obj.AddComponent<TroopTrainingSlotUI>();
+
+            if (!activeTrainingSlotUIItems.Contains(itemUI))
             {
-                if (!activeTrainingSlotUIItems.Contains(existingSlots[index]))
-                {
-                    activeTrainingSlotUIItems.Add(existingSlots[index]);
-                }
-                return existingSlots[index];
+                activeTrainingSlotUIItems.Add(itemUI);
             }
+            return itemUI;
         }
 
         return null;

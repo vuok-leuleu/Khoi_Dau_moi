@@ -57,7 +57,8 @@ public class WaveResourceManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Thu thập tài nguyên từ tất cả các công trình sản xuất trên các Vùng Đất khi bắt đầu Wave mới
+    /// <summary>
+    /// Thu thập tài nguyên từ tất cả các công trình sản xuất trên các Vùng Đất khi bắt đầu Wave/Ngày mới
     /// </summary>
     public static void CollectBuildingResourcesForWave(int waveIndex)
     {
@@ -77,50 +78,38 @@ public class WaveResourceManager : MonoBehaviour
             if (b.IsInitialBuildNeeded || b.IsRuined || b.IsUpgrading) continue; // Công trình chưa xây xong hoặc hỏng -> Chưa sinh tài nguyên
 
             int lvl = b.CurrentLevel; // 0-indexed (0 là Lv1, 1 là Lv2...)
+            string nameLower = b.gameObject.name.ToLower();
+            string bNameLower = b.buildingName != null ? b.buildingName.ToLower() : "";
 
-            switch (b.buildingType)
+            bool isWood = b.buildingType == BuildingType.WoodCutter || b.buildingType == BuildingType.Wood || nameLower.Contains("wood") || nameLower.Contains("gỗ") || bNameLower.Contains("gỗ") || bNameLower.Contains("mộc");
+            bool isStone = b.buildingType == BuildingType.StoneMine || b.buildingType == BuildingType.StoneStorage || b.buildingType == BuildingType.Stone || nameLower.Contains("stone") || nameLower.Contains("đá") || bNameLower.Contains("đá");
+            bool isFood = b.buildingType == BuildingType.Kitchen || b.buildingType == BuildingType.FoodStorage || b.buildingType == BuildingType.Rice || nameLower.Contains("food") || nameLower.Contains("lương") || nameLower.Contains("lúa") || nameLower.Contains("bếp") || bNameLower.Contains("lương") || bNameLower.Contains("lúa");
+            bool isHouse = b.buildingType == BuildingType.House || nameLower.Contains("house") || nameLower.Contains("chính");
+
+            if (isWood)
             {
-                case BuildingType.WoodCutter:
-                    {
-                        var ws = b.GetComponentInChildren<WoodStorage>();
-                        int workers = (ws != null && ws.maxWorkersLevels != null && lvl < ws.maxWorkersLevels.Length) ? ws.maxWorkersLevels[lvl] : (lvl + 1) * 2;
-                        int woodAmount = workers * 15;
-                        totalWoodGained += woodAmount;
-                    }
-                    break;
-
-                case BuildingType.StoneMine:
-                case BuildingType.StoneStorage:
-                    {
-                        var ss = b.GetComponentInChildren<StoneStorage>();
-                        int workers = (ss != null && ss.maxWorkersLevels != null && lvl < ss.maxWorkersLevels.Length) ? ss.maxWorkersLevels[lvl] : (lvl + 1) * 2;
-                        int stoneAmount = workers * 15;
-                        totalStoneGained += stoneAmount;
-                    }
-                    break;
-
-                case BuildingType.Kitchen:
-                case BuildingType.FoodStorage:
-                    {
-                        var rs = b.GetComponentInChildren<RiceStorage>();
-                        var kit = b.GetComponentInChildren<Kitchen>();
-                        int workers = (rs != null && rs.maxWorkersLevels != null && lvl < rs.maxWorkersLevels.Length) ? rs.maxWorkersLevels[lvl] : ((kit != null && kit.maxWorkersLevels != null && lvl < kit.maxWorkersLevels.Length) ? kit.maxWorkersLevels[lvl] : (lvl + 1) * 3);
-                        int foodAmount = workers * 15;
-                        totalFoodGained += foodAmount;
-                    }
-                    break;
-
-                case BuildingType.House:
-                    {
-                        int goldAmount = (lvl + 1) * 25;
-                        totalGoldGained += goldAmount;
-                    }
-                    break;
+                int woodAmount = (lvl + 1) * 30;
+                totalWoodGained += woodAmount;
+            }
+            else if (isStone)
+            {
+                int stoneAmount = (lvl + 1) * 30;
+                totalStoneGained += stoneAmount;
+            }
+            else if (isFood)
+            {
+                int foodAmount = (lvl + 1) * 30;
+                totalFoodGained += foodAmount;
+            }
+            else if (isHouse)
+            {
+                int goldAmount = (lvl + 1) * 25;
+                totalGoldGained += goldAmount;
             }
         }
 
-        // Tự động cộng Vàng từ Thủ Đô / Nhà Chính
-        totalGoldGained += 50;
+        // Thưởng thêm Vàng từ Thủ Đô / Nhà Chính mỗi khi qua ngày mới
+        totalGoldGained += 20;
 
         if (totalWoodGained > 0) JsonDataManager.Ins.AddWood(totalWoodGained);
         if (totalStoneGained > 0) JsonDataManager.Ins.AddStone(totalStoneGained);
@@ -129,11 +118,11 @@ public class WaveResourceManager : MonoBehaviour
 
         JsonDataManager.Ins.BroadcastAllResources();
 
-        Debug.Log($"[WaveResourceManager] 🌾 WAVE {waveIndex}: Thu hoạch thành công! +{totalWoodGained} Gỗ, +{totalStoneGained} Đá, +{totalFoodGained} Lương, +{totalGoldGained} Vàng.");
+        Debug.Log($"[WaveResourceManager] 🌾 NGÀY/WAVE {waveIndex}: Thu hoạch tài nguyên thành công! +{totalWoodGained} Gỗ, +{totalStoneGained} Đá, +{totalFoodGained} Lương, +{totalGoldGained} Vàng.");
 
         if (UIManager.Ins != null && (totalWoodGained > 0 || totalStoneGained > 0 || totalFoodGained > 0 || totalGoldGained > 0))
         {
-            UIManager.Ins.ShowWarning($"🌾 Wave {waveIndex}: Thu hoạch +{totalWoodGained} Gỗ, +{totalStoneGained} Đá, +{totalFoodGained} Lương, +{totalGoldGained} Vàng!");
+            UIManager.Ins.ShowWarning($"🌾 Ngày {waveIndex}: Thu hoạch +{totalWoodGained} Gỗ, +{totalStoneGained} Đá, +{totalFoodGained} Lương, +{totalGoldGained} Vàng!");
         }
     }
 }

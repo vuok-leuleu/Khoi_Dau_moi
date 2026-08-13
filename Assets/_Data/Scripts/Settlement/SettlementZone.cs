@@ -338,10 +338,12 @@ public class SettlementZone : MonoBehaviour
     {
         get
         {
-            var th = TownHallBuilding;
-            if (th != null && isTownHallEstablished)
-                return th.CurrentLevel + 1;
-            return settlementLevel;
+            if (PlayerPrefs.HasKey($"Settlement_{settlementName}_Level"))
+            {
+                int saved = PlayerPrefs.GetInt($"Settlement_{settlementName}_Level", settlementLevel);
+                if (saved > settlementLevel) settlementLevel = saved;
+            }
+            return Mathf.Max(1, settlementLevel);
         }
     }
 
@@ -373,16 +375,15 @@ public class SettlementZone : MonoBehaviour
         var th = TownHallBuilding;
         if (th != null && isTownHallEstablished)
         {
-            int expectedLevel = th.CurrentLevel + 1;
-            if (settlementLevel != expectedLevel)
+            int curLevel = SettlementLevel;
+            if (th.CurrentLevel + 1 < curLevel)
             {
-                settlementLevel = expectedLevel;
-                Update3DSlotVisibility();
-                if (SettlementSidePanelUI.Ins != null)
-                {
-                    SettlementSidePanelUI.Ins.UpdateHeaderVisual();
-                    SettlementSidePanelUI.Ins.RefreshPanel();
-                }
+                th.LoadBuildingData(curLevel - 1, th.IsRuined, false);
+            }
+            else if (th.CurrentLevel + 1 > curLevel)
+            {
+                settlementLevel = th.CurrentLevel + 1;
+                SaveSettlementState();
             }
         }
     }
@@ -611,13 +612,22 @@ public class SettlementZone : MonoBehaviour
     public void UpgradeSettlementLevel()
     {
         settlementLevel++;
+        SaveSettlementState();
+
         if (townHallBuilding != null)
         {
+            townHallBuilding.LoadBuildingData(settlementLevel - 1, townHallBuilding.IsRuined, false);
             townHallBuilding.Upgrade();
         }
+
         SaveSettlementState();
+        Update3DSlotVisibility();
         Debug.Log($"[SettlementZone] 🚀 Đã nâng cấp vùng đất {settlementName} lên Cấp {settlementLevel}!");
-        if (SettlementSidePanelUI.Ins != null) SettlementSidePanelUI.Ins.RefreshPanel();
+        if (SettlementSidePanelUI.Ins != null)
+        {
+            SettlementSidePanelUI.Ins.UpdateHeaderVisual();
+            SettlementSidePanelUI.Ins.RefreshPanel();
+        }
     }
 
     /// <summary>
