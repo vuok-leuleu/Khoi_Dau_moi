@@ -8,7 +8,7 @@ using System.Collections.Generic;
  * HUDController.cs
  * Folder: Scripts/UI/
  * Dự án: KHẨN HOANG (PENTA DEV)
- * Tự động đồng bộ tài nguyên, nảy Icon vật phẩm với DOTween và chống lỗi NullReferenceException.
+ * Popup giữ cố định 1s PHÍA DƯỚI CẠNH PHẢI CỦA ICON TÀI NGUYÊN TƯƠNG ỨNG (Gỗ hiện dưới icon Gỗ, Đá dưới icon Đá, v.v.), hết 1s popup biến mất ngay và số trên UI mới bắt đầu chạy tăng/giảm.
  */
 
 public class HUDController : MonoBehaviour
@@ -25,7 +25,7 @@ public class HUDController : MonoBehaviour
     public RectTransform stoneGroup;
     public RectTransform foodGroup;
 
-    [Header("Top UI – Icon Vật Phẩm (Tùy chọn)")]
+    [Header("Top UI – Icon Vật Phẩm")]
     public RectTransform goldIcon;
     public RectTransform woodIcon;
     public RectTransform stoneIcon;
@@ -35,18 +35,26 @@ public class HUDController : MonoBehaviour
     public GameObject floatingTextPrefab;
     public Transform floatingTextParent;
 
+    [Header("Popup Position & Timing Settings")]
+    [Tooltip("Độ lệch vị trí X so với cạnh phải Icon (+ là sang phải thêm, - là lùi về trái)")]
+    public float popupOffsetX = 0f;
+    [Tooltip("Độ lệch vị trí Y so với Icon (VD: -35 là nằm cố định dưới Icon 35px)")]
+    public float popupOffsetY = -35f;
+    [Tooltip("Thời gian popup đứng yên cố định trước khi biến mất (mặc định 1 giây)")]
+    public float popupStayDuration = 1.0f;
+    [Tooltip("Thời gian chạy số tăng/giảm sau khi popup biến mất (giây)")]
+    public float numberCountDuration = 0.35f;
+
     private int _currentGold;
     private int _currentWood;
     private int _currentStone;
     private int _currentFood;
 
-    // --- HỆ THỐNG OBJECT POOL MINI ---
-    private Queue<GameObject> _floatingTextPool = new Queue<GameObject>();
-
-    // --- CẤU TRÚC GỘP TÀI NGUYÊN (CHỐNG SPAM REBUILD MESH UI) ---
-    private Dictionary<TextMeshProUGUI, int> _pendingDeltas = new Dictionary<TextMeshProUGUI, int>();
-    private Dictionary<TextMeshProUGUI, float> _cooldownTimers = new Dictionary<TextMeshProUGUI, float>();
-    private const float UI_REFRESH_COOLDOWN = 0.05f;
+    // Giá trị hiển thị đang chạy thực tế trên Text (để counter đếm chính xác từng đợt)
+    private int _displayedGold;
+    private int _displayedWood;
+    private int _displayedStone;
+    private int _displayedFood;
 
     public static HUDController Instance { get; private set; }
 
@@ -75,6 +83,11 @@ public class HUDController : MonoBehaviour
             _currentFood = JsonDataManager.Ins.food;
         }
 
+        _displayedGold = _currentGold;
+        _displayedWood = _currentWood;
+        _displayedStone = _currentStone;
+        _displayedFood = _currentFood;
+
         SetTextInstant(goldText, _currentGold);
         SetTextInstant(woodText, _currentWood);
         SetTextInstant(stoneText, _currentStone);
@@ -84,7 +97,7 @@ public class HUDController : MonoBehaviour
     }
 
     /// <summary>
-    /// Tự động quét và gán chính xác theo Object Cha (GoldGroup, WoodGroup, StoneGroup, FoodGroup)
+    /// Tự động quét và gán chính xác theo Object Cha (Hỗ trợ cả tên có khoảng trắng 'GoldGroup ', 'WoodGroup ', v.v.)
     /// </summary>
     [ContextMenu("Rebind All UI Groups")]
     public void AutoFindUIReferences()
@@ -98,61 +111,119 @@ public class HUDController : MonoBehaviour
 
         if (topPanel == null) return;
 
-        // 🎯 LẤY CHÍNH XÁC OBJECT CHA NHÓM TÀI NGUYÊN
-        if (goldGroup == null) goldGroup = (topPanel.Find("RightGroup/GoldGroup") ?? topPanel.Find("GoldGroup")) as RectTransform;
-        if (woodGroup == null) woodGroup = (topPanel.Find("RightGroup/WoodGroup") ?? topPanel.Find("WoodGroup")) as RectTransform;
-        if (stoneGroup == null) stoneGroup = (topPanel.Find("RightGroup/StoneGroup") ?? topPanel.Find("StoneGroup")) as RectTransform;
-        if (foodGroup == null) foodGroup = (topPanel.Find("RightGroup/FoodGroup") ?? topPanel.Find("FoodGroup")) as RectTransform;
+        // 🎯 LẤY CHÍNH XÁC OBJECT CHA NHÓM TÀI NGUYÊN (Tìm đệ quy trong toàn bộ topPanel nếu cần)
+        if (goldGroup == null)
+        {
+            goldGroup = (topPanel.Find("RightGroup/GoldGroup ") ?? topPanel.Find("RightGroup/GoldGroup") ??
+                         topPanel.Find("GoldGroup ") ?? topPanel.Find("GoldGroup") ??
+                         topPanel.Find("RightGroup/WheatGroup ") ?? topPanel.Find("RightGroup/WheatGroup") ??
+                         FindChildRecursive(topPanel, "GoldGroup ") ?? FindChildRecursive(topPanel, "GoldGroup")) as RectTransform;
+        }
+        if (woodGroup == null)
+        {
+            woodGroup = (topPanel.Find("RightGroup/WoodGroup ") ?? topPanel.Find("RightGroup/WoodGroup") ??
+                         topPanel.Find("WoodGroup ") ?? topPanel.Find("WoodGroup") ??
+                         topPanel.Find("RightGroup/LumberGroup ") ?? topPanel.Find("RightGroup/LumberGroup") ??
+                         FindChildRecursive(topPanel, "WoodGroup ") ?? FindChildRecursive(topPanel, "WoodGroup")) as RectTransform;
+        }
+        if (stoneGroup == null)
+        {
+            stoneGroup = (topPanel.Find("RightGroup/StoneGroup ") ?? topPanel.Find("RightGroup/StoneGroup") ??
+                          topPanel.Find("StoneGroup ") ?? topPanel.Find("StoneGroup") ??
+                          topPanel.Find("RightGroup/RockGroup ") ?? topPanel.Find("RightGroup/RockGroup") ??
+                          FindChildRecursive(topPanel, "StoneGroup ") ?? FindChildRecursive(topPanel, "StoneGroup")) as RectTransform;
+        }
+        if (foodGroup == null)
+        {
+            foodGroup = (topPanel.Find("RightGroup/FoodGroup ") ?? topPanel.Find("RightGroup/FoodGroup") ??
+                         topPanel.Find("FoodGroup ") ?? topPanel.Find("FoodGroup") ??
+                         topPanel.Find("RightGroup/MeatGroup ") ?? topPanel.Find("RightGroup/MeatGroup") ??
+                         FindChildRecursive(topPanel, "FoodGroup ") ?? FindChildRecursive(topPanel, "FoodGroup")) as RectTransform;
+        }
 
+        // Gán Text và Icon cho từng nhóm
         if (goldGroup != null)
         {
-            goldText = goldGroup.GetComponentInChildren<TextMeshProUGUI>(true);
-            goldIcon = goldGroup.Find("GoldIcon") as RectTransform ?? goldGroup.Find("WheatIcon") as RectTransform ?? goldGroup.GetComponentInChildren<Image>(true)?.rectTransform;
+            if (goldText == null) goldText = goldGroup.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (goldIcon == null) goldIcon = (goldGroup.Find("WheatIcon ") ?? goldGroup.Find("WheatIcon") ?? goldGroup.Find("GoldIcon ") ?? goldGroup.Find("GoldIcon") ?? goldGroup.GetComponentInChildren<Image>(true)?.rectTransform) as RectTransform;
         }
 
         if (woodGroup != null)
         {
-            woodText = woodGroup.GetComponentInChildren<TextMeshProUGUI>(true);
-            woodIcon = woodGroup.Find("WoodIcon") as RectTransform ?? woodGroup.GetComponentInChildren<Image>(true)?.rectTransform;
+            if (woodText == null) woodText = woodGroup.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (woodIcon == null) woodIcon = (woodGroup.Find("WoodIcon") ?? woodGroup.Find("WoodIcon ") ?? woodGroup.GetComponentInChildren<Image>(true)?.rectTransform) as RectTransform;
         }
 
         if (stoneGroup != null)
         {
-            stoneText = stoneGroup.GetComponentInChildren<TextMeshProUGUI>(true);
-            stoneIcon = stoneGroup.Find("StoneIcon") as RectTransform ?? stoneGroup.GetComponentInChildren<Image>(true)?.rectTransform;
+            if (stoneText == null) stoneText = stoneGroup.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (stoneIcon == null) stoneIcon = (stoneGroup.Find("StoneIcon ") ?? stoneGroup.Find("StoneIcon") ?? stoneGroup.GetComponentInChildren<Image>(true)?.rectTransform) as RectTransform;
         }
 
         if (foodGroup != null)
         {
-            foodText = foodGroup.GetComponentInChildren<TextMeshProUGUI>(true);
-            foodIcon = foodGroup.Find("FoodIcon") as RectTransform ?? foodGroup.GetComponentInChildren<Image>(true)?.rectTransform;
+            if (foodText == null) foodText = foodGroup.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (foodIcon == null) foodIcon = (foodGroup.Find("Foodicon") ?? foodGroup.Find("Foodicon ") ?? foodGroup.Find("FoodIcon") ?? foodGroup.GetComponentInChildren<Image>(true)?.rectTransform) as RectTransform;
         }
 
-        if (floatingTextParent == null) floatingTextParent = topPanel.Find("RightGroup/FloatingText");
-
-        Debug.Log($"[HUDController] 🔄 Đã liên kết với Object Cha: GoldGroup={goldGroup?.name}, WoodGroup={woodGroup?.name}, StoneGroup={stoneGroup?.name}, FoodGroup={foodGroup?.name}");
-    }
-
-    private void Update()
-    {
-        if (_cooldownTimers.Count == 0) return;
-
-        // Xử lý bộ đếm thời gian gộp tài nguyên an toàn (tránh NullReferenceException)
-        List<TextMeshProUGUI> keys = new List<TextMeshProUGUI>(_cooldownTimers.Keys);
-        foreach (var textKey in keys)
+        // Tự động tìm Canvas cho FloatingText
+        if (floatingTextParent == null || !floatingTextParent.gameObject.scene.IsValid())
         {
-            if (textKey == null) continue;
-
-            if (_cooldownTimers.TryGetValue(textKey, out float timerVal) && timerVal > 0)
+            var separateCanvas = GameObject.Find("Canvas_FloatingText");
+            if (separateCanvas != null) floatingTextParent = separateCanvas.transform;
+            else
             {
-                _cooldownTimers[textKey] -= Time.deltaTime;
-                if (_cooldownTimers[textKey] <= 0 && _pendingDeltas.TryGetValue(textKey, out int deltaVal) && deltaVal != 0)
-                {
-                    TriggerFloatingTextAndFx(textKey, deltaVal);
-                    _pendingDeltas[textKey] = 0;
-                }
+                var sceneCanvas = Object.FindFirstObjectByType<Canvas>();
+                if (sceneCanvas != null) floatingTextParent = sceneCanvas.transform;
+                else floatingTextParent = topPanel;
             }
         }
+
+        Debug.Log($"[HUDController] 🔄 Đã liên kết: GoldGroup={goldGroup?.name}(Icon:{goldIcon?.name}), WoodGroup={woodGroup?.name}(Icon:{woodIcon?.name}), StoneGroup={stoneGroup?.name}(Icon:{stoneIcon?.name}), FoodGroup={foodGroup?.name}(Icon:{foodIcon?.name})");
+    }
+
+    private Transform FindChildRecursive(Transform parent, string nameToFind)
+    {
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            var child = parent.GetChild(i);
+            if (child.name == nameToFind || child.name.Trim() == nameToFind.Trim()) return child;
+            var found = FindChildRecursive(child, nameToFind);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Lấy RectTransform của ICON tài nguyên tương ứng làm tâm neo cho popup
+    /// </summary>
+    private RectTransform GetIconAnchor(ResourceType type)
+    {
+        switch (type)
+        {
+            case ResourceType.Gold:
+                if (goldIcon != null) return goldIcon;
+                if (goldGroup != null) return goldGroup;
+                if (goldText != null) return goldText.rectTransform;
+                break;
+            case ResourceType.Wood:
+                if (woodIcon != null) return woodIcon;
+                if (woodGroup != null) return woodGroup;
+                if (woodText != null) return woodText.rectTransform;
+                break;
+            case ResourceType.Stone:
+                if (stoneIcon != null) return stoneIcon;
+                if (stoneGroup != null) return stoneGroup;
+                if (stoneText != null) return stoneText.rectTransform;
+                break;
+            case ResourceType.Food:
+                if (foodIcon != null) return foodIcon;
+                if (foodGroup != null) return foodGroup;
+                if (foodText != null) return foodText.rectTransform;
+                break;
+        }
+
+        return transform as RectTransform;
     }
 
     // --- CÁC HÀM CẬP NHẬT TỪ EVENT QUẢN LÝ ---
@@ -160,100 +231,61 @@ public class HUDController : MonoBehaviour
     public void UpdateGold(int value)
     {
         int delta = value - _currentGold;
-        AnimateNumber(goldText, _currentGold, value);
         _currentGold = value;
-        HandleResourceChange(goldText, delta);
+        if (delta == 0) return;
+
+        RectTransform anchor = GetIconAnchor(ResourceType.Gold);
+        ShowFloatingTextOptimized(delta, anchor, () =>
+        {
+            AnimateNumber(goldText, _displayedGold, _currentGold);
+            _displayedGold = _currentGold;
+        });
     }
 
     public void UpdateWood(int value)
     {
         int delta = value - _currentWood;
-        AnimateNumber(woodText, _currentWood, value);
         _currentWood = value;
-        HandleResourceChange(woodText, delta);
+        if (delta == 0) return;
+
+        RectTransform anchor = GetIconAnchor(ResourceType.Wood);
+        ShowFloatingTextOptimized(delta, anchor, () =>
+        {
+            AnimateNumber(woodText, _displayedWood, _currentWood);
+            _displayedWood = _currentWood;
+        });
     }
 
     public void UpdateStone(int value)
     {
         int delta = value - _currentStone;
-        AnimateNumber(stoneText, _currentStone, value);
         _currentStone = value;
-        HandleResourceChange(stoneText, delta);
+        if (delta == 0) return;
+
+        RectTransform anchor = GetIconAnchor(ResourceType.Stone);
+        ShowFloatingTextOptimized(delta, anchor, () =>
+        {
+            AnimateNumber(stoneText, _displayedStone, _currentStone);
+            _displayedStone = _currentStone;
+        });
     }
 
     public void UpdateFood(int value)
     {
         int delta = value - _currentFood;
-        AnimateNumber(foodText, _currentFood, value);
         _currentFood = value;
-        HandleResourceChange(foodText, delta);
+        if (delta == 0) return;
+
+        RectTransform anchor = GetIconAnchor(ResourceType.Food);
+        ShowFloatingTextOptimized(delta, anchor, () =>
+        {
+            AnimateNumber(foodText, _displayedFood, _currentFood);
+            _displayedFood = _currentFood;
+        });
     }
 
     // ──────────────────────────────────────────────────────────────
-    // LOGIC XỬ LÝ GỘP DỮ LIỆU & ANIMATION VẬT PHẨM (DOTWEEN)
-    // ──────────────────────────────────────────────────────────────
-
-    private void HandleResourceChange(TextMeshProUGUI textTarget, int delta)
-    {
-        if (delta == 0 || textTarget == null) return;
-
-        if (!_pendingDeltas.ContainsKey(textTarget)) _pendingDeltas[textTarget] = 0;
-        if (!_cooldownTimers.ContainsKey(textTarget)) _cooldownTimers[textTarget] = 0f;
-
-        _pendingDeltas[textTarget] += delta;
-
-        if (_cooldownTimers[textTarget] <= 0f)
-        {
-            TriggerFloatingTextAndFx(textTarget, _pendingDeltas[textTarget]);
-            _pendingDeltas[textTarget] = 0;
-            _cooldownTimers[textTarget] = UI_REFRESH_COOLDOWN;
-        }
-    }
-
-    private void TriggerFloatingTextAndFx(TextMeshProUGUI textTarget, int totalDelta)
-    {
-        if (totalDelta == 0 || textTarget == null) return;
-
-        Color fxColor = Color.white;
-        if (textTarget == goldText) fxColor = new Color(1f, 0.85f, 0f);
-        else if (textTarget == woodText) fxColor = new Color(0.65f, 0.4f, 0.15f);
-        else if (textTarget == stoneText) fxColor = new Color(0.75f, 0.75f, 0.8f);
-        else if (textTarget == foodText) fxColor = new Color(0.3f, 0.9f, 0.3f);
-
-        ShowFloatingTextOptimized(totalDelta, textTarget, fxColor);
-        PulseOrShake(textTarget, totalDelta);
-
-        // Nảy nhịp Object Cha chứa ô Text đang được cập nhật
-        if (textTarget.transform.parent != null)
-        {
-            AnimateItemIcon(textTarget.transform.parent as RectTransform, totalDelta);
-        }
-    }
-
-    /// <summary>
-    /// Hiệu ứng DOTween nảy Icon/Group vật phẩm khi nhận hoặc trừ tài nguyên
-    /// </summary>
-    public void AnimateItemIcon(RectTransform iconTarget, int delta)
-    {
-        if (iconTarget == null) return;
-
-        DOTween.Kill(iconTarget);
-        iconTarget.localScale = Vector3.one;
-
-        if (delta > 0)
-        {
-            iconTarget.DOPunchScale(new Vector3(0.4f, 0.4f, 0f), 0.35f, 6, 0.5f)
-                .SetId(iconTarget);
-        }
-        else
-        {
-            iconTarget.DOShakePosition(0.25f, 4f, 10, 90f)
-                .SetId(iconTarget);
-        }
-    }
-
-    // ──────────────────────────────────────────────────────────────
-    // PRIVATE – ANIMATION & POOL (TỐI ƯU ĐỒ HỌA)
+    // PRIVATE – ANIMATION & FORMAT SỐ
     // ──────────────────────────────────────────────────────────────
 
     public static string FormatNumber(int amount)
@@ -275,6 +307,9 @@ public class HUDController : MonoBehaviour
         return amount.ToString();
     }
 
+    /// <summary>
+    /// Chạy số counter tăng/giảm mượt mà từ giá trị cũ đến giá trị mới (KHÔNG phóng to thu nhỏ)
+    /// </summary>
     private void AnimateNumber(TextMeshProUGUI text, int fromValue, int toValue)
     {
         if (text == null) return;
@@ -286,7 +321,7 @@ public class HUDController : MonoBehaviour
         {
             temp = x;
             if (text != null) text.text = FormatNumber(x);
-        }, toValue, 0.2f)
+        }, toValue, numberCountDuration)
         .SetEase(Ease.OutQuad)
         .SetId(text);
     }
@@ -296,30 +331,79 @@ public class HUDController : MonoBehaviour
         if (text != null) text.text = FormatNumber(value);
     }
 
-    private void PulseOrShake(TextMeshProUGUI text, int delta)
+    /// <summary>
+    /// Sinh popup giữ CỐ ĐỊNH, tính toạ độ neo theo CẠNH PHẢI CỦA ĐÚNG ICON TÀI NGUYÊN TƯƠNG ỨNG
+    /// </summary>
+    private void ShowFloatingTextOptimized(int amount, RectTransform anchorRect, System.Action onComplete)
     {
-        if (text == null || text.transform == null) return;
-
-        DOTween.Kill(text.transform);
-        text.transform.localScale = Vector3.one;
-
-        if (delta > 0)
+        if (floatingTextPrefab == null || anchorRect == null)
         {
-            text.transform.DOScale(1.25f, 0.12f)
-                .SetLoops(2, LoopType.Yoyo)
-                .SetId(text.transform);
+            onComplete?.Invoke();
+            return;
+        }
+
+        Transform targetParent = floatingTextParent;
+        if (targetParent == null || !targetParent.gameObject.scene.IsValid())
+        {
+            var separateCanvas = GameObject.Find("Canvas_FloatingText");
+            if (separateCanvas != null) targetParent = separateCanvas.transform;
+            else
+            {
+                Canvas rootCanvas = anchorRect.GetComponentInParent<Canvas>();
+                if (rootCanvas != null) targetParent = rootCanvas.transform;
+                else targetParent = transform;
+            }
+        }
+
+        // Spawn trực tiếp vào Canvas cha
+        GameObject fxObj = Instantiate(floatingTextPrefab, targetParent, false);
+
+        RectTransform fxRect = fxObj.GetComponent<RectTransform>();
+        RectTransform parentRect = targetParent as RectTransform;
+
+        if (fxRect != null)
+        {
+            // Đảm bảo Pivot của popup luôn là chính giữa (0.5, 0.5)
+            fxRect.pivot = new Vector2(0.5f, 0.5f);
+
+            if (parentRect != null)
+            {
+                // 🎯 Lấy vị trí CẠNH PHẢI của chính Icon tài nguyên đó (xMax)
+                Vector3 iconRightEdgeCenter = anchorRect.TransformPoint(new Vector2(anchorRect.rect.xMax, anchorRect.rect.center.y));
+
+                Canvas parentCanvas = targetParent.GetComponentInParent<Canvas>();
+                Camera cam = (parentCanvas != null && parentCanvas.renderMode != RenderMode.ScreenSpaceOverlay) ? parentCanvas.worldCamera : null;
+
+                Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(cam, iconRightEdgeCenter);
+                if (RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRect, screenPoint, cam, out Vector2 localPoint))
+                {
+                    fxRect.anchoredPosition = new Vector2(localPoint.x + popupOffsetX, localPoint.y + popupOffsetY);
+                }
+                else
+                {
+                    fxRect.position = iconRightEdgeCenter;
+                    fxRect.anchoredPosition = new Vector2(fxRect.anchoredPosition.x + popupOffsetX, fxRect.anchoredPosition.y + popupOffsetY);
+                }
+            }
+            else
+            {
+                fxRect.position = anchorRect.position;
+                fxRect.anchoredPosition = new Vector2(fxRect.anchoredPosition.x + popupOffsetX, fxRect.anchoredPosition.y + popupOffsetY);
+            }
+
+            fxRect.localScale = Vector3.one;
+        }
+
+        FloatingText ft = fxObj.GetComponent<FloatingText>();
+        if (ft != null)
+        {
+            string sign = amount > 0 ? "+" : "";
+            ft.Setup($"{sign}{FormatNumber(amount)}", duration: popupStayDuration, onComplete: onComplete);
         }
         else
         {
-            text.transform.DOShakeScale(0.15f, 0.3f)
-                .SetId(text.transform);
+            onComplete?.Invoke();
         }
-    }
-
-    private void ShowFloatingTextOptimized(int amount, TextMeshProUGUI anchor, Color color)
-    {
-        // 🚫 ĐÃ TẮT HOÀN TOÀN HIỆU ỨNG CHỮ SỐ FLOATING TEXT (+/-) THEO YÊU CẦU
-        return;
     }
 
     private void OnDestroy()
@@ -328,11 +412,6 @@ public class HUDController : MonoBehaviour
         if (woodText != null) DOTween.Kill(woodText);
         if (stoneText != null) DOTween.Kill(stoneText);
         if (foodText != null) DOTween.Kill(foodText);
-
-        if (goldText != null && goldText.transform != null) DOTween.Kill(goldText.transform);
-        if (woodText != null && woodText.transform != null) DOTween.Kill(woodText.transform);
-        if (stoneText != null && stoneText.transform != null) DOTween.Kill(stoneText.transform);
-        if (foodText != null && foodText.transform != null) DOTween.Kill(foodText.transform);
 
         if (goldIcon != null) DOTween.Kill(goldIcon);
         if (woodIcon != null) DOTween.Kill(woodIcon);
