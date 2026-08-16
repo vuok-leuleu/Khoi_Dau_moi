@@ -66,7 +66,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: -44867604, guid: 6f710ce97903e3c4c8ab79f1ac3fef77, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -143,7 +143,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 806902307, guid: 6f710ce97903e3c4c8ab79f1ac3fef77, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -716,11 +716,17 @@ MonoBehaviour:
   arrowWidth: 55
   arrowHeightAtOneMeter: 100
   labelHeight: 220
+  waveLabelWidth: 360
+  waveLabelHeight: 128
+  waveFontSize: 52
   groundMask:
     serializedVersion: 2
     m_Bits: 4294967295
   arrowColor: {r: 0.56, g: 0.14, b: 0.2, a: 1}
   arrowOutlineColor: {r: 0.93, g: 0.76, b: 0.35, a: 1}
+  worldArrowWidth: 1.3
+  worldArrowShaftSprite: {fileID: -44867604, guid: 6f710ce97903e3c4c8ab79f1ac3fef77, type: 3}
+  worldArrowHeadSprite: {fileID: 806902307, guid: 6f710ce97903e3c4c8ab79f1ac3fef77, type: 3}
 --- !u!1 &9032415087544198899
 GameObject:
   m_ObjectHideFlags: 0

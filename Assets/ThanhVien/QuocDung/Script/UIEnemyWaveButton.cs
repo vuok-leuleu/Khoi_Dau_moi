@@ -144,9 +144,9 @@ public class UIEnemyWaveButton : MonoBehaviour
             BattleData.RecordCurrentSceneState(enemyCount);
             if (!string.IsNullOrEmpty(battleSceneName))
             {
-                UnityEngine.SceneManagement.SceneManager.LoadScene(battleSceneName);
+                CloudSceneTransition.LoadSceneWithCloud(battleSceneName);
             }
-            Destroy(gameObject);
+            gameObject.SetActive(false);
             return;
         }
 

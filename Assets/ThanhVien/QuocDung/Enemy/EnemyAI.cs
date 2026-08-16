@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
@@ -185,6 +186,15 @@ public class EnemyAI : MonoBehaviour
     public bool isWaitingAtTarget = false;
     private UIEnemyWaveButton spawnedAttackButton;
 
+    [Header("Arrival Presentation")]
+    [SerializeField] private bool focusCameraOnArrival = true;
+    [SerializeField, Min(0.1f)] private float arrivalCameraDuration = 0.7f;
+    [SerializeField, Min(2f)] private float arrivalCameraHeight = 14f;
+    [SerializeField, Min(2f)] private float arrivalCameraDistance = 12f;
+
+    private bool arrivalPresentationStarted;
+    private Coroutine arrivalPresentationRoutine;
+
     public void EnableCombat()
     {
         if (isCombatActive) return;
@@ -276,6 +286,8 @@ public class EnemyAI : MonoBehaviour
 
     private void OnEnable()
     {
+        arrivalPresentationStarted = false;
+        arrivalPresentationRoutine = null;
         if (!globalActiveEnemies.Contains(this))
         {
             globalActiveEnemies.Add(this);
@@ -422,8 +434,63 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
+    private void StartArrivalPresentation(Vector3 destination)
+    {
+        if (arrivalPresentationStarted) return;
+        arrivalPresentationStarted = true;
+
+        if (attackButtonUI != null)
+        {
+            attackButtonUI.SetActive(false);
+        }
+
+        if (arrivalPresentationRoutine != null)
+        {
+            StopCoroutine(arrivalPresentationRoutine);
+        }
+
+        arrivalPresentationRoutine = StartCoroutine(PlayArrivalPresentation(destination));
+    }
+
+    private IEnumerator PlayArrivalPresentation(Vector3 destination)
+    {
+        Camera mainCamera = Camera.main;
+        if (mainCamera == null) mainCamera = FindFirstObjectByType<Camera>();
+
+        RTSCameraController cameraController = mainCamera != null
+            ? mainCamera.GetComponent<RTSCameraController>()
+            : null;
+
+        if (mainCamera != null && focusCameraOnArrival)
+        {
+            if (cameraController != null) cameraController.enabled = false;
+
+            Transform cameraTransform = mainCamera.transform;
+            Vector3 startPosition = cameraTransform.position;
+            Vector3 flatForward = Vector3.ProjectOnPlane(cameraTransform.forward, Vector3.up).normalized;
+            if (flatForward.sqrMagnitude < 0.001f) flatForward = Vector3.forward;
+
+            Vector3 focusPosition = destination - flatForward * arrivalCameraDistance;
+            focusPosition.y = arrivalCameraHeight;
+
+            // Camera zoom mượt mà đồng thời đám mây che kín toàn bộ màn hình (cả trên và dưới) rồi mở ra
+            yield return CloudSceneTransition.PlayCameraFocusWipeSmooth(
+                mainCamera,
+                startPosition,
+                focusPosition,
+                arrivalCameraDuration > 0.1f ? arrivalCameraDuration : 1.0f
+            );
+
+            if (cameraController != null) cameraController.enabled = true;
+        }
+
+        ArrivalBattleAlertUI.ShowFor(this, villageCenter);
+
+        arrivalPresentationRoutine = null;
+    }
     public void OnAttackButtonClicked()
     {
+        if (CloudSceneTransition.IsTransitioning) return;
         Time.timeScale = 1f;
         int waveCount = (squadEnemies != null && squadEnemies.Count > 0) ? squadEnemies.Count : 1;
         BattleData.RecordCurrentSceneState(waveCount);
@@ -431,7 +498,7 @@ public class EnemyAI : MonoBehaviour
         Debug.Log($"[EnemyAI] Bấm nút Tấn Công (Wave = {waveCount} Enemy) -> Đang chuyển sang Scene: {battleSceneName}");
         if (!string.IsNullOrEmpty(battleSceneName))
         {
-            UnityEngine.SceneManagement.SceneManager.LoadScene(battleSceneName);
+            CloudSceneTransition.LoadSceneWithCloud(battleSceneName);
         }
         else
         {
@@ -538,10 +605,7 @@ public class EnemyAI : MonoBehaviour
                     isWaitingAtTarget = true;
                     if (isMeLeader)
                     {
-                        if (attackButtonUI != null && !attackButtonUI.activeSelf)
-                        {
-                            attackButtonUI.SetActive(true);
-                        }
+                        StartArrivalPresentation(destination);
                     }
                     else
                     {

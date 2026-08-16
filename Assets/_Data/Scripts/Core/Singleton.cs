@@ -1,9 +1,27 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 {
     private static T m_ins;
     private static bool m_isQuitting = false;
+    private static bool m_wasDestroyed = false;
+
+    static Singleton()
+    {
+        SceneManager.sceneUnloaded += OnSceneUnloaded;
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private static void OnSceneUnloaded(Scene current)
+    {
+        m_wasDestroyed = true;
+    }
+
+    private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        m_wasDestroyed = false;
+    }
 
     protected virtual void Awake()
     {
@@ -20,10 +38,11 @@ public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
         if (m_ins == this)
         {
             m_ins = null;
+            m_wasDestroyed = true;
         }
     }
 
-    public static bool HasInstance => m_ins != null && !m_isQuitting;
+    public static bool HasInstance => (UnityEngine.Object)m_ins != null && !m_isQuitting;
 
     public static T Ins
     {
@@ -41,14 +60,15 @@ public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
             }
 #endif
 
-            if (m_ins == null)
+            if ((UnityEngine.Object)m_ins == null)
             {
                 m_ins = Object.FindFirstObjectByType<T>();
 
-                if (m_ins == null && !m_isQuitting && Application.isPlaying)
+                if ((UnityEngine.Object)m_ins == null && !m_isQuitting && !m_wasDestroyed && Application.isPlaying)
                 {
                     GameObject singleton = new GameObject(typeof(T).Name);
                     m_ins = singleton.AddComponent<T>();
+                    m_wasDestroyed = false;
                 }
             }
 
@@ -58,9 +78,10 @@ public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 
     public void MakeSingleton(bool destroyOnload)
     {
-        if (m_ins == null)
+        if ((UnityEngine.Object)m_ins == null)
         {
             m_ins = this as T;
+            m_wasDestroyed = false;
 
             if (destroyOnload) return;
 

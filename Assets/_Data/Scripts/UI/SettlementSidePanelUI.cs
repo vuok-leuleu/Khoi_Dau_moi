@@ -39,6 +39,11 @@ public class SettlementSidePanelUI : MonoBehaviour
     private List<SettlementSlotItemUI> activeSlotUIItems = new List<SettlementSlotItemUI>();
     private List<TroopTrainingSlotUI> activeTrainingSlotUIItems = new List<TroopTrainingSlotUI>();
 
+    private void OnDestroy()
+    {
+        if (Ins == this) Ins = null;
+    }
+
     private void Awake()
     {
         if (Ins == null) Ins = this;

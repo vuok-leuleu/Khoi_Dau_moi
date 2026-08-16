@@ -451,7 +451,7 @@ public class TroopDispatchUI : MonoBehaviour
             {
                 float angle = (360f / Mathf.Max(1, totalSoldiers)) * i;
                 Vector3 offset = new Vector3(Mathf.Cos(angle * Mathf.Deg2Rad), 0f, Mathf.Sin(angle * Mathf.Deg2Rad)) * 2.0f;
-                soldier.StartExpeditionMarch(centerTarget + offset, syncWavesToReach);
+                soldier.StartExpeditionMarch(centerTarget + offset, syncWavesToReach, enemyTarget);
             }
         }
 
@@ -462,6 +462,6 @@ public class TroopDispatchUI : MonoBehaviour
         ExpeditionBattleTrigger trigger = runner.AddComponent<ExpeditionBattleTrigger>();
         trigger.StartMonitoring(selectedSoldiersToDispatch, enemyTarget, battleSceneName);
 
-        Destroy(gameObject);
+        gameObject.SetActive(false);
     }
 }

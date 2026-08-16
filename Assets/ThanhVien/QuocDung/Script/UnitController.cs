@@ -1,15 +1,7 @@
-using UnityEngine;
-using UnityEngine.AI;
 using System.Collections;
 using System.Collections.Generic;
-
-// 1. Định nghĩa các Trạng thái (State Machine)
-public enum UnitState
-{
-    Idle,
-    Moving,
-    Attacking
-}
+using UnityEngine;
+using UnityEngine.AI;
 
 public enum AttackMode
 {
@@ -17,7 +9,13 @@ public enum AttackMode
     Ranged
 }
 
-[RequireComponent(typeof(NavMeshAgent))]
+public enum UnitState
+{
+    Idle,
+    Moving,
+    Attacking
+}
+
 public class UnitController : MonoBehaviour
 {
     private static readonly Dictionary<int, UnitController> claimedEnemies = new Dictionary<int, UnitController>();
@@ -87,48 +85,12 @@ public class UnitController : MonoBehaviour
     public Vector3 marchStartPosition;
     public Vector3 marchDestinationPosition;
 
+    [Header("Route Warning UI (SoldierPoint)")]
+    [SerializeField] private SoldierPoint soldierPointUIPrefab;
+    private SoldierPoint activeRouteUI;
+
     public bool isMarchingToEnemyBase => isExpeditionMarching || isRespondingToWarning || isReturning;
     public bool isDead => hpSoldier != null && hpSoldier.IsDead;
-
-    [Header("Mũi Tên Dưới Chân (Ground Arrow)")]
-    [Tooltip("Bật/Tắt hiển thị mũi tên di chuyển dưới chân Soldier")]
-    public bool showGroundArrow = true;
-    public static bool globalShowSoldierGroundArrow = true;
-
-    public SoldierGroundArrow EnsureSoldierGroundArrow()
-    {
-        SoldierGroundArrow arrow = GetComponentInChildren<SoldierGroundArrow>();
-        if (arrow == null)
-        {
-            arrow = SoldierGroundArrow.Create(transform);
-        }
-        if (arrow != null)
-        {
-            arrow.showGroundArrow = showGroundArrow;
-        }
-        return arrow;
-    }
-
-    public void SetGroundArrowVisible(bool visible)
-    {
-        showGroundArrow = visible;
-        SoldierGroundArrow arrow = GetComponentInChildren<SoldierGroundArrow>();
-        if (arrow != null)
-        {
-            arrow.showGroundArrow = visible;
-        }
-    }
-
-    public static void ToggleAllSoldierGroundArrows(bool enable)
-    {
-        globalShowSoldierGroundArrow = enable;
-        SoldierGroundArrow.globalShowSoldierGroundArrow = enable;
-        UnitController[] soldiers = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
-        foreach (var s in soldiers)
-        {
-            if (s != null) s.SetGroundArrowVisible(enable);
-        }
-    }
 
     float GetAttackStopDistance()
     {
@@ -160,174 +122,131 @@ public class UnitController : MonoBehaviour
         int id = enemy.GetInstanceID();
         if (claimedEnemies.TryGetValue(id, out UnitController owner))
         {
-            return owner != null && owner != this;
+            if (owner != null && owner != this && owner.gameObject.activeInHierarchy && owner.currentTarget == enemy)
+            {
+                return true;
+            }
+            claimedEnemies.Remove(id);
         }
         return false;
     }
 
-    bool ClaimEnemy(GameObject enemy)
+    void ClaimEnemy(GameObject enemy)
     {
-        if (enemy == null) return false;
-
+        if (enemy == null) return;
+        ReleaseCurrentTargetClaim();
         int id = enemy.GetInstanceID();
         claimedEnemies[id] = this;
         currentTargetInstanceId = id;
-        return true;
     }
 
     void ReleaseCurrentTargetClaim()
     {
-        int id = currentTargetInstanceId;
-        if (id == 0 && currentTarget != null)
+        if (currentTargetInstanceId != 0)
         {
-            id = currentTarget.GetInstanceID();
+            if (claimedEnemies.TryGetValue(currentTargetInstanceId, out UnitController owner) && owner == this)
+            {
+                claimedEnemies.Remove(currentTargetInstanceId);
+            }
+            currentTargetInstanceId = 0;
         }
-
-        if (id == 0)
-        {
-            return;
-        }
-
-        if (claimedEnemies.TryGetValue(id, out UnitController owner) && owner == this)
-        {
-            claimedEnemies.Remove(id);
-        }
-
-        currentTargetInstanceId = 0;
     }
 
-    void Start()
+    void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
         hpSoldier = GetComponent<HPSoldier>();
-
-        if (agent == null)
+        if (hpSoldier == null)
         {
-            Debug.LogError("UnitController requires a NavMeshAgent component.");
-            enabled = false;
-            return;
+            hpSoldier = GetComponentInParent<HPSoldier>();
         }
 
         if (animator == null)
         {
             animator = GetComponentInChildren<Animator>();
         }
-
-        // Khởi tạo tương thích ngược cho detectRadius và enemyLayer
-        if (detectRadius == 25f && raycastDistance != 6f)
-        {
-            detectRadius = raycastDistance;
-        }
         
-        // Đảm bảo bán kính quét tối thiểu là 20f để hoạt động theo vùng hiệu quả
-        if (detectRadius < 15f)
+        if (returnPosition == Vector3.zero)
         {
-            detectRadius = 20f;
+            returnPosition = transform.position;
         }
+    }
 
-        if (enemyLayer.value == ~0 && targetLayerMask.value != ~0)
-        {
-            enemyLayer = targetLayerMask;
-        }
-
-        // Tự động warp agent lên NavMesh nếu bị lệch khi spawn
-        if (agent.isActiveAndEnabled && !agent.isOnNavMesh)
+    void Start()
+    {
+        if (agent != null && !agent.isOnNavMesh)
         {
             if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 5f, NavMesh.AllAreas))
             {
                 agent.Warp(hit.position);
             }
         }
-
-        if (returnPosition == Vector3.zero)
-        {
-            returnPosition = transform.position;
-        }
-
-        lowFreqCoroutine = StartCoroutine(LowFrequencyUpdate());
-
-        if (currentState == UnitState.Attacking && currentTarget != null)
-        {
-            SetDestination(currentTarget.transform.position);
-            lastDestinationPos = currentTarget.transform.position;
-        }
+        
+        lowFreqCoroutine = StartCoroutine(LowFrequencyScanRoutine());
     }
 
-    private void SetDestination(Vector3 dest)
-    {
-        if (agent != null && agent.isActiveAndEnabled)
-        {
-            if (!agent.isOnNavMesh)
-            {
-                if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 5f, NavMesh.AllAreas))
-                {
-                    agent.Warp(hit.position);
-                }
-            }
-
-            if (agent.isOnNavMesh)
-            {
-                agent.isStopped = false;
-
-                if (Vector3.Distance(agent.destination, dest) > 0.25f)
-                {
-                    agent.SetDestination(dest);
-                }
-                return;
-            }
-        }
-
-        // Fallback di chuyển trực tiếp Transform nếu không có NavMesh trong Scene
-        float speed = (agent != null && agent.speed > 0.1f) ? agent.speed : 3.5f;
-        Vector3 moveDir = (dest - transform.position);
-        moveDir.y = 0f;
-
-        if (moveDir.sqrMagnitude > 0.01f)
-        {
-            Quaternion targetRot = Quaternion.LookRotation(moveDir);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, 360f * Time.deltaTime);
-            transform.position = Vector3.MoveTowards(transform.position, transform.position + moveDir.normalized, speed * Time.deltaTime);
-        }
-    }
-
-    IEnumerator LowFrequencyUpdate()
+    IEnumerator LowFrequencyScanRoutine()
     {
         while (true)
         {
-            yield return new WaitForSeconds(scanFrequency);
+            float currentFrequency = (currentState == UnitState.Moving && currentTarget != null) 
+                ? Mathf.Max(0.05f, scanFrequency * 0.5f) 
+                : scanFrequency;
 
-            if (currentState == UnitState.Attacking && currentTarget != null)
+            yield return new WaitForSeconds(currentFrequency);
+            PerformAreaScan();
+        }
+    }
+
+    void PerformAreaScan()
+    {
+        if (currentState == UnitState.Attacking && currentTarget != null) return;
+
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, detectRadius, enemyLayer);
+        if (hitColliders.Length == 0) return;
+
+        GameObject bestTarget = null;
+        float minDistance = float.MaxValue;
+
+        for (int i = 0; i < hitColliders.Length; i++)
+        {
+            Collider col = hitColliders[i];
+            if (col == null || !col.gameObject.activeInHierarchy) continue;
+
+            if (col.CompareTag(enemyTag) || (col.transform.parent != null && col.transform.parent.CompareTag(enemyTag)))
             {
-                if (!IsEnemyAlive(currentTarget))
-                {
-                    ReleaseCurrentTargetClaim();
-                    currentTarget = null;
-                    currentState = UnitState.Idle;
-                    if (agent != null && agent.isOnNavMesh)
-                    {
-                        agent.isStopped = true;
-                    }
-                    continue;
-                }
+                GameObject enemyObj = col.gameObject;
+                if (!IsEnemyAlive(enemyObj)) continue;
 
-                Vector3 targetPos = currentTarget.transform.position;
-                float stopDistance = GetAttackStopDistance();
-
-                if ((transform.position - targetPos).sqrMagnitude > stopDistance * stopDistance)
+                float dist = Vector3.Distance(transform.position, enemyObj.transform.position);
+                if (dist < minDistance)
                 {
-                    if ((targetPos - lastDestinationPos).sqrMagnitude > destinationUpdateThreshold * destinationUpdateThreshold)
-                    {
-                        SetDestination(targetPos);
-                        lastDestinationPos = targetPos;
-                    }
+                    minDistance = dist;
+                    bestTarget = enemyObj;
                 }
             }
+        }
+
+        if (bestTarget != null && bestTarget != currentTarget)
+        {
+            currentTarget = bestTarget;
+            ClaimEnemy(bestTarget);
+            currentState = UnitState.Moving;
         }
     }
 
     void Update()
     {
-        if (hpSoldier != null && hpSoldier.IsDead) return;
+        if (hpSoldier != null && hpSoldier.IsDead)
+        {
+            ReleaseCurrentTargetClaim();
+            DestroyRouteUI();
+            if (agent != null && agent.isOnNavMesh && !agent.isStopped)
+            {
+                agent.isStopped = true;
+            }
+            return;
+        }
 
         string currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
         bool isSceneBattle = currentScene.ToLower().Contains("battle");
@@ -335,6 +254,7 @@ public class UnitController : MonoBehaviour
         if (isSceneBattle)
         {
             isExpeditionMarching = false;
+            DestroyRouteUI();
         }
 
         // 🔥 Xử lý Lính di chuyển từng nấc theo từng Wave (chỉ khi ở Main Scene)
@@ -351,12 +271,15 @@ public class UnitController : MonoBehaviour
                 agent.isStopped = true;
                 if (Vector3.Distance(transform.position, targetStepPos) > 0.05f)
                 {
-                    agent.Warp(Vector3.MoveTowards(transform.position, targetStepPos, 8f * Time.deltaTime));
+                    transform.position = Vector3.MoveTowards(transform.position, targetStepPos, 8f * Time.deltaTime);
                 }
             }
             else
             {
-                transform.position = Vector3.MoveTowards(transform.position, targetStepPos, 8f * Time.deltaTime);
+                if (Vector3.Distance(transform.position, targetStepPos) > 0.05f)
+                {
+                    transform.position = Vector3.MoveTowards(transform.position, targetStepPos, 8f * Time.deltaTime);
+                }
             }
 
             Vector3 lookDir = marchDestinationPosition - transform.position;
@@ -366,7 +289,7 @@ public class UnitController : MonoBehaviour
                 transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(lookDir), 360f * Time.deltaTime);
             }
 
-            UpdateAnimationState();
+            UpdateAnimation();
             return;
         }
 
@@ -375,28 +298,31 @@ public class UnitController : MonoBehaviour
         {
             if (currentTarget == null || !currentTarget.CompareTag(enemyTag) || !IsEnemyAlive(currentTarget))
             {
-                if (TryAcquireEnemyInArea())
+                GameObject enemy = FindClosestEnemy();
+                if (enemy != null)
                 {
-                    // Tìm thấy mục tiêu mới và bắt đầu đuổi/tấn công
+                    currentTarget = enemy;
+                    ClaimEnemy(enemy);
+                    currentState = UnitState.Moving;
                 }
                 else
                 {
-                    // Không thấy kẻ địch nào -> Về trạng thái Idle và dừng agent
-                    if (currentState == UnitState.Attacking)
+                    if (currentTarget != null)
                     {
                         ReleaseCurrentTargetClaim();
                         currentTarget = null;
                         if (!isRespondingToWarning && !isReturning)
                         {
                             currentState = UnitState.Idle;
-                            if (agent != null && agent.isOnNavMesh)
-                            {
-                                agent.isStopped = true;
-                            }
                         }
                     }
                 }
             }
+        }
+        else
+        {
+            ReleaseCurrentTargetClaim();
+            currentTarget = null;
         }
 
         // Cập nhật và xử lý logic Cảnh báo
@@ -413,8 +339,6 @@ public class UnitController : MonoBehaviour
                 }
                 else
                 {
-                    // Nếu vẫn còn địch trên bản đồ nhưng đã mất dấu địch hiện tại,
-                    // và chúng ta chưa tới điểm cảnh báo, hãy tiếp tục di chuyển tới đó
                     float distToWarning = Vector3.Distance(transform.position, warningPosition);
                     if (distToWarning > GetAttackStopDistance() && agent != null && agent.isOnNavMesh && Vector3.Distance(agent.destination, warningPosition) > 0.5f)
                     {
@@ -424,52 +348,89 @@ public class UnitController : MonoBehaviour
                 }
             }
         }
-        else if (isReturning)
+
+        if (isReturning)
         {
-            if (currentTarget == null)
+            if (Vector3.Distance(transform.position, returnPosition) <= 0.8f)
             {
-                // Kiểm tra xem đã về tới vị trí cũ chưa
-                if (agent != null && agent.isOnNavMesh && !agent.pathPending && (agent.remainingDistance <= agent.stoppingDistance || !agent.hasPath))
-                {
-                    isReturning = false;
-                    currentState = UnitState.Idle;
-                }
-                else if (agent != null && agent.isOnNavMesh && Vector3.Distance(agent.destination, returnPosition) > 0.5f)
-                {
-                    // Đảm bảo vẫn đang di chuyển về vị trí cũ
-                    SetDestination(returnPosition);
-                    currentState = UnitState.Moving;
-                }
+                isReturning = false;
+                autoAggro = false;
+                currentState = UnitState.Idle;
+                if (agent != null && agent.isOnNavMesh) agent.isStopped = true;
+            }
+            else
+            {
+                SetDestination(returnPosition);
+                currentState = UnitState.Moving;
             }
         }
 
+        // State Machine
         switch (currentState)
         {
-            case UnitState.Attacking:
-                HandleAttacking();
+            case UnitState.Idle:
+                if (agent != null && agent.isOnNavMesh && !agent.isStopped)
+                {
+                    agent.isStopped = true;
+                }
                 break;
+
             case UnitState.Moving:
-                HandleMovement();
+                if (currentTarget != null)
+                {
+                    float distanceToTarget = Vector3.Distance(transform.position, currentTarget.transform.position);
+                    if (distanceToTarget <= GetAttackStopDistance())
+                    {
+                        currentState = UnitState.Attacking;
+                        if (agent != null && agent.isOnNavMesh) agent.isStopped = true;
+                    }
+                    else
+                    {
+                        if (Vector3.Distance(lastDestinationPos, currentTarget.transform.position) > destinationUpdateThreshold)
+                        {
+                            SetDestination(currentTarget.transform.position);
+                            lastDestinationPos = currentTarget.transform.position;
+                        }
+                    }
+                }
+                break;
+
+            case UnitState.Attacking:
+                if (currentTarget != null && IsEnemyAlive(currentTarget))
+                {
+                    float distanceToTarget = Vector3.Distance(transform.position, currentTarget.transform.position);
+                    if (distanceToTarget > GetAttackStopDistance() * 1.15f)
+                    {
+                        currentState = UnitState.Moving;
+                        SetDestination(currentTarget.transform.position);
+                    }
+                    else
+                    {
+                        Vector3 targetLookPos = currentTarget.transform.position;
+                        targetLookPos.y = transform.position.y;
+                        Vector3 dir = (targetLookPos - transform.position).normalized;
+                        if (dir != Vector3.zero)
+                        {
+                            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), Time.deltaTime * 10f);
+                        }
+
+                        if (Time.time >= nextAttackTime)
+                        {
+                            PerformAttack();
+                            nextAttackTime = Time.time + attackRate;
+                        }
+                    }
+                }
+                else
+                {
+                    ReleaseCurrentTargetClaim();
+                    currentTarget = null;
+                    currentState = UnitState.Idle;
+                }
                 break;
         }
 
-        UpdateAnimationState();
-    }
-
-    public void SetNewTarget(GameObject target)
-    {
-        if (target == null) return;
-        if (!target.CompareTag(enemyTag)) return;
-        if (currentTarget == target) return;
-
-        ReleaseCurrentTargetClaim();
-        if (!ClaimEnemy(target)) return;
-
-        currentTarget = target;
-        currentState = UnitState.Attacking;
-
-        SetDestination(target.transform.position);
-        lastDestinationPos = target.transform.position;
+        UpdateAnimation();
     }
 
     public void RespondToWarning(Vector3 targetPosition)
@@ -490,7 +451,7 @@ public class UnitController : MonoBehaviour
         StartExpeditionMarch(targetPosition, -1);
     }
 
-    public void StartExpeditionMarch(Vector3 destinationPos, int wavesToReach = -1)
+    public void StartExpeditionMarch(Vector3 destinationPos, int wavesToReach = -1, Transform targetBuilding = null)
     {
         if (!isExpeditionMarching)
         {
@@ -502,7 +463,6 @@ public class UnitController : MonoBehaviour
         if (wavesToReach <= 0)
         {
             float dist = Vector3.Distance(marchStartPosition, marchDestinationPosition);
-            // 🔥 Tự động tính số Wave cần thiết dựa theo khoảng cách thực tế (khoảng 15m / Wave)
             wavesToReach = Mathf.Max(1, Mathf.RoundToInt(dist / 15f));
         }
 
@@ -513,9 +473,46 @@ public class UnitController : MonoBehaviour
         isReturning = false;
         currentState = UnitState.Moving;
 
-        if (showGroundArrow && globalShowSoldierGroundArrow)
+        CreateOrUpdateRouteUI(destinationPos, targetBuilding);
+    }
+
+    private void CreateOrUpdateRouteUI(Vector3 destinationPos, Transform targetBuilding = null)
+    {
+        if (soldierPointUIPrefab == null)
         {
-            EnsureSoldierGroundArrow().SetTargetDestination(destinationPos);
+            soldierPointUIPrefab = Resources.Load<SoldierPoint>("SoldierPointUI");
+            if (soldierPointUIPrefab == null)
+            {
+                SoldierPoint sceneObj = Object.FindFirstObjectByType<SoldierPoint>();
+                if (sceneObj != null) soldierPointUIPrefab = sceneObj;
+            }
+        }
+
+        if (soldierPointUIPrefab != null)
+        {
+            if (activeRouteUI == null)
+            {
+                activeRouteUI = Instantiate(soldierPointUIPrefab);
+            }
+
+            Transform targetTr = targetBuilding;
+            if (targetTr == null)
+            {
+                GameObject dummyTarget = new GameObject("MarchDestinationTarget");
+                dummyTarget.transform.position = destinationPos;
+                targetTr = dummyTarget.transform;
+            }
+
+            activeRouteUI.Setup(transform, targetTr, this, 0.1f);
+        }
+    }
+
+    public void DestroyRouteUI()
+    {
+        if (activeRouteUI != null)
+        {
+            Destroy(activeRouteUI.gameObject);
+            activeRouteUI = null;
         }
     }
 
@@ -527,7 +524,6 @@ public class UnitController : MonoBehaviour
 
     private bool AnyEnemyAlive()
     {
-        // 1. Tag check
         try
         {
             GameObject[] enemies = GameObject.FindGameObjectsWithTag(enemyTag);
@@ -542,13 +538,12 @@ public class UnitController : MonoBehaviour
         }
         catch {}
 
-        // 2. EnemyAI check fallback
         EnemyAI[] enemyAIs = Object.FindObjectsByType<EnemyAI>(FindObjectsSortMode.None);
-        foreach (var enemy in enemyAIs)
+        foreach (var e in enemyAIs)
         {
-            if (enemy != null && enemy.gameObject.activeInHierarchy)
+            if (e != null && e.gameObject.activeInHierarchy)
             {
-                var hp = enemy.GetComponent<EnemyHealth>();
+                var hp = e.GetComponentInParent<EnemyHealth>();
                 if (hp == null || hp.CurrentHealth > 0f) return true;
             }
         }
@@ -556,356 +551,193 @@ public class UnitController : MonoBehaviour
         return false;
     }
 
-    void HandleAttacking()
+    void SetDestination(Vector3 targetPos)
     {
-        if (currentTarget == null)
+        if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh)
         {
-            ReleaseCurrentTargetClaim();
-            currentState = UnitState.Idle;
-            return;
-        }
-
-        float sqrDistance = (transform.position - currentTarget.transform.position).sqrMagnitude;
-        float stopDistance = GetAttackStopDistance();
-
-        if (sqrDistance <= stopDistance * stopDistance)
-        {
-            if (agent != null && agent.isOnNavMesh)
-            {
-                agent.isStopped = true;
-            }
-            
-            // Xoay mượt về phía kẻ địch khi đứng tấn công
-            Vector3 lookDir = (currentTarget.transform.position - transform.position);
-            lookDir.y = 0f;
-            if (lookDir.sqrMagnitude > 0.001f)
-            {
-                Quaternion targetRot = Quaternion.LookRotation(lookDir);
-                transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, 360f * Time.deltaTime);
-            }
-
-            // Thực hiện tấn công theo chu kỳ
-            if (Time.time >= nextAttackTime)
-            {
-                ExecuteAttack(currentTarget.transform);
-                nextAttackTime = Time.time + attackRate;
-            }
-        }
-        else
-        {
-            if (agent != null && agent.isOnNavMesh && agent.isStopped)
-            {
-                agent.isStopped = false;
-            }
+            agent.isStopped = false;
+            agent.SetDestination(targetPos);
         }
     }
 
-    void HandleMovement()
+    void PerformAttack()
     {
-        if (agent != null && agent.isOnNavMesh && !agent.pathPending)
-        {
-            if (agent.hasPath && agent.remainingDistance <= agent.stoppingDistance)
-            {
-                currentState = UnitState.Idle;
-            }
-        }
-    }
-
-    private bool IsEnemyCollider(Collider col, out GameObject enemyRoot)
-    {
-        enemyRoot = null;
-        if (col == null) return false;
-
-        if (col.tag == enemyTag || 
-            col.GetComponentInParent<EnemyHealth>() != null || 
-            col.name.ToLower().Contains("enemy"))
-        {
-            var health = col.GetComponentInParent<EnemyHealth>();
-            enemyRoot = (health != null) ? health.gameObject : col.gameObject;
-            return IsEnemyAlive(enemyRoot);
-        }
-        return false;
-    }
-
-    bool TryAcquireEnemyInArea()
-    {
-        Collider[] colliders = null;
-        if (enemyLayer.value != 0)
-        {
-            colliders = Physics.OverlapSphere(transform.position, detectRadius, enemyLayer);
-        }
-
-        List<GameObject> validEnemies = new List<GameObject>();
-
-        if (colliders != null)
-        {
-            foreach (var col in colliders)
-            {
-                if (col == null || !col.gameObject.activeInHierarchy) continue;
-                if (IsEnemyCollider(col, out GameObject enemyRoot))
-                {
-                    if (!validEnemies.Contains(enemyRoot)) validEnemies.Add(enemyRoot);
-                }
-            }
-        }
-
-        // Fallback 1: Nếu LayerMask không tìm thấy gì, quét lại toàn bộ các Layer trong bán kính
-        if (validEnemies.Count == 0)
-        {
-            Collider[] fallbackColliders = Physics.OverlapSphere(transform.position, detectRadius);
-            foreach (var col in fallbackColliders)
-            {
-                if (col == null || !col.gameObject.activeInHierarchy) continue;
-                if (IsEnemyCollider(col, out GameObject enemyRoot))
-                {
-                    if (!validEnemies.Contains(enemyRoot)) validEnemies.Add(enemyRoot);
-                }
-            }
-        }
-
-        // Fallback 2: Quét toàn bộ Scene theo Tag "Enemy" trong bán kính
-        if (validEnemies.Count == 0)
-        {
-            GameObject[] taggedEnemies = null;
-            try { taggedEnemies = GameObject.FindGameObjectsWithTag(enemyTag); } catch { taggedEnemies = null; }
-
-            if (taggedEnemies != null)
-            {
-                float detectRadiusSqr = detectRadius * detectRadius;
-                foreach (var go in taggedEnemies)
-                {
-                    if (go == null || !go.activeInHierarchy) continue;
-
-                    float sqrDist = (go.transform.position - transform.position).sqrMagnitude;
-                    if (sqrDist <= detectRadiusSqr)
-                    {
-                        var health = go.GetComponentInParent<EnemyHealth>();
-                        GameObject enemyRoot = (health != null) ? health.gameObject : go;
-
-                        if (IsEnemyAlive(enemyRoot) && !validEnemies.Contains(enemyRoot))
-                        {
-                            validEnemies.Add(enemyRoot);
-                        }
-                    }
-                }
-            }
-        }
-
-        // Fallback 3 (Dành cho chế độ phản công): Mở rộng quét TOÀN BỘ BẢN ĐỒ tìm kẻ địch còn sống
-        if (validEnemies.Count == 0 && (isRespondingToWarning || autoAggro))
-        {
-            EnemyAI[] allEnemyAIs = Object.FindObjectsByType<EnemyAI>(FindObjectsSortMode.None);
-            foreach (var enemyAI in allEnemyAIs)
-            {
-                if (enemyAI != null && enemyAI.gameObject.activeInHierarchy && IsEnemyAlive(enemyAI.gameObject))
-                {
-                    if (!validEnemies.Contains(enemyAI.gameObject))
-                    {
-                        validEnemies.Add(enemyAI.gameObject);
-                    }
-                }
-            }
-
-            try
-            {
-                GameObject[] taggedEnemies = GameObject.FindGameObjectsWithTag(enemyTag);
-                if (taggedEnemies != null)
-                {
-                    foreach (var go in taggedEnemies)
-                    {
-                        if (go == null || !go.activeInHierarchy) continue;
-                        var health = go.GetComponentInParent<EnemyHealth>();
-                        GameObject enemyRoot = (health != null) ? health.gameObject : go;
-                        if (IsEnemyAlive(enemyRoot) && !validEnemies.Contains(enemyRoot))
-                        {
-                            validEnemies.Add(enemyRoot);
-                        }
-                    }
-                }
-            }
-            catch {}
-        }
-
-        if (validEnemies.Count == 0)
-        {
-            return false;
-        }
-
-        // In log giúp theo dõi trong Console
-        // Debug.Log($"[UnitController Scan] {gameObject.name} tìm thấy {validEnemies.Count} mục tiêu hợp lệ trong bán kính {detectRadius}.");
-
-        // 1. Tìm kẻ địch gần nhất chưa bị ai chiếm (claim)
-        GameObject bestTarget = null;
-        float minDistance = float.MaxValue;
-
-        foreach (var enemy in validEnemies)
-        {
-            if (IsEnemyClaimedByOther(enemy)) continue;
-
-            float dist = (enemy.transform.position - transform.position).sqrMagnitude;
-            if (dist < minDistance)
-            {
-                minDistance = dist;
-                bestTarget = enemy;
-            }
-        }
-
-        // 2. Fallback: Nếu tất cả kẻ địch trong tầm đều đã bị chiếm, chọn kẻ địch gần nhất (chấp nhận chia sẻ mục tiêu)
-        if (bestTarget == null)
-        {
-            minDistance = float.MaxValue;
-            foreach (var enemy in validEnemies)
-            {
-                float dist = (enemy.transform.position - transform.position).sqrMagnitude;
-                if (dist < minDistance)
-                {
-                    minDistance = dist;
-                    bestTarget = enemy;
-                }
-            }
-        }
-
-        if (bestTarget != null)
-        {
-            if (currentTarget == bestTarget)
-            {
-                return true;
-            }
-
-            ReleaseCurrentTargetClaim();
-            ClaimEnemy(bestTarget);
-
-            currentTarget = bestTarget;
-            currentState = UnitState.Attacking;
-
-            SetDestination(currentTarget.transform.position);
-            lastDestinationPos = currentTarget.transform.position;
-            return true;
-        }
-
-        return false;
-    }
-
-    private void ExecuteAttack(Transform target)
-    {
-        PlayAttackAnimation();
-
         if (attackMode == AttackMode.Melee)
         {
-            IDamageable damageable = target.GetComponentInParent<IDamageable>();
-            if (damageable != null)
-            {
-                damageable.TakeDamage(attackDamage, target.position);
-            }
+            PlayAnimationTrigger(attackBoolParam);
+            StartCoroutine(ApplyMeleeDamageAfterDelay(0.35f));
         }
         else if (attackMode == AttackMode.Ranged)
         {
-            StartCoroutine(SpawnProjectileDelayed(target, projectileSpawnDelay));
+            PlayAnimationTrigger(shootBoolParam);
+            StartCoroutine(SpawnRangedProjectileAfterDelay(projectileSpawnDelay));
         }
     }
 
-    private IEnumerator SpawnProjectileDelayed(Transform target, float delay)
+    private void PlayAnimationTrigger(string paramName)
     {
-        yield return new WaitForSeconds(delay);
+        if (animator == null || string.IsNullOrWhiteSpace(paramName)) return;
 
-        if (target != null && target.gameObject.activeInHierarchy && IsEnemyAlive(target.gameObject))
+        if (HasAnimatorParameter(animator, paramName, AnimatorControllerParameterType.Trigger))
         {
-            if (projectilePrefab != null)
-            {
-                Vector3 spawnPos = firePoint != null ? firePoint.position : transform.position + Vector3.up * 1.5f;
-                Collider targetCollider = target.GetComponentInChildren<Collider>();
-                Vector3 targetCenter = targetCollider != null ? targetCollider.bounds.center : target.position + Vector3.up * 1f;
-                Vector3 direction = (targetCenter - spawnPos).normalized;
-                Quaternion spawnRot = Quaternion.LookRotation(direction);
-
-                GameObject proj = Instantiate(projectilePrefab, spawnPos, spawnRot);
-                
-                Arrow arrowComp = proj.GetComponent<Arrow>();
-                if (arrowComp != null)
-                {
-                    arrowComp.SetLauncher(gameObject);
-                    arrowComp.SetDamage(attackDamage);
-                    arrowComp.SetTarget(target, projectileSpeed);
-                }
-                else
-                {
-                    Rigidbody rb = proj.GetComponent<Rigidbody>();
-                    if (rb == null) rb = proj.AddComponent<Rigidbody>();
-                    rb.linearVelocity = direction * projectileSpeed;
-                }
-            }
+            animator.SetTrigger(paramName);
+        }
+        else if (HasAnimatorParameter(animator, paramName, AnimatorControllerParameterType.Bool))
+        {
+            animator.SetBool(paramName, true);
         }
     }
 
-    public void PlayAttackAnimation()
+    private bool HasAnimatorParameter(Animator anim, string paramName, AnimatorControllerParameterType paramType)
     {
-        if (animator == null) return;
-
-        string paramToSet = (attackMode == AttackMode.Ranged) ? shootBoolParam : attackBoolParam;
-        if (!string.IsNullOrWhiteSpace(paramToSet))
+        if (anim == null || string.IsNullOrWhiteSpace(paramName)) return false;
+        foreach (var p in anim.parameters)
         {
-            if (HasAnimatorParameter(animator, paramToSet, AnimatorControllerParameterType.Trigger))
+            if (p.type == paramType && p.name == paramName)
             {
-                animator.SetTrigger(paramToSet);
-            }
-            else
-            {
-                if (attackMode == AttackMode.Ranged)
-                {
-                    animator.SetBool(paramToSet, true);
-                }
-                else
-                {
-                    StartCoroutine(TriggerBoolAnimation(paramToSet));
-                }
-            }
-        }
-    }
-
-    private bool HasAnimatorParameter(Animator anim, string paramName, AnimatorControllerParameterType type)
-    {
-        foreach (AnimatorControllerParameter param in anim.parameters)
-        {
-            if (param.name == paramName && param.type == type)
                 return true;
+            }
         }
         return false;
     }
 
-    private System.Collections.IEnumerator TriggerBoolAnimation(string paramName)
+    IEnumerator ApplyMeleeDamageAfterDelay(float delay)
     {
-        animator.SetBool(paramName, true);
-        yield return new WaitForSeconds(0.1f);
-        animator.SetBool(paramName, false);
+        yield return new WaitForSeconds(delay);
+        if (currentTarget != null && IsEnemyAlive(currentTarget))
+        {
+            float dist = Vector3.Distance(transform.position, currentTarget.transform.position);
+            if (dist <= GetAttackStopDistance() * 1.35f)
+            {
+                var hp = currentTarget.GetComponentInParent<EnemyHealth>();
+                if (hp != null)
+                {
+                    hp.TakeDamage(attackDamage, currentTarget.transform.position);
+                }
+                else
+                {
+                    var dmg = currentTarget.GetComponentInParent<IDamageable>();
+                    if (dmg != null) dmg.TakeDamage(attackDamage, currentTarget.transform.position);
+                }
+            }
+        }
     }
 
-    private bool IsShooting()
+    IEnumerator SpawnRangedProjectileAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (currentTarget != null && IsEnemyAlive(currentTarget) && projectilePrefab != null)
+        {
+            Transform target = currentTarget.transform;
+            Vector3 spawnPos = firePoint != null ? firePoint.position : (transform.position + Vector3.up * 1.2f);
+            Vector3 aimDir = (target.position - spawnPos).normalized;
+            Quaternion spawnRot = aimDir != Vector3.zero ? Quaternion.LookRotation(aimDir) : transform.rotation;
+
+            GameObject proj = Instantiate(projectilePrefab, spawnPos, spawnRot);
+            
+            Arrow arrowComp = proj.GetComponent<Arrow>();
+            if (arrowComp != null)
+            {
+                arrowComp.SetLauncher(gameObject);
+                arrowComp.SetDamage(attackDamage);
+                arrowComp.SetTarget(target, projectileSpeed);
+            }
+            else
+            {
+                Rigidbody rb = proj.GetComponent<Rigidbody>();
+                if (rb != null)
+                {
+                    rb.linearVelocity = aimDir * projectileSpeed;
+                }
+            }
+        }
+    }
+
+    GameObject FindClosestEnemy()
+    {
+        GameObject[] enemies = GameObject.FindGameObjectsWithTag(enemyTag);
+        GameObject closest = null;
+        float minDistance = float.MaxValue;
+        
+        List<GameObject> validEnemies = new List<GameObject>();
+        for (int i = 0; i < enemies.Length; i++)
+        {
+            GameObject e = enemies[i];
+            if (e != null && e.activeInHierarchy && IsEnemyAlive(e))
+            {
+                validEnemies.Add(e);
+            }
+        }
+
+        if (validEnemies.Count == 0 && (isRespondingToWarning || autoAggro))
+        {
+            EnemyAI[] allEnemyAIs = Object.FindObjectsByType<EnemyAI>(FindObjectsSortMode.None);
+            foreach (var ai in allEnemyAIs)
+            {
+                if (ai != null && ai.gameObject.activeInHierarchy && IsEnemyAlive(ai.gameObject))
+                {
+                    validEnemies.Add(ai.gameObject);
+                }
+            }
+        }
+
+        for (int i = 0; i < validEnemies.Count; i++)
+        {
+            GameObject enemy = validEnemies[i];
+            if (IsEnemyClaimedByOther(enemy)) continue;
+
+            float dist = Vector3.Distance(transform.position, enemy.transform.position);
+            if (dist < minDistance)
+            {
+                minDistance = dist;
+                closest = enemy;
+            }
+        }
+
+        if (closest == null)
+        {
+            for (int i = 0; i < validEnemies.Count; i++)
+            {
+                GameObject enemy = validEnemies[i];
+                float dist = Vector3.Distance(transform.position, enemy.transform.position);
+                if (dist < minDistance)
+                {
+                    minDistance = dist;
+                    closest = enemy;
+                }
+            }
+        }
+
+        return closest;
+    }
+
+    bool IsShooting()
     {
         if (attackMode != AttackMode.Ranged) return false;
-        if (currentTarget == null || !currentTarget.activeInHierarchy) return false;
-        if (!IsEnemyAlive(currentTarget)) return false;
+        if (currentState == UnitState.Attacking) return true;
+        if (animator == null) return false;
 
-        float stopDistance = GetAttackStopDistance();
-        float sqrDistance = (transform.position - currentTarget.transform.position).sqrMagnitude;
-        if (sqrDistance > stopDistance * stopDistance) return false;
-
-        if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh && !agent.isStopped) return false;
-
-        return true;
+        var stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+        return stateInfo.IsName("Shoot");
     }
 
-    private void UpdateAnimationState()
+    void UpdateAnimation()
     {
         if (animator == null) return;
-        if (hpSoldier != null && hpSoldier.IsDead) return;
 
         bool isMoving = false;
 
-        if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh)
+        if (isExpeditionMarching)
         {
-            bool hasMeaningfulPath = !agent.isStopped && agent.hasPath && !agent.pathPending && agent.remainingDistance > agent.stoppingDistance;
-            bool hasMeaningfulVelocity = !agent.isStopped && agent.velocity.sqrMagnitude > 0.01f;
-            isMoving = hasMeaningfulPath || hasMeaningfulVelocity;
+            isMoving = true;
+        }
+        else if (currentState == UnitState.Moving && agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh)
+        {
+            isMoving = agent.velocity.sqrMagnitude > 0.1f && !agent.isStopped;
+        }
+        else if (isReturning)
+        {
+            isMoving = true;
         }
         else
         {
@@ -919,7 +751,6 @@ public class UnitController : MonoBehaviour
             bool isShooting = IsShooting();
             if (isShooting)
             {
-                // Force the animator to stay in the "Shoot" state by looping it manually
                 var stateInfo = animator.GetCurrentAnimatorStateInfo(0);
                 if (stateInfo.IsName("Shoot"))
                 {
@@ -936,7 +767,6 @@ public class UnitController : MonoBehaviour
                     }
                 }
 
-                // Set/Keep trigger or bool state active
                 if (HasAnimatorParameter(animator, shootBoolParam, AnimatorControllerParameterType.Trigger))
                 {
                     animator.SetTrigger(shootBoolParam);
@@ -948,7 +778,6 @@ public class UnitController : MonoBehaviour
             }
             else
             {
-                // Reset trigger or bool state when not shooting
                 if (HasAnimatorParameter(animator, shootBoolParam, AnimatorControllerParameterType.Trigger))
                 {
                     animator.ResetTrigger(shootBoolParam);
@@ -969,6 +798,7 @@ public class UnitController : MonoBehaviour
     void OnDisable()
     {
         ReleaseCurrentTargetClaim();
+        DestroyRouteUI();
 
         if (lowFreqCoroutine != null)
         {
@@ -977,13 +807,16 @@ public class UnitController : MonoBehaviour
         }
     }
 
+    void OnDestroy()
+    {
+        DestroyRouteUI();
+    }
+
     void OnDrawGizmosSelected()
     {
-        // Vòng đỏ: Tầm quét kẻ địch theo vùng
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, detectRadius);
 
-        // Vòng vàng: Tầm dừng tấn công
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, GetAttackStopDistance());
     }

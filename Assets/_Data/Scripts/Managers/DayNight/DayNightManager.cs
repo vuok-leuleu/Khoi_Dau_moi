@@ -457,6 +457,17 @@ public class DayNightManager : Singleton<DayNightManager>
         }
     }
 
+    private Vector3 GetDefaultClosedPosition(int index)
+    {
+        switch (index % 3)
+        {
+            case 0: return new Vector3(0f, -1.3f, 3.0f);  // Mây 0: Che phần DƯỚI màn hình
+            case 1: return new Vector3(0f, 0.8f, 3.4f);   // Mây 1: Che phần TRÊN màn hình
+            case 2: return new Vector3(0f, -0.2f, 2.8f);  // Mây 2: Che phần GIỮA màn hình
+            default: return new Vector3(0f, 0f, 3.0f);
+        }
+    }
+
     private Vector3 GetDefaultOffsetForCloud(int index, bool isChildOfCamera)
     {
         if (cloudOffscreenOffsets != null && index < cloudOffscreenOffsets.Length && cloudOffscreenOffsets[index] != Vector3.zero)
@@ -468,19 +479,19 @@ public class DayNightManager : Singleton<DayNightManager>
         {
             switch (index % 3)
             {
-                case 0: return new Vector3(-15f, 0f, 0f); // Mây 1: Từ Bên Trái
-                case 1: return new Vector3(15f, 0f, 0f);  // Mây 2: Từ Bên Phải
-                case 2: return new Vector3(-12f, 4f, 0f); // Mây 3: Từ Bên Trái / Trên
-                default: return new Vector3(-15f, 0f, 0f);
+                case 0: return new Vector3(-20f, -2f, 0f); // Mây 1: Từ Bên Trái - Dưới
+                case 1: return new Vector3(20f, 2f, 0f);   // Mây 2: Từ Bên Phải - Trên
+                case 2: return new Vector3(-18f, 4f, 0f);  // Mây 3: Từ Bên Trái - Trên
+                default: return new Vector3(-20f, 0f, 0f);
             }
         }
         else
         {
             switch (index % 3)
             {
-                case 0: return new Vector3(-35f, 0f, 0f); // Mây 1: Từ Bên Trái
-                case 1: return new Vector3(35f, 0f, 0f);  // Mây 2: Từ Bên Phải
-                case 2: return new Vector3(-30f, 8f, 0f); // Mây 3: Từ Bên Trái / Trên
+                case 0: return new Vector3(-35f, -5f, 0f);
+                case 1: return new Vector3(35f, 5f, 0f);
+                case 2: return new Vector3(-30f, 8f, 0f);
                 default: return new Vector3(-35f, 0f, 0f);
             }
         }
@@ -538,7 +549,19 @@ public class DayNightManager : Singleton<DayNightManager>
                         }
                     }
 
-                    cloudClosedPositions[i] = GetCloudPosition(cloudTransforms[i]);
+                    if (isChildOfCam && !isUICloud)
+                    {
+                        if (cloudTransforms[i].localScale.x < 1.4f || cloudTransforms[i].localScale.y < 1.4f)
+                        {
+                            cloudTransforms[i].localScale = new Vector3(
+                                Mathf.Max(cloudTransforms[i].localScale.x, 1.6f),
+                                Mathf.Max(cloudTransforms[i].localScale.y, 1.6f),
+                                Mathf.Max(cloudTransforms[i].localScale.z, 1.6f)
+                            );
+                        }
+                    }
+
+                    cloudClosedPositions[i] = (isChildOfCam && !isUICloud) ? GetDefaultClosedPosition(i) : GetCloudPosition(cloudTransforms[i]);
                     Vector3 offset = GetDefaultOffsetForCloud(i, isChildOfCam);
                     cloudOpenPositions[i] = cloudClosedPositions[i] + offset;
 

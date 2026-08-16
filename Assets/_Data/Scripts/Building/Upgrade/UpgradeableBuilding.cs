@@ -329,7 +329,7 @@ public class UpgradeableBuilding : MonoBehaviour
             parentZone.builtStructures.Remove(this);
         }
 
-        if (SettlementSidePanelUI.Ins != null)
+        if (SettlementSidePanelUI.Ins != null && SettlementSidePanelUI.Ins.gameObject != null && SettlementSidePanelUI.Ins.gameObject.activeInHierarchy)
         {
             SettlementSidePanelUI.Ins.RefreshPanel();
         }

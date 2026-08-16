@@ -207,14 +207,17 @@ public class HPTower : MonoBehaviour, IDamageable
 
     private void OnDestroy()
     {
-        // Dọn dẹp bộ nhớ Runtime chống leak bộ nhớ do Sprite/Texture tự tạo ra
+        // Dọn dẹp bộ nhớ Runtime chống leak bộ nhớ do Sprite tự tạo ra
         if (whiteSprite != null)
         {
-            if (whiteSprite.texture != null)
+            if (Application.isPlaying)
             {
-                Destroy(whiteSprite.texture);
+                Destroy(whiteSprite);
             }
-            Destroy(whiteSprite);
+            else
+            {
+                DestroyImmediate(whiteSprite);
+            }
         }
     }
 

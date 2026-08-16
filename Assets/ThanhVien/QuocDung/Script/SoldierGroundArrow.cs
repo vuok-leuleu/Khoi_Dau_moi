@@ -10,10 +10,10 @@ public class SoldierGroundArrow : MonoBehaviour
     public bool hasTargetPosition = false;
 
     [Tooltip("Bật/Tắt hiển thị mũi tên dưới chân Soldier này")]
-    public bool showGroundArrow = true;
+    public bool showGroundArrow = false;
 
     [Tooltip("Cờ bật/tắt toàn cục cho tất cả Lính")]
-    public static bool globalShowSoldierGroundArrow = true;
+    public static bool globalShowSoldierGroundArrow = false;
 
     [Tooltip("Chiều rộng mũi tên bệt dưới chân (mét)")]
     [Range(0.1f, 5f)]
@@ -86,7 +86,6 @@ public class SoldierGroundArrow : MonoBehaviour
     {
         targetPosition = targetPos;
         hasTargetPosition = true;
-        showGroundArrow = true;
         EnsureComponents();
         UpdateVisuals();
     }
@@ -99,7 +98,6 @@ public class SoldierGroundArrow : MonoBehaviour
             targetPosition = targetTr.position;
             hasTargetPosition = true;
         }
-        showGroundArrow = true;
         EnsureComponents();
         UpdateVisuals();
     }
