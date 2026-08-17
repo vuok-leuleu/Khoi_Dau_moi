@@ -23,9 +23,15 @@ public class SettingManager : Singleton<SettingManager>
     {
         masterVolume = Mathf.Clamp01(volume);
         PlayerPrefs.SetFloat("MasterVolume", masterVolume);
+
         if (AudioManager.Instance != null)
         {
             AudioManager.Instance.SetMasterVolume(masterVolume);
+        }
+
+        if (SoundMgr.HasInstance && SoundMgr.Ins != null)
+        {
+            SoundMgr.Ins.SetMasterVolume(masterVolume);
         }
     }
 
@@ -33,9 +39,25 @@ public class SettingManager : Singleton<SettingManager>
     {
         musicVolume = Mathf.Clamp01(volume);
         PlayerPrefs.SetFloat("MusicVolume", musicVolume);
+
         if (AudioManager.Instance != null)
         {
             AudioManager.Instance.SetBGMVolume(musicVolume);
+        }
+
+        if (SoundMgr.HasInstance && SoundMgr.Ins != null)
+        {
+            SoundMgr.Ins.SetBGMVolume(musicVolume);
+        }
+
+        // Đồng bộ các SoundManager khác của dự án nếu có
+        SoundManager[] managers = Object.FindObjectsByType<SoundManager>(FindObjectsSortMode.None);
+        foreach (var sm in managers)
+        {
+            if (sm != null)
+            {
+                sm.bgmVolume = musicVolume * masterVolume;
+            }
         }
     }
 
@@ -71,6 +93,10 @@ public class SettingManager : Singleton<SettingManager>
         musicVolume = PlayerPrefs.GetFloat("MusicVolume", 1f);
         screenModeIndex = PlayerPrefs.GetInt("ScreenModeIndex", 1); // Mặc định là Fullscreen (1)
         mouseSpeed = PlayerPrefs.GetFloat("MouseSpeed", 5f);
+
+        // Đội đồng bộ volume ngay khi vừa load settings
+        SetMasterVolume(masterVolume);
+        SetMusicVolume(musicVolume);
 
         // Áp dụng cấu hình màn hình ngay khi mở game
         SetScreenMode(screenModeIndex);

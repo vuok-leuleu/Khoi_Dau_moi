@@ -1543,7 +1543,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 11.439949, y: 2.9529173, z: 9.508296}
   m_Center: {x: 0.87773037, y: 1.4762775, z: -2.3409677}
@@ -3045,15 +3045,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 64189816799595732, guid: 078efdee227ce7b40b3a095532cd4e65, type: 3}
       propertyPath: m_Enabled
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 64290586370141854, guid: 078efdee227ce7b40b3a095532cd4e65, type: 3}
       propertyPath: m_Enabled
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 64335578167134696, guid: 078efdee227ce7b40b3a095532cd4e65, type: 3}
       propertyPath: m_Enabled
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 242406762053602963, guid: 078efdee227ce7b40b3a095532cd4e65, type: 3}
       propertyPath: m_Enabled
@@ -3217,6 +3217,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 297307054518151826}
     m_Modifications:
+    - target: {fileID: 550302825359904224, guid: e617e924a2176df4ab5bbe4258490bc0, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3396696558019864731, guid: e617e924a2176df4ab5bbe4258490bc0, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3558188614226957582, guid: e617e924a2176df4ab5bbe4258490bc0, type: 3}
       propertyPath: m_LocalPosition.x
       value: 1.35
@@ -3260,6 +3268,26 @@ PrefabInstance:
     - target: {fileID: 4191418717481340852, guid: e617e924a2176df4ab5bbe4258490bc0, type: 3}
       propertyPath: m_Name
       value: WorkerGo
+      objectReference: {fileID: 0}
+    - target: {fileID: 4660682261389266012, guid: e617e924a2176df4ab5bbe4258490bc0, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5089379585130406109, guid: e617e924a2176df4ab5bbe4258490bc0, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7061918736928962524, guid: e617e924a2176df4ab5bbe4258490bc0, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7458265984922259316, guid: e617e924a2176df4ab5bbe4258490bc0, type: 3}
+      propertyPath: m_AnimatePhysics
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7458265984922259316, guid: e617e924a2176df4ab5bbe4258490bc0, type: 3}
+      propertyPath: m_ApplyRootMotion
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

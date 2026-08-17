@@ -329,15 +329,33 @@ public class AudioManager : MonoBehaviour
 
     private void UpdateBGMVolumeInternal()
     {
+        bool muted = isMasterMuted || isBGMMuted;
+        float effectiveVolume = muted ? 0f : (bgmVolume * masterVolume);
+
         if (bgmSource != null)
         {
-            bool muted = isMasterMuted || isBGMMuted;
-            bgmSource.volume = muted ? 0f : (bgmVolume * masterVolume);
+            bgmSource.volume = effectiveVolume;
         }
 
         if (mainAudioMixer != null)
         {
-            SetMixerVolume(bgmVolumeParam, (isMasterMuted || isBGMMuted) ? 0f : bgmVolume);
+            SetMixerVolume(bgmVolumeParam, muted ? 0f : bgmVolume);
+        }
+
+        // Đồng bộ sang SoundMgr nếu có
+        if (SoundMgr.HasInstance && SoundMgr.Ins != null)
+        {
+            SoundMgr.Ins.SetBGMVolume(muted ? 0f : bgmVolume);
+        }
+
+        // Đồng bộ sang SoundManager của thành viên khác nếu có
+        SoundManager[] dungManagers = Object.FindObjectsByType<SoundManager>(FindObjectsSortMode.None);
+        foreach (var sm in dungManagers)
+        {
+            if (sm != null)
+            {
+                sm.bgmVolume = effectiveVolume;
+            }
         }
     }
 
