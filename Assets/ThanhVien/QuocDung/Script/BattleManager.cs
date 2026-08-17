@@ -100,6 +100,11 @@ public class BattleManager : MonoBehaviour
 
     public static BattleManager Ins { get; private set; }
 
+    private void OnDestroy()
+    {
+        if (Ins == this) Ins = null;
+    }
+
     private void Awake()
     {
         Ins = this;
@@ -237,7 +242,7 @@ public class BattleManager : MonoBehaviour
         Time.timeScale = 1f;
         string targetScene = (BattleData.HasData && !string.IsNullOrEmpty(BattleData.MainSceneName)) ? BattleData.MainSceneName : "MainScene";
         Debug.Log($"[BattleManager] 🚀 ReturnToMainScene -> LoadScene('{targetScene}') ngay lập tức!");
-        UnityEngine.SceneManagement.SceneManager.LoadScene(targetScene);
+        CloudSceneTransition.LoadSceneWithCloud(targetScene);
     }
 
     private void Update()

@@ -81,6 +81,11 @@ public class CampaignTutorialManager : MonoBehaviour
     private bool isPointingAtWorld = false;
     private GameObject spawnedMonsterInstance;
 
+    private void OnDestroy()
+    {
+        if (Ins == this) Ins = null;
+    }
+
     private void Awake()
     {
         if (Ins == null) Ins = this;

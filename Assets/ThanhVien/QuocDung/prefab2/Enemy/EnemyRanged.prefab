@@ -63,7 +63,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
   m_LocalPosition: {x: 96.06, y: 0, z: 39.88}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7321976001334201679}
@@ -129,6 +129,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAI
   villageCenter: {fileID: 0}
   animator: {fileID: 472579318761163330}
+  attackButtonUI: {fileID: 0}
+  battleSceneName: SceneBattle
+  buttonRotationOffset: {x: 0, y: 0, z: 90}
+  showGroundArrow: 1
+  wavesToReachTarget: 3
+  spawnWave: 1
+  targetWave: 4
   patrolRadius: 8
   pointReachDistance: 1
   repathInterval: 2
@@ -160,6 +167,10 @@ MonoBehaviour:
   squadEnemies: []
   isCombatActive: 0
   isWaitingAtTarget: 0
+  focusCameraOnArrival: 1
+  arrivalCameraDuration: 0.7
+  arrivalCameraHeight: 14
+  arrivalCameraDistance: 12
 --- !u!54 &3581391958472659968
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -226,7 +237,7 @@ MonoBehaviour:
   bloodTransform: {fileID: 0}
   hpBarHeightOffset: 2.2
   hpBarSize: {x: 1.2, y: 0.15}
-  hpBarColor: {r: 1, g: 0, b: 0, a: 1}
+  hpBarColor: {r: 1, g: 0, b: 0, a: 0}
   hideHpBarWhenFull: 0
 --- !u!1 &4069702562952774948
 GameObject:

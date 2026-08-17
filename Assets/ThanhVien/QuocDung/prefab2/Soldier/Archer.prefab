@@ -30,7 +30,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 95.19, y: 0.0000023110156, z: 34.25}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2409704139518173790}
@@ -92,7 +92,7 @@ MonoBehaviour:
   moveBoolParam: IsMove
   attackBoolParam: IsAttack
   shootBoolParam: IsShoot
-  attackDamage: 15
+  attackDamage: 30
   attackRate: 1.1
   projectilePrefab: {fileID: 5359184337749467852, guid: f993c8283c5cd9040bec9dd913992256, type: 3}
   firePoint: {fileID: 2409704139518173790}
@@ -122,6 +122,13 @@ MonoBehaviour:
   isReturning: 0
   returnPosition: {x: 0, y: 0, z: 0}
   warningPosition: {x: 0, y: 0, z: 0}
+  isExpeditionMarching: 0
+  marchStartWave: 1
+  marchWavesToReach: 3
+  marchTargetWave: 4
+  marchStartPosition: {x: 0, y: 0, z: 0}
+  marchDestinationPosition: {x: 0, y: 0, z: 0}
+  soldierPointUIPrefab: {fileID: 7111244036665792479, guid: 38bd48e20241e124cbeb93eef447228d, type: 3}
 --- !u!195 &1473931839958075119
 NavMeshAgent:
   m_ObjectHideFlags: 0
