@@ -108,12 +108,18 @@ public class EnemySpawn : MonoBehaviour
         }
     }
 
-    private bool IsTutorialActive()
+    public bool IsTutorialActive()
     {
-        if (CampaignTutorialManager.Ins != null && CampaignTutorialManager.Ins.gameObject.activeInHierarchy) return true;
+        if (CampaignTutorialManager.Ins != null && CampaignTutorialManager.Ins.gameObject.activeInHierarchy && !CampaignTutorialManager.Ins.IsTutorialCompleted())
+        {
+            return true;
+        }
 
         GameObject tutCanvas = GameObject.Find("TutorialCanvas");
-        if (tutCanvas != null && tutCanvas.activeInHierarchy) return true;
+        if (tutCanvas != null && tutCanvas.activeInHierarchy)
+        {
+            return true;
+        }
 
         return false;
     }
@@ -148,14 +154,14 @@ public class EnemySpawn : MonoBehaviour
 
     private void OnWaveStartHandler(int waveIndex)
     {
+        // Khi đang Tutorial, hoàn toàn KHÔNG tự động spawn quái tấn công thành
+        if (IsTutorialActive()) return;
+
         // Tự động Spawn đợt Quái mới phù hợp với hệ thống Wave của DayNightManager (xuất hiện ở Wave 1, Wave 4, Wave 7, ...)
         if (waveIndex == 1 || (waveIndex > 1 && (waveIndex - 1) % 3 == 0))
         {
-            if (!IsTutorialActive())
-            {
-                Debug.Log($"[EnemySpawn] 🔥 DayNightManager phát sự kiện Wave {waveIndex}! Tự động Spawn đợt Quái mới.");
-                SpawnEnemy();
-            }
+            Debug.Log($"[EnemySpawn] 🔥 DayNightManager phát sự kiện Wave {waveIndex}! Tự động Spawn đợt Quái mới.");
+            SpawnEnemy();
         }
     }
 
@@ -164,8 +170,8 @@ public class EnemySpawn : MonoBehaviour
         SubscribeToWaveEvents();
         GetOrFindAttackTarget();
 
-        // 1. Spawn quái khởi đầu ở Wave 1 nếu spawnOnStart = true
-        if (spawnOnStart)
+        // 1. Spawn quái khởi đầu ở Wave 1 nếu spawnOnStart = true và KHÔNG phải Tutorial
+        if (spawnOnStart && !IsTutorialActive())
         {
             int currentWave = (DayNightManager.HasInstance && DayNightManager.Ins != null) ? DayNightManager.Ins.CurrentWave : 1;
             if (currentWave <= 1)
@@ -200,13 +206,12 @@ public class EnemySpawn : MonoBehaviour
         {
             if (UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject()) return;
 
-            Camera mainCam = Camera.main;
-            if (mainCam != null)
+            if (Camera.main != null)
             {
-                Ray ray = mainCam.ScreenPointToRay(Input.mousePosition);
+                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
                 if (Physics.Raycast(ray, out RaycastHit hit, 200f))
                 {
-                    if (hit.transform == transform || hit.transform.IsChildOf(transform) || hit.transform.name.Contains("Chal") || hit.transform.name.Contains("Enemy") || hit.transform.name.Contains("Spawn"))
+                    if (hit.transform == transform || hit.transform.IsChildOf(transform))
                     {
                         UIEnemyWaveButton.CreateButton(GetSpawnPoint());
                     }
@@ -263,17 +268,17 @@ public class EnemySpawn : MonoBehaviour
                 if (p != null) sources.Add(p);
             }
         }
-
         if (sources.Count == 0)
         {
             sources.Add(transform);
         }
 
+        List<EnemyAI> squadList = new List<EnemyAI>();
         List<GameObject> spawnedWaveEnemies = new List<GameObject>();
 
         foreach (Transform source in sources)
         {
-            List<EnemyAI> squadList = new List<EnemyAI>();
+            if (source == null) continue;
 
             if (useGridSpawn)
             {
@@ -302,6 +307,7 @@ public class EnemySpawn : MonoBehaviour
                 leadAI.squadEnemies.Insert(0, leadAI);
             }
 
+            // Gắn EnemyRouteWarningUI (Mũi tên & Đồng hồ đếm ngược)
             if (routeWarningUIPrefab != null)
             {
                 Transform routeStart = (sources.Count > 0 && sources[0] != null) ? sources[0] : GetSpawnPoint();
@@ -315,6 +321,16 @@ public class EnemySpawn : MonoBehaviour
                 {
                     Transform routeTarget = attackTarget != null ? attackTarget : GetOrFindAttackTarget();
                     activeRouteWarning.Setup(routeStart, routeTarget, leadEnemy, routeWarningHeightOffset);
+                }
+            }
+
+            // Gắn Button Tấn Công cho Thủ Lĩnh
+            if (showAttackButton)
+            {
+                UIEnemyWaveButton waveBtn = UIEnemyWaveButton.CreateButton(leadEnemy, warningIconHeightOffset);
+                if (waveBtn != null)
+                {
+                    waveBtn.transform.SetParent(leadEnemy);
                 }
             }
         }
@@ -332,9 +348,9 @@ public class EnemySpawn : MonoBehaviour
 
         GameObject bestEnemy = null;
         float maxFrontDist = float.MinValue;
-        float minCenterDist = float.MaxValue;
+        float minSideDist = float.MaxValue;
 
-        foreach (GameObject enemy in enemies)
+        foreach (var enemy in enemies)
         {
             if (enemy == null) continue;
 
@@ -345,20 +361,20 @@ public class EnemySpawn : MonoBehaviour
             if (frontDist > maxFrontDist + 0.1f)
             {
                 maxFrontDist = frontDist;
-                minCenterDist = sideDist;
+                minSideDist = sideDist;
                 bestEnemy = enemy;
             }
             else if (Mathf.Abs(frontDist - maxFrontDist) <= 0.1f)
             {
-                if (sideDist < minCenterDist)
+                if (sideDist < minSideDist)
                 {
-                    minCenterDist = sideDist;
+                    minSideDist = sideDist;
                     bestEnemy = enemy;
                 }
             }
         }
 
-        return bestEnemy;
+        return bestEnemy != null ? bestEnemy : enemies[0];
     }
 
     private void SpawnGridAt(Vector3 center, Quaternion rotation, List<EnemyAI> squadList, List<GameObject> spawnedWaveEnemies = null)
@@ -380,8 +396,7 @@ public class EnemySpawn : MonoBehaviour
     }
 
     /// <summary>
-    /// Tìm hoặc lấy mục tiêu tấn công: Lựa chọn NGẪU NHIÊN 1 Prefab Nhà Chính (Town Hall / House) đang hoạt động trong Scene.
-    /// Tuyệt đối KHÔNG nhắm vào Transform rỗng (townHallPoint) hoặc Vùng Đất.
+    /// Tìm Prefab Nhà Chính đang tồn tại trong Scene hoặc các Nhà Chính của Vùng Đất.
     /// </summary>
     public Transform GetOrFindAttackTarget()
     {
@@ -498,3 +513,4 @@ public class EnemySpawn : MonoBehaviour
         return enemy;
     }
 }
+

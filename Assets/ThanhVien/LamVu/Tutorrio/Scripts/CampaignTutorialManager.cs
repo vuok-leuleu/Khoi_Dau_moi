@@ -7,35 +7,34 @@ using UnityEngine.SceneManagement;
 
 /*
  * CampaignTutorialManager.cs
- * Hệ thống Hướng Dẫn Tutorial 6 Giai Đoạn CHUẨN XÁC NGUYÊN BẢN THEO YÊU CẦU cho Demacia Rising
+ * Hệ thống Hướng Dẫn Tutorial 6 Giai Đoạn CHUẨN XÁC NGUYÊN BẢN THEO 0. PROLOGUE cho Demacia Rising
  * 
  * QUY TẮC BẮT BUỘC:
- * 1. Giữ lại Vòng Tròn Highlight Ring, ẩn hoàn toàn Bàn Tay Pointer.
- * 2. Hướng dẫn chữ tuyệt đối KHÔNG DÙNG Emoji, Icon, Ký hiệu, tuyệt đối KHÔNG DÙNG từ "hoặc", phải có Dấu Câu Tiếng Việt chuẩn xác.
- * 3. Vòng tròn Ring luôn luôn chỉ đúng vị trí đối tượng/nút bấm mục tiêu.
+ * 1. Đồng bộ 100% với 6 nhiệm vụ trong 0. PROLOGUE của ChapterQuestTestController:
+ *    - Quest 0: Bấm vào Zeffira để mở Settlement View
+ *    - Quest 1: Xây dựng Xưởng Gỗ tại Zeffira (Cần Qua Ngày)
+ *    - Quest 2: Huấn luyện 1 Hộ Vệ tại Zeffira (Cần Qua Ngày)
+ *    - Quest 3: Di chuyển quân đến lãnh thổ địch phía Đông Zeffira (VASKASIA)
+ *    - Quest 4: Chuẩn bị và giành chiến thắng trong trận đánh đầu
+ *    - Quest 5: Xây dựng Vaskasia trên vùng đất trống
+ * 2. Vòng tròn Highlight Ring chỉ đúng mục tiêu / nút bấm.
+ * 3. Khống chế và ngăn chặn mọi đợt quái tấn công thành khi đang trong Tutorial.
+ * 4. Khóa camera và tương tác khi đang mở Dialogue để tránh bị click lệch trỏ.
+ * 5. Tự động ẩn hoàn toàn Hint Text và Canvas khi hoàn thành xong Tutorial.
  */
 
 public enum DemaciaTutorialStage
 {
     None,
-    Stage1_BuildWood,           // 1. Xây Xưởng Gỗ
-    Stage1_SkipDayWood,         // 1. Bấm qua ngày hoàn thành Xưởng Gỗ
-    Stage1_ResourceExplain,     // 1. Giải thích tài nguyên khi qua ngày
-    
-    Stage2_ViewEnemyTerritory,  // 2. Trỏ vùng đất cần chinh phục
-    Stage2_ReturnToBase,        // 2. Trở về vùng đất hiện tại
-    Stage2_BuildBarracks,       // 2. Xây Trại Lính
-    Stage2_SkipDayBarracks,     // 2. Bấm qua ngày hoàn thành Trại Lính
-
-    Stage3_EnemyDiscovered,     // 3. Spawn 1 quái, kẻ địch phát hiện ra ta và tấn công trước
-
-    Stage4_AttackEnemyMonster,  // 4. Tấn công quái (SceneBattle)
-    Stage4_VictoryComplete,     // 4. Phòng thủ thành công
-
-    Stage5_AttackEnemyOutpost,  // 5. Tấn công căn cứ địch (SceneBattle)
-    Stage5_VictoryConquer,      // 5. Chiếm được vùng đất mới
-
-    Stage6_BuildOnNewLand,      // 6. Hướng dẫn xây công trình trên vùng đất vừa chiếm
+    Stage0_OpenSettlementView,    // 0. Bấm vào Zeffira để mở Settlement View
+    Stage1_BuildWood,             // 1. Xây Xưởng Gỗ tại Zeffira
+    Stage1_SkipDayWood,           // 1. Bấm qua ngày hoàn thành Xưởng Gỗ
+    Stage2_TrainGuard,            // 2. Chọn huấn luyện 1 Hộ Vệ (Guard) tại Zeffira
+    Stage2_SkipDayTroop,          // 2. Bấm qua ngày hoàn tất huấn luyện Hộ Vệ
+    Stage3_MarchToEnemyEast,      // 3. Di chuyển quân đến lãnh thổ địch phía Đông Zeffira (Vaskasia)
+    Stage4_AttackEnemyBattle,     // 4. Chuẩn bị và giành chiến thắng trong trận đánh đầu
+    Stage4_VictoryComplete,       // 4. Hoàn thành trận đánh đầu
+    Stage5_EstablishVaskasia,     // 5. Xây dựng Vaskasia trên vùng đất trống
     Completed
 }
 
@@ -48,38 +47,37 @@ public class CampaignTutorialManager : MonoBehaviour
 
     [Header("=== THÀNH PHẦN GIAO DIỆN HƯỚNG DẪN ===")]
     [SerializeField] private GameObject overlayDim;         
-    [SerializeField] private GameObject handPointer;        // 🔒 Sẽ bị ẩn hoàn toàn theo yêu cầu
+    [SerializeField] private GameObject handPointer;        // 🔒 Ẩn hoàn toàn
     [SerializeField] private RectTransform highlightRing;   // 🔒 Vòng tròn Highlight duy nhất
     [SerializeField] private Canvas tutorialCanvas;         
     [SerializeField] private TMP_Text hintText;             
 
     [Header("=== THÀNH PHẦN SCENE & VÙNG ĐẤT ===")]
     [SerializeField] private SettlementZone baseZone;        // Vùng đất khởi đầu (ZEFFIRA)
-    [SerializeField] private SettlementZone enemyZone;       // Vùng đất cần chinh phục (Zone B)
+    [SerializeField] private SettlementZone enemyZone;       // Vùng đất cần chinh phục phía Đông (VASKASIA)
     [SerializeField] private EnemySpawn enemySpawner;       
     [SerializeField] private int tutorialEnemyCount = 3;    
 
-    [Header("=== NÚT TẤN CÔNG CĂN CỨ ĐỊCH (STAGE 5) ===")]
+    [Header("=== NÚT TẤN CÔNG CĂN CỨ ĐỊCH ===")]
     [SerializeField] private Button outpostAttackButton;
 
-    [Header("=== CÁC MẢNG LỜI THOẠI TRƯỞNG LÀNG MARCUS (CHỈNH SỬA TRÊN INSPECTOR) ===")]
-    [Tooltip("Danh sách các câu thoại Trưởng Làng Marcus ở Stage 1 (Nếu trống sẽ dùng thoại mặc định trong code)")]
+    [Header("=== CÁC MẢNG LỜI THOẠI TRƯỞNG LÀNG MARCUS (INSPECTOR) ===")]
+    [SerializeField] private DialogueData[] stage0Dialogues;
     [SerializeField] private DialogueData[] stage1Dialogues;
-    [Tooltip("Danh sách các câu thoại Trưởng Làng Marcus ở Stage 2")]
     [SerializeField] private DialogueData[] stage2Dialogues;
-    [Tooltip("Danh sách các câu thoại Trưởng Làng Marcus ở Stage 3")]
     [SerializeField] private DialogueData[] stage3Dialogues;
-    [Tooltip("Danh sách các câu thoại Trưởng Làng Marcus ở Stage 4")]
     [SerializeField] private DialogueData[] stage4Dialogues;
-    [Tooltip("Danh sách các câu thoại Trưởng Làng Marcus ở Stage 5")]
     [SerializeField] private DialogueData[] stage5Dialogues;
-    [Tooltip("Danh sách các câu thoại Trưởng Làng Marcus khi hoàn thành Tutorial")]
     [SerializeField] private DialogueData[] stageCompleteDialogues;
 
     private RectTransform currentTargetUI;
     private Vector3 currentTargetWorldPos;
     private bool isPointingAtWorld = false;
-    private GameObject spawnedMonsterInstance;
+
+    public bool IsTutorialCompleted()
+    {
+        return currentStage == DemaciaTutorialStage.Completed || PlayerPrefs.GetInt("TutorialCompleted", 0) == 1;
+    }
 
     private void OnDestroy()
     {
@@ -91,9 +89,7 @@ public class CampaignTutorialManager : MonoBehaviour
         if (Ins == null) Ins = this;
         else Destroy(gameObject);
 
-        // 🔒 Ẩn bàn tay theo yêu cầu (chỉ dùng Vòng Tròn Ring)
         if (handPointer != null) handPointer.SetActive(false);
-
         if (highlightRing != null) highlightRing.gameObject.SetActive(false);
 
         if (tutorialCanvas == null && highlightRing != null)
@@ -102,16 +98,20 @@ public class CampaignTutorialManager : MonoBehaviour
 
     private void Start()
     {
-        // Kiểm tra xem đã hoàn thành Tutorial hoàn toàn chưa
+        // 1. Kiểm tra nếu đã hoàn thành Tutorial từ trước
         if (PlayerPrefs.GetInt("TutorialCompleted", 0) == 1)
         {
             currentStage = DemaciaTutorialStage.Completed;
             HidePointer();
+            UpdateHint("");
             if (tutorialCanvas != null) tutorialCanvas.gameObject.SetActive(false);
             return;
         }
 
-        // Xử lý khi trở về từ SceneBattle
+        // 2. Tìm vùng đất tự động: Bắt buộc tìm chính xác ZEFFIRA và VASKASIA
+        AutoDetectZones();
+
+        // 3. Xử lý khi trở về từ SceneBattle
         if (BattleData.HasResult || BattleData.LastBattleWasVictory)
         {
             int lastStage = PlayerPrefs.GetInt("SavedTutorialStage", 4);
@@ -120,14 +120,9 @@ public class CampaignTutorialManager : MonoBehaviour
 
             EnsureAllBuiltBuildingsCompleted();
 
-            if (lastStage == 4)
+            if (lastStage >= 4)
             {
                 StartCoroutine(HandleStage4ReturnRoutine());
-                return;
-            }
-            else if (lastStage == 5)
-            {
-                StartCoroutine(HandleStage5ReturnRoutine());
                 return;
             }
         }
@@ -135,8 +130,56 @@ public class CampaignTutorialManager : MonoBehaviour
         Time.timeScale = 1f;
         HidePointer();
 
-        // Bắt đầu Stage 1
-        StartStage1_BuildWood();
+        // Bắt đầu Step 0: Bấm vào Zeffira để mở Settlement View
+        StartStage0_OpenSettlementView();
+    }
+
+    /// <summary>
+    /// Tự động tìm chính xác vùng đất Zeffira và Vaskasia
+    /// </summary>
+    private void AutoDetectZones()
+    {
+        SettlementZone[] zones = Object.FindObjectsByType<SettlementZone>(FindObjectsSortMode.None);
+        
+        if (baseZone == null)
+        {
+            foreach (var z in zones)
+            {
+                if (z != null && (z.settlementName.ToUpper().Contains("ZEFFIRA") || z.zoneTier == 0))
+                {
+                    baseZone = z;
+                    break;
+                }
+            }
+        }
+
+        if (enemyZone == null)
+        {
+            // Ưu tiên tìm đúng vùng đất mang tên VASKASIA
+            foreach (var z in zones)
+            {
+                if (z != null && z.settlementName.ToUpper().Contains("VASKASIA"))
+                {
+                    enemyZone = z;
+                    break;
+                }
+            }
+
+            // Fallback: Tìm vùng đất bậc 1 hoặc có tiền đồn quái
+            if (enemyZone == null)
+            {
+                foreach (var z in zones)
+                {
+                    if (z != null && z != baseZone && (z.zoneTier == 1 || z.hasEnemyOutpost))
+                    {
+                        enemyZone = z;
+                        break;
+                    }
+                }
+            }
+        }
+
+        Debug.Log($"[CampaignTutorialManager] 🗺️ Base Zone: {(baseZone != null ? baseZone.settlementName : "NULL")}, Enemy Zone: {(enemyZone != null ? enemyZone.settlementName : "NULL")}");
     }
 
     private void Update()
@@ -144,35 +187,90 @@ public class CampaignTutorialManager : MonoBehaviour
         UpdateHighlightRingAnimation();
     }
 
+    private void SetCameraControlEnabled(bool isEnabled)
+    {
+        RTSCameraController cam = Object.FindFirstObjectByType<RTSCameraController>();
+        if (cam != null)
+        {
+            cam.enabled = isEnabled;
+        }
+    }
+
     private void PlayDialogueSequence(DialogueData[] customArray, DialogueData[] defaultArray, System.Action onComplete = null)
     {
         DialogueData[] toPlay = (customArray != null && customArray.Length > 0) ? customArray : defaultArray;
         if (NPCDialogueUI.Ins != null && toPlay != null && toPlay.Length > 0)
         {
-            // 💡 Bật Overlay Dim khi bắt đầu đoạn hội thoại của Marcus
+            // 🔒 Khóa camera và bật màn chặn click tránh người chơi ấn lệch trỏ trong lúc thoại
+            SetCameraControlEnabled(false);
             if (overlayDim != null)
             {
                 var img = overlayDim.GetComponent<UnityEngine.UI.Image>();
-                if (img != null) img.raycastTarget = false;
+                if (img != null) img.raycastTarget = true;
                 overlayDim.SetActive(true);
             }
 
             NPCDialogueUI.Ins.ShowDialogueSequence(toPlay, () =>
             {
-                // 💡 Tắt Overlay Dim ngay khi hội thoại kết thúc để người chơi tương tác với thế giới 3D
                 if (overlayDim != null) overlayDim.SetActive(false);
+                SetCameraControlEnabled(true);
                 onComplete?.Invoke();
             });
         }
         else
         {
             if (overlayDim != null) overlayDim.SetActive(false);
+            SetCameraControlEnabled(true);
             onComplete?.Invoke();
         }
     }
 
+    public void CompleteQuestObjective(int questIndex)
+    {
+        if (ChapterQuestController.Instance != null)
+        {
+            ChapterQuestController.Instance.CompleteObjective(0, questIndex);
+        }
+    }
+
     // ====================================================================
-    // STAGE 1: XƯỞNG GỖ -> QUA NGÀY -> TÀI NGUYÊN -> XƯỞNG ĐÁ -> QUA NGÀY
+    // 0. PROLOGUE - STEP 0: BẤM VÀO ZEFFIRA ĐỂ MỞ SETTLEMENT VIEW
+    // ====================================================================
+    public void StartStage0_OpenSettlementView()
+    {
+        currentStage = DemaciaTutorialStage.Stage0_OpenSettlementView;
+        PlayerPrefs.SetInt("SavedTutorialStage", 0);
+        PlayerPrefs.Save();
+
+        PlayDialogueSequence(stage0Dialogues, new DialogueData[]
+        {
+            new DialogueData { speakerName = "Trưởng Làng Marcus", message = "Thưa lãnh chúa, khu định cư Zeffira của chúng ta cần được tái thiết sau những biến động. Hãy kiểm tra tình hình bên trong lãnh địa." }
+        }, () =>
+        {
+            UpdateHint("Hãy bấm vào Zeffira để mở Settlement View.");
+            if (baseZone != null)
+            {
+                FocusCameraOn(baseZone.transform.position, 1.2f);
+                Transform targetPoint = baseZone.townHallPoint != null ? baseZone.townHallPoint : baseZone.transform;
+                PointHandAt(targetPoint.position + Vector3.up * 1.5f);
+            }
+        });
+    }
+
+    /// <summary>
+    /// Gọi khi người chơi nhấp chọn Zeffira hoặc SettlementSidePanelUI mở lên
+    /// </summary>
+    public void OnSettlementOpened(SettlementZone zone)
+    {
+        if (currentStage == DemaciaTutorialStage.Stage0_OpenSettlementView)
+        {
+            CompleteQuestObjective(0); // Tick xong Quest 0
+            StartStage1_BuildWood();
+        }
+    }
+
+    // ====================================================================
+    // 0. PROLOGUE - STEP 1: XÂY DỰNG XƯỞNG GỖ TẠI ZEFFIRA
     // ====================================================================
     public void StartStage1_BuildWood()
     {
@@ -182,11 +280,11 @@ public class CampaignTutorialManager : MonoBehaviour
 
         PlayDialogueSequence(stage1Dialogues, new DialogueData[]
         {
-            new DialogueData { speakerName = "Trưởng Làng", message = "Chào mừng bạn đến với vùng đất mới. Hãy bắt đầu phát triển vương quốc của chúng ta." }
+            new DialogueData { speakerName = "Trưởng Làng Marcus", message = "Gỗ là tài nguyên tiên quyết để xây dựng lãnh địa. Hãy chọn một ô đất trống để lập Xưởng Gỗ." }
         }, () =>
         {
             UpdateHint("Hãy chọn ô đất trống và xây dựng Xưởng Gỗ.");
-            HidePointer();
+            PointAtFirstEmptySlot();
         });
     }
 
@@ -195,16 +293,10 @@ public class CampaignTutorialManager : MonoBehaviour
         if (currentStage == DemaciaTutorialStage.Stage1_BuildWood)
         {
             currentStage = DemaciaTutorialStage.Stage1_SkipDayWood;
-            UpdateHint("Thời gian thi công cần qua ngày mới hoàn thành. Hãy bấm nút Qua Ngày để hoàn tất xây dựng.");
+            UpdateHint("Công trình cần 1 lượt ngày để hoàn tất thi công. Hãy bấm nút Qua Ngày.");
             PointAtSkipDayButton();
         }
-        else if (currentStage == DemaciaTutorialStage.Stage2_BuildBarracks)
-        {
-            currentStage = DemaciaTutorialStage.Stage2_SkipDayBarracks;
-            UpdateHint("Hãy bấm nút Qua Ngày để hoàn tất xây dựng Trại Lính.");
-            PointAtSkipDayButton();
-        }
-        else if (currentStage == DemaciaTutorialStage.Stage6_BuildOnNewLand)
+        else if (currentStage == DemaciaTutorialStage.Stage5_EstablishVaskasia)
         {
             CompleteTutorial();
         }
@@ -214,200 +306,159 @@ public class CampaignTutorialManager : MonoBehaviour
     {
         if (currentStage == DemaciaTutorialStage.Stage1_SkipDayWood)
         {
-            currentStage = DemaciaTutorialStage.Stage1_ResourceExplain;
-            UpdateHint("Khi qua ngày mới, các công trình sẽ cung cấp tài nguyên cho vương quốc của bạn.");
-            HidePointer();
-            Invoke(nameof(StartStage2_ViewEnemyTerritory), 3.5f);
+            CompleteQuestObjective(1); // Tick xong Quest 1: Xây xong Xưởng Gỗ
+            StartStage2_TrainGuard();
         }
-        else if (currentStage == DemaciaTutorialStage.Stage2_SkipDayBarracks)
+        else if (currentStage == DemaciaTutorialStage.Stage2_SkipDayTroop)
         {
-            StartStage3_EnemyDiscovered();
+            CompleteQuestObjective(2); // Tick xong Quest 2: Huấn luyện xong Hộ Vệ
+            StartStage3_MarchToEnemyEast();
         }
     }
 
     // ====================================================================
-    // STAGE 2: QUAN SÁT VÙNG ĐẤT ĐỊCH -> VỀ CĂN CỨ -> XÂY TRẠI LÍNH -> QUA NGÀY
+    // 0. PROLOGUE - STEP 2: HUẤN LUYỆN 1 HỘ VỆ (GUARD) TẠI ZEFFIRA
     // ====================================================================
-    private void StartStage2_ViewEnemyTerritory()
+    public void StartStage2_TrainGuard()
     {
-        currentStage = DemaciaTutorialStage.Stage2_ViewEnemyTerritory;
+        currentStage = DemaciaTutorialStage.Stage2_TrainGuard;
         PlayerPrefs.SetInt("SavedTutorialStage", 2);
         PlayerPrefs.Save();
 
-        UpdateHint("Hãy quan sát vùng đất cần chinh phục phía trước.");
-        HidePointer();
-
-        if (enemyZone != null)
+        PlayDialogueSequence(stage2Dialogues, new DialogueData[]
         {
-            FocusCameraOn(enemyZone.transform.position, 1.5f);
-        }
-
-        Invoke(nameof(StartStage2_ReturnToBase), 3.5f);
-    }
-
-    private void StartStage2_ReturnToBase()
-    {
-        currentStage = DemaciaTutorialStage.Stage2_ReturnToBase;
-        UpdateHint("Trở về vùng đất hiện tại để chuẩn bị lực lượng.");
-        HidePointer();
-
-        if (baseZone != null)
-        {
-            FocusCameraOn(baseZone.transform.position, 1.5f);
-        }
-
-        Invoke(nameof(StartStage2_BuildBarracks), 3f);
-    }
-
-    private void StartStage2_BuildBarracks()
-    {
-        currentStage = DemaciaTutorialStage.Stage2_BuildBarracks;
-        UpdateHint("Hãy chọn ô đất trống và xây dựng Trại Lính.");
-        HidePointer();
-
-        if (baseZone != null)
-        {
-            FocusCameraOn(baseZone.transform.position, 1f);
-        }
-    }
-
-    private EnemySpawn GetEnemySpawner()
-    {
-        if (enemySpawner != null) return enemySpawner;
-        if (enemyZone != null && enemyZone.spawnedEnemyOutpostInstance != null)
-        {
-            var spawner = enemyZone.spawnedEnemyOutpostInstance.GetComponentInChildren<EnemySpawn>();
-            if (spawner != null) return spawner;
-        }
-        return Object.FindFirstObjectByType<EnemySpawn>();
-    }
-
-    // ====================================================================
-    // STAGE 3: KẺ ĐỊCH PHÁT HIỆN VÀ TẤN CÔNG TRƯỚC
-    // ====================================================================
-    private void StartStage3_EnemyDiscovered()
-    {
-        currentStage = DemaciaTutorialStage.Stage3_EnemyDiscovered;
-        PlayerPrefs.SetInt("SavedTutorialStage", 3);
-        PlayerPrefs.Save();
-
-        EnemySpawn spawner = GetEnemySpawner();
-        if (spawner != null)
-        {
-            spawner.SpawnEnemy();
-        }
-
-        EnemyAI monster = Object.FindFirstObjectByType<EnemyAI>();
-        if (monster != null)
-        {
-            spawnedMonsterInstance = monster.gameObject;
-            PointHandAt(monster.transform.position + Vector3.up * 1.5f);
-        }
-
-        PlayDialogueSequence(stage3Dialogues, new DialogueData[]
-        {
-            new DialogueData { speakerName = "Trưởng Làng", message = "Kẻ địch đã phát hiện ra ta và tấn công trước." }
+            new DialogueData { speakerName = "Trưởng Làng Marcus", message = "Khu vực biên cương lân cận đang bị kẻ địch dòm ngó. Hãy chiêu mộ một Hộ Vệ (Guard) tại Doanh Trại để bảo vệ người dân." }
         }, () =>
         {
-            StartStage4_AttackEnemyMonster();
+            UpdateHint("Hãy chọn ô Huấn Luyện Lính tại Zeffira để chiêu mộ Hộ Vệ.");
+            PointAtFirstTrainingSlot();
         });
     }
 
-    // ====================================================================
-    // STAGE 4: TẤN CÔNG QUÁI (SCENE BATTLE) -> PHÒNG THỦ THÀNH CÔNG
-    // ====================================================================
-    private void StartStage4_AttackEnemyMonster()
+    private void PointAtFirstTrainingSlot()
     {
-        currentStage = DemaciaTutorialStage.Stage4_AttackEnemyMonster;
+        if (SettlementSidePanelUI.Ins != null)
+        {
+            var trainingSlots = SettlementSidePanelUI.Ins.GetComponentsInChildren<TroopTrainingSlotUI>();
+            foreach (var slot in trainingSlots)
+            {
+                if (slot != null && slot.gameObject.activeInHierarchy)
+                {
+                    PointHandAtUI(slot.transform as RectTransform);
+                    return;
+                }
+            }
+        }
+    }
+
+    public void OnTroopTrainingStarted(BuildingType troopType)
+    {
+        if (currentStage == DemaciaTutorialStage.Stage2_TrainGuard)
+        {
+            // Chuyển sang chờ người chơi bấm Qua Ngày để lính tập luyện xong
+            currentStage = DemaciaTutorialStage.Stage2_SkipDayTroop;
+            UpdateHint("Binh sĩ cần thời gian tập luyện trong 1 lượt ngày. Hãy bấm nút Qua Ngày để hoàn tất huấn luyện.");
+            PointAtSkipDayButton();
+        }
+    }
+
+    // ====================================================================
+    // 0. PROLOGUE - STEP 3: DI CHUYỂN QUÂN ĐẾN LÃNH THỔ ĐỊCH PHÍA ĐÔNG ZEFFIRA (VASKASIA)
+    // ====================================================================
+    public void StartStage3_MarchToEnemyEast()
+    {
+        currentStage = DemaciaTutorialStage.Stage3_MarchToEnemyEast;
+        PlayerPrefs.SetInt("SavedTutorialStage", 3);
+        PlayerPrefs.Save();
+
+        PlayDialogueSequence(stage3Dialogues, new DialogueData[]
+        {
+            new DialogueData { speakerName = "Trưởng Làng Marcus", message = "Trinh sát báo về: Phía Đông Zeffira có một căn cứ địch đang chiếm đóng vùng đất màu mỡ Vaskasia. Hãy xuất quân tiến về phía Đông!" }
+        }, () =>
+        {
+            UpdateHint("Hãy quan sát và điều chuyển lực lượng đến vùng đất Vaskasia ở phía Đông.");
+            
+            if (enemyZone != null)
+            {
+                FocusCameraOn(enemyZone.transform.position, 1.5f);
+                Transform targetPoint = (enemyZone.spawnedEnemyOutpostInstance != null) ? 
+                    enemyZone.spawnedEnemyOutpostInstance.transform : enemyZone.transform;
+                PointHandAt(targetPoint.position + Vector3.up * 2f);
+            }
+
+            // Sau khi quan sát hoàn tất -> Hoàn thành Quest 3 và chuyển sang chuẩn bị tấn công
+            Invoke(nameof(FinishMarchStep), 3.5f);
+        });
+    }
+
+    private void FinishMarchStep()
+    {
+        if (currentStage == DemaciaTutorialStage.Stage3_MarchToEnemyEast)
+        {
+            CompleteQuestObjective(3); // Tick xong Quest 3: Di chuyển quân đến lãnh thổ địch phía Đông
+            StartStage4_AttackEnemyBattle();
+        }
+    }
+
+    // ====================================================================
+    // 0. PROLOGUE - STEP 4: CHUẨN BỊ VÀ GIÀNH CHIẾN THẮNG TRONG TRẬN ĐÁNH ĐẦU
+    // ====================================================================
+    public void StartStage4_AttackEnemyBattle()
+    {
+        currentStage = DemaciaTutorialStage.Stage4_AttackEnemyBattle;
         PlayerPrefs.SetInt("SavedTutorialStage", 4);
         PlayerPrefs.Save();
 
-        UpdateHint("Hãy chọn kẻ địch để tiến hành tấn công phòng thủ.");
+        PlayDialogueSequence(stage4Dialogues, new DialogueData[]
+        {
+            new DialogueData { speakerName = "Trưởng Làng Marcus", message = "Quân địch đã dàn trận sẵn sàng! Hãy chỉ huy lực lượng tiến công và giành lấy chiến thắng đầu tiên!" }
+        }, () =>
+        {
+            UpdateHint("Hãy chọn căn cứ địch và bấm nút Tấn Công để tham chiến.");
 
-        if (spawnedMonsterInstance != null)
-        {
-            PointHandAt(spawnedMonsterInstance.transform.position + Vector3.up * 1.5f);
-        }
-        else
-        {
-            EnemyAI monster = Object.FindFirstObjectByType<EnemyAI>();
-            if (monster != null)
+            Transform outpostTransform = (enemyZone != null && enemyZone.spawnedEnemyOutpostInstance != null) ? 
+                enemyZone.spawnedEnemyOutpostInstance.transform : 
+                (enemyZone != null ? enemyZone.transform : null);
+
+            if (outpostTransform != null)
             {
-                spawnedMonsterInstance = monster.gameObject;
-                PointHandAt(monster.transform.position + Vector3.up * 1.5f);
+                UIEnemyWaveButton attackBtnScript = UIEnemyWaveButton.CreateButton(outpostTransform, 2.5f);
+                if (attackBtnScript != null)
+                {
+                    Button btn = attackBtnScript.GetComponentInChildren<Button>();
+                    if (btn != null)
+                    {
+                        btn.onClick.AddListener(() =>
+                        {
+                            PlayerPrefs.SetInt("SavedTutorialStage", 4);
+                            PlayerPrefs.Save();
+                        });
+                    }
+                    PointHandAtUI(attackBtnScript.transform as RectTransform);
+                }
+                else
+                {
+                    PointHandAt(outpostTransform.position + Vector3.up * 2f);
+                }
             }
-        }
+        });
+    }
+
+    public void OnOutpostAttackButtonClicked()
+    {
+        PlayerPrefs.SetInt("SavedTutorialStage", 4);
+        PlayerPrefs.Save();
+
+        BattleData.RecordCurrentSceneState(tutorialEnemyCount);
+        Debug.Log("[CampaignTutorialManager] ⚔️ Bắt đầu trận đánh đầu tiên! Chuyển sang SceneBattle...");
+        SceneManager.LoadScene("SceneBattle");
     }
 
     private IEnumerator HandleStage4ReturnRoutine()
     {
         currentStage = DemaciaTutorialStage.Stage4_VictoryComplete;
 
-        bool dialogueDone = false;
-        PlayDialogueSequence(stage4Dialogues, new DialogueData[]
-        {
-            new DialogueData { speakerName = "Trưởng Làng", message = "Phòng thủ thành công." }
-        }, () => { dialogueDone = true; });
-
-        while (!dialogueDone) yield return null;
-
-        StartStage5_AttackEnemyOutpost();
-    }
-
-    // ====================================================================
-    // STAGE 5: TẤN CÔNG CĂN CỨ ĐỊCH -> CHIẾM ĐÓNG VÙNG ĐẤT MỚI
-    // ====================================================================
-    private void StartStage5_AttackEnemyOutpost()
-    {
-        currentStage = DemaciaTutorialStage.Stage5_AttackEnemyOutpost;
-        PlayerPrefs.SetInt("SavedTutorialStage", 5);
-        PlayerPrefs.Save();
-
-        UpdateHint("Hãy chọn căn cứ địch để tiến hành tấn công và chiếm đóng vùng đất này.");
-
-        Transform outpostTransform = (enemyZone != null && enemyZone.spawnedEnemyOutpostInstance != null) ? 
-            enemyZone.spawnedEnemyOutpostInstance.transform : 
-            (enemyZone != null ? enemyZone.transform : null);
-
-        if (outpostTransform != null)
-        {
-            // Tự động sinh Nút Kiếm Tấn Công nổi trên đầu Căn Cứ Địch
-            UIEnemyWaveButton attackBtnScript = UIEnemyWaveButton.CreateButton(outpostTransform, 2.5f);
-            if (attackBtnScript != null)
-            {
-                Button btn = attackBtnScript.GetComponentInChildren<Button>();
-                if (btn != null)
-                {
-                    btn.onClick.AddListener(() =>
-                    {
-                        PlayerPrefs.SetInt("SavedTutorialStage", 5);
-                        PlayerPrefs.Save();
-                    });
-                }
-                PointHandAtUI(attackBtnScript.transform as RectTransform);
-            }
-            else
-            {
-                PointHandAt(outpostTransform.position + Vector3.up * 2f);
-            }
-        }
-    }
-
-    public void OnOutpostAttackButtonClicked()
-    {
-        PlayerPrefs.SetInt("SavedTutorialStage", 5);
-        PlayerPrefs.Save();
-
-        BattleData.RecordCurrentSceneState(tutorialEnemyCount);
-        Debug.Log("[CampaignTutorialManager] Bấm Tấn Công Căn Cứ Địch Stage 5! Chuyển sang SceneBattle...");
-        SceneManager.LoadScene("SceneBattle");
-    }
-
-    private IEnumerator HandleStage5ReturnRoutine()
-    {
-        currentStage = DemaciaTutorialStage.Stage5_VictoryConquer;
-
-        // Xóa căn cứ địch trên Zone B và thiết lập vùng đất đã được chiếm đóng thành công
+        // Xóa căn cứ địch trên Vaskasia sau khi thắng trận
         if (enemyZone != null)
         {
             enemyZone.hasEnemyOutpost = false;
@@ -423,44 +474,63 @@ public class CampaignTutorialManager : MonoBehaviour
             outpostAttackButton.gameObject.SetActive(false);
         }
 
+        CompleteQuestObjective(4); // Tick xong Quest 4: Giành chiến thắng trong trận đánh đầu
+
         bool dialogueDone = false;
-        PlayDialogueSequence(stage5Dialogues, new DialogueData[]
+        PlayDialogueSequence(stage4Dialogues, new DialogueData[]
         {
-            new DialogueData { speakerName = "Trưởng Làng", message = "Đã tiêu diệt toàn bộ lực lượng địch và chiếm đóng thành công vùng đất mới." }
+            new DialogueData { speakerName = "Trưởng Làng Marcus", message = "Chiến thắng vang dội! Lực lượng địch đã bị quét sạch, vùng đất Vaskasia đã được giải phóng hoàn toàn." }
         }, () => { dialogueDone = true; });
 
         while (!dialogueDone) yield return null;
 
-        StartStage6_BuildOnNewLand();
+        StartStage5_EstablishVaskasia();
     }
 
     // ====================================================================
-    // STAGE 6: HƯỚNG DẪN XÂY NHÀ CHÍNH MỚI TRÊN VÙNG ĐẤT VỪA CHIẾM ĐÓNG
+    // 0. PROLOGUE - STEP 5: XÂY DỰNG VASKASIA TRÊN VÙNG ĐẤT TRỐNG
     // ====================================================================
-    private void StartStage6_BuildOnNewLand()
+    public void StartStage5_EstablishVaskasia()
     {
-        currentStage = DemaciaTutorialStage.Stage6_BuildOnNewLand;
-        PlayerPrefs.SetInt("SavedTutorialStage", 6);
+        currentStage = DemaciaTutorialStage.Stage5_EstablishVaskasia;
+        PlayerPrefs.SetInt("SavedTutorialStage", 5);
         PlayerPrefs.Save();
 
-        // CHỈ hoàn thành nếu vùng đất MỚI (enemyZone) đã thực sự được xây dựng Nhà Chính (isTownHallEstablished == true)
         if (enemyZone != null && enemyZone.isTownHallEstablished)
         {
             CompleteTutorial();
             return;
         }
 
-        UpdateHint("Hãy xây dựng Nhà Chính mới trên vùng đất vừa chiếm đóng.");
-        HidePointer();
-
-        if (enemyZone != null)
+        PlayDialogueSequence(stage5Dialogues, new DialogueData[]
         {
-            FocusCameraOn(enemyZone.transform.position, 1.5f);
+            new DialogueData { speakerName = "Trưởng Làng Marcus", message = "Vùng đất này giờ đã an toàn. Hãy lập tức khởi công xây dựng Nhà Chính để biến nơi đây thành khu định cư mới mang tên Vaskasia!" }
+        }, () =>
+        {
+            UpdateHint("Hãy chọn vùng đất mới và xây dựng Nhà Chính Vaskasia.");
+            HidePointer();
+
+            if (enemyZone != null)
+            {
+                FocusCameraOn(enemyZone.transform.position, 1.5f);
+                Transform targetPoint = enemyZone.townHallPoint != null ? enemyZone.townHallPoint : enemyZone.transform;
+                PointHandAt(targetPoint.position + Vector3.up * 1.5f);
+            }
+        });
+    }
+
+    public void OnTownHallEstablished(SettlementZone zone)
+    {
+        if (currentStage == DemaciaTutorialStage.Stage5_EstablishVaskasia)
+        {
+            CompleteTutorial();
         }
     }
 
     private void CompleteTutorial()
     {
+        CompleteQuestObjective(5); // Tick xong Quest 5: Xây dựng Vaskasia -> Hoàn thành toàn bộ Prologue!
+
         currentStage = DemaciaTutorialStage.Completed;
         PlayerPrefs.SetInt("TutorialCompleted", 1);
         PlayerPrefs.Save();
@@ -469,32 +539,33 @@ public class CampaignTutorialManager : MonoBehaviour
 
         PlayDialogueSequence(stageCompleteDialogues, new DialogueData[]
         {
-            new DialogueData { speakerName = "Trưởng Làng", message = "Chúc mừng bạn đã hoàn thành hướng dẫn và chiếm đóng thành công lãnh thổ mới." }
+            new DialogueData { speakerName = "Trưởng Làng Marcus", message = "Chúc mừng lãnh chúa! Người đã hoàn thành xuất sắc giai đoạn Mở Đầu (Prologue), mở rộng bờ cõi Demacia và nhận thưởng chiếc rương Demacian Orb quý giá!" }
         }, () =>
         {
             if (JsonDataManager.Ins != null)
             {
-                JsonDataManager.Ins.AddWood(500);
-                JsonDataManager.Ins.AddStone(500);
+                JsonDataManager.Ins.AddGold(100);
+                JsonDataManager.Ins.AddWood(100);
+                JsonDataManager.Ins.AddStone(50);
                 JsonDataManager.Ins.BroadcastAllResources();
             }
-            UpdateHint("Đã hoàn thành Hướng Dẫn Khẩn Hoang! Nhận 500 Gỗ và 500 Đá.");
+            
+            // 🔥 ẨN HOÀN TOÀN HINT TEXT VÀ CANVAS KHI KẾT THÚC HƯỚNG DẪN
+            UpdateHint("");
+            if (hintText != null) hintText.gameObject.SetActive(false);
+            if (tutorialCanvas != null) tutorialCanvas.gameObject.SetActive(false);
+
+            // Mở bảng Chapter Quest chúc mừng và hiển thị Chương I
+            if (ChapterQuestController.Instance != null)
+            {
+                ChapterQuestController.Instance.OpenWindow();
+            }
         });
     }
 
     // ====================================================================
-    // TÍNH NĂNG MỞ RỘNG VÀ HOOK SỰ KIỆN TỪ CÁC SCRIPT KHÁC
+    // CÁC HÀM HOOK PHỤ TRỢ TỪ CÁC SCRIPT KHÁC
     // ====================================================================
-    public void OnTownHallEstablished(SettlementZone zone)
-    {
-        if (currentStage == DemaciaTutorialStage.Stage6_BuildOnNewLand)
-        {
-            if (zone == null || enemyZone == null || zone == enemyZone)
-            {
-                CompleteTutorial();
-            }
-        }
-    }
     public void OnCivilBuildingPlaced(BuildingType buildingType, Transform placedBuildingTransform = null)
     {
         OnBuildingPlaced(buildingType);
@@ -529,33 +600,11 @@ public class CampaignTutorialManager : MonoBehaviour
     public void OnStartPlacement() { HidePointer(); }
     public void OnCancelPlacement() { }
     public void OnEnemyKilled() { }
-
     public void OnShopOpened() { }
     public void OnShopItemSelected(BuildingType type) { }
 
-    private void PointAtConstructButton()
-    {
-        if (BuildingShopUI.Ins != null)
-        {
-            Button btn = null;
-            var buttons = BuildingShopUI.Ins.GetComponentsInChildren<Button>();
-            foreach (var b in buttons)
-            {
-                if (b != null && (b.gameObject.name.Contains("Construct") || b.gameObject.name.Contains("Build") || b.gameObject.name.Contains("Xây")))
-                {
-                    btn = b;
-                    break;
-                }
-            }
-            if (btn != null)
-            {
-                PointHandAtUI(btn.transform as RectTransform);
-            }
-        }
-    }
-
     // ====================================================================
-    // CÁC HÀM ĐIỀU KHIỂN CAMERA & NẮM BẮT VỊ TRÍ
+    // CÁC HÀM ĐIỀU KHIỂN CAMERA & HIGHLIGHT
     // ====================================================================
     public void FocusCameraOn(Vector3 targetWorldPos, float duration = 1.2f)
     {
@@ -574,7 +623,7 @@ public class CampaignTutorialManager : MonoBehaviour
         float distance = heightDiff / Mathf.Max(0.1f, Mathf.Abs(forwardDir.y));
 
         Vector3 endPos = targetWorldPos - forwardDir * distance;
-        endPos.y = startPos.y; // Giữ nguyên độ cao Y hiện tại của Camera
+        endPos.y = startPos.y;
 
         float elapsed = 0f;
         while (elapsed < duration)
@@ -587,9 +636,6 @@ public class CampaignTutorialManager : MonoBehaviour
         camTrans.position = endPos;
     }
 
-    // ====================================================================
-    // CÁC HÀM PHỤ TRỢ (HIGHLIGHT RING, HINT, POSITIONING)
-    // ====================================================================
     private void UpdateHighlightRingAnimation()
     {
         if (highlightRing == null || !highlightRing.gameObject.activeSelf) return;
@@ -607,7 +653,7 @@ public class CampaignTutorialManager : MonoBehaviour
 
     public void PointHandAt(Vector3 worldPos)
     {
-        if (handPointer != null) handPointer.SetActive(false); // 🔒 Ẩn bàn tay theo yêu cầu
+        if (handPointer != null) handPointer.SetActive(false);
 
         isPointingAtWorld = true;
         currentTargetWorldPos = worldPos;
@@ -623,7 +669,7 @@ public class CampaignTutorialManager : MonoBehaviour
 
     public void PointHandAtUI(RectTransform uiRect)
     {
-        if (handPointer != null) handPointer.SetActive(false); // 🔒 Ẩn bàn tay theo yêu cầu
+        if (handPointer != null) handPointer.SetActive(false);
         if (uiRect == null) return;
 
         isPointingAtWorld = false;

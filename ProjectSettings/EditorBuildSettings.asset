@@ -14,9 +14,6 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Data/Scenes/BuildMapTest.unity
     guid: ff4689feee69d3343bce098aa2ed1cca
-  - enabled: 0
-    path: Assets/_Data/Scenes/NewGame.unity
-    guid: 1497260a37538a042b0be5eaa173c16a
   - enabled: 1
     path: Assets/_Data/Scenes/Init.unity
     guid: eaa75f0540f981f4f99ac9d225a216e5
@@ -32,9 +29,6 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Data/Scenes/MainMenu.unity
     guid: 99c9720ab356a0642a771bea13969a05
-  - enabled: 0
-    path: Assets/_Data/Scenes/Gameplay.unity
-    guid: ecf7da8f961e02a48977fc69acf33fbb
   - enabled: 1
     path: Assets/_Data/Scenes/demobuilding.unity
     guid: 162d9f79e410ba04cb96c65a2aad98ee

@@ -329,6 +329,7 @@ public class TroopTrainingManager : MonoBehaviour
         slot.isCompleted = false;
 
         SaveZoneTrainingData(zone.settlementName);
+        if (CampaignTutorialManager.Ins != null) CampaignTutorialManager.Ins.OnTroopTrainingStarted(troopType);
         zone.UpdateZoneVisualText();
         Debug.Log($"[TroopTrainingManager] ⚔️ Đã bắt đầu huấn luyện {troopType} tại Ô {slotIndex + 1} (Thời gian: 1 ngày)!");
 

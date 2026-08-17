@@ -50,6 +50,8 @@ public class ChapterQuestController : MonoBehaviour
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
+
+        InitAllFourChapters();
     }
 
     private void Start()
@@ -62,7 +64,7 @@ public class ChapterQuestController : MonoBehaviour
         DisplayChapter(currentChapterIndex);
     }
 
-    private void InitAllFourChapters()
+    public void InitAllFourChapters()
     {
         if (chapterList != null && chapterList.Count > 0) return;
 
@@ -145,41 +147,38 @@ public class ChapterQuestController : MonoBehaviour
 
     public void DisplayChapter(int index)
     {
+        InitAllFourChapters();
         if (chapterList == null || chapterList.Count == 0) return;
 
         currentChapterIndex = Mathf.Clamp(index, 0, chapterList.Count - 1);
         ChapterData currentChapter = chapterList[currentChapterIndex];
 
-        // 1. Cập nhật Tiêu đề chương
-        if (chapterTitleText != null) chapterTitleText.text = currentChapter.chapterName;
-
-        // 2. Cập nhật Phần thưởng khóa
-        if (keyRewardNameText != null) keyRewardNameText.text = currentChapter.keyRewardName;
-        if (keyRewardIcon != null)
+        // 1. Cập nhật Tiêu Đề Chương
+        if (chapterTitleText != null)
         {
-            if (currentChapter.keyRewardIcon != null)
-            {
-                keyRewardIcon.gameObject.SetActive(true);
-                keyRewardIcon.sprite = currentChapter.keyRewardIcon;
-            }
-            else
-            {
-                keyRewardIcon.gameObject.SetActive(false);
-            }
+            chapterTitleText.text = currentChapter.chapterName;
         }
 
-        // 3. Điều hướng Prev/Next
+        // 2. Cập nhật nút chuyển Chương (Prev / Next)
         if (prevChapterBtn != null) prevChapterBtn.interactable = (currentChapterIndex > 0);
-        if (nextChapterBtn != null) nextChapterBtn.interactable = (currentChapterIndex < chapterList.Count - 1);
+        if (nextChapterBtn != null) nextChapterBtn.interactable = (currentChapterIndex < highestUnlockedChapterIndex && currentChapterIndex < chapterList.Count - 1);
 
-        // 4. Render danh sách mục tiêu & cập nhật số lượng quà lên REWARD header
-        RenderObjectives(currentChapter);
+        // 3. Cập nhật Card Phần Thưởng Khóa (Key Reward)
+        if (keyRewardNameText != null) keyRewardNameText.text = currentChapter.keyRewardName;
+        if (keyRewardIcon != null && currentChapter.keyRewardIcon != null)
+        {
+            keyRewardIcon.sprite = currentChapter.keyRewardIcon;
+        }
+
+        // 4. Sinh danh sách các Mục Tiêu (Quest Items)
+        if (objectiveContainer != null && objectiveItemPrefab != null)
+        {
+            PopulateObjectives(currentChapter);
+        }
     }
 
-    private void RenderObjectives(ChapterData chapter)
+    private void PopulateObjectives(ChapterData chapter)
     {
-        if (objectiveContainer == null || objectiveItemPrefab == null) return;
-
         foreach (Transform child in objectiveContainer)
         {
             Destroy(child.gameObject);
@@ -189,7 +188,6 @@ public class ChapterQuestController : MonoBehaviour
         bool foundActiveQuest = false;
         string activeQuestTitle = "";
 
-        // Biến lưu phần thưởng cần hiển thị trên thanh REWARD
         int displayRewardGold = 0;
         int displayRewardWood = 0;
         int displayRewardStone = 0;
@@ -208,18 +206,17 @@ public class ChapterQuestController : MonoBehaviour
             {
                 itemText.text = $"<color={colorQuestionMark}>???</color>";
             }
+            else if (obj.isCompleted)
+            {
+                itemText.text = $"<color={colorCompleted}><s>{cleanTitle}</s></color>";
+            }
             else
             {
-                if (obj.isCompleted)
+                if (!foundActiveQuest)
                 {
-                    itemText.text = $"<s><color={colorCompleted}>{cleanTitle}</color></s>";
-                }
-                else if (!foundActiveQuest)
-                {
-                    // ĐÂY LÀ NHIỆM VỤ ĐANG LÀM -> Lấy phần thưởng của nhiệm vụ này để đưa lên Header
+                    itemText.text = $"<color={colorActiveQuest}>✦ {cleanTitle}</color>";
                     foundActiveQuest = true;
                     activeQuestTitle = cleanTitle;
-                    itemText.text = $"<b><color={colorActiveQuest}>{cleanTitle}</color></b>";
 
                     displayRewardGold = obj.rewardGold;
                     displayRewardWood = obj.rewardWood;
@@ -227,33 +224,13 @@ public class ChapterQuestController : MonoBehaviour
                 }
                 else
                 {
-                    itemText.text = $"<color={colorQuestionMark}>???</color>";
+                    itemText.text = $"<color={colorQuestionMark}>□ {cleanTitle}</color>";
                 }
             }
-
-            if (enableAnimations)
-            {
-                CanvasGroup itemCG = item.GetComponent<CanvasGroup>();
-                if (itemCG == null) itemCG = item.AddComponent<CanvasGroup>();
-
-                itemCG.alpha = 0f;
-                float delay = i * 0.035f;
-                itemCG.DOFade(1f, 0.2f).SetDelay(delay).SetUpdate(true);
-            }
         }
 
-        // Nếu tất cả nhiệm vụ trong chương đã xong hoặc đang xem chương bị khóa -> Hiển thị quà chốt chương
-        if (!foundActiveQuest)
-        {
-            displayRewardGold = chapter.rewardGold;
-            displayRewardWood = chapter.rewardWood;
-            displayRewardStone = chapter.rewardStone;
-        }
-
-        // Cập nhật số lượng quà lên REWARD header
         UpdateRewardHeaderDisplay(displayRewardGold, displayRewardWood, displayRewardStone);
 
-        // Cập nhật bảng Tracker HUD góc phải
         if (QuestTrackerHUD.Instance != null && currentChapterIndex == highestUnlockedChapterIndex)
         {
             string displayTracker = foundActiveQuest ? activeQuestTitle : "Hoàn thành toàn bộ chương!";
@@ -261,29 +238,25 @@ public class ChapterQuestController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Cập nhật hiển thị số lượng tài nguyên thưởng tại cụm REWARD Header
-    /// </summary>
     private void UpdateRewardHeaderDisplay(int gold, int wood, int stone)
     {
         if (goldAmountText != null) goldAmountText.text = gold.ToString();
         if (woodAmountText != null) woodAmountText.text = wood.ToString();
         if (stoneAmountText != null) stoneAmountText.text = stone.ToString();
 
-        // Hiệu ứng nảy nhẹ cụm tài nguyên khi đổi số
         if (enableAnimations && baseResourcesContainer != null)
         {
             baseResourcesContainer.transform.DOKill();
             baseResourcesContainer.transform.localScale = Vector3.one;
-            baseResourcesContainer.transform.DOPunchScale(new Vector3(0.08f, 0.08f, 0f), 0.25f, 5, 0.5f).SetUpdate(true);
         }
     }
 
     public bool CompleteObjective(int chapterIndex, int objectiveIndex)
     {
+        InitAllFourChapters();
+
         if (chapterIndex < 0 || chapterIndex >= chapterList.Count) return false;
 
-        // Only the currently unlocked chapter can receive gameplay progress.
         if (chapterIndex != highestUnlockedChapterIndex)
         {
             Debug.LogWarning($"[QUEST] Cannot complete an objective in locked Chapter {chapterIndex}.");
@@ -293,20 +266,28 @@ public class ChapterQuestController : MonoBehaviour
         var chapter = chapterList[chapterIndex];
         if (objectiveIndex < 0 || objectiveIndex >= chapter.objectives.Count) return false;
 
-        int activeObjectiveIndex = chapter.objectives.FindIndex(objective => !objective.isCompleted);
-        if (objectiveIndex != activeObjectiveIndex)
-        {
-            Debug.LogWarning($"[QUEST] Objective {objectiveIndex} is not the active objective for Chapter {chapterIndex}.");
-            return false;
-        }
-
+        // Hoàn thành objective tương ứng (hỗ trợ đánh dấu tuần tự chính xác)
         QuestObjective obj = chapter.objectives[objectiveIndex];
+        if (obj.isCompleted) return true;
 
         obj.isCompleted = true;
+        Debug.Log($"<color=cyan>[QUEST] ✅ Đã hoàn thành nhiệm vụ {objectiveIndex + 1}: {obj.title}</color>");
 
         GiveReward(obj.rewardGold, obj.rewardWood, obj.rewardStone, obj.rewardWheat);
         CheckChapterProgress();
-        DisplayChapter(currentChapterIndex);
+
+        if (gameObject.activeInHierarchy)
+        {
+            DisplayChapter(currentChapterIndex);
+        }
+        else if (QuestTrackerHUD.Instance != null && chapterList.Count > highestUnlockedChapterIndex)
+        {
+            var curCh = chapterList[highestUnlockedChapterIndex];
+            int nextActiveIdx = curCh.objectives.FindIndex(o => !o.isCompleted);
+            string nextTitle = nextActiveIdx >= 0 ? curCh.objectives[nextActiveIdx].title : "Hoàn thành toàn bộ chương!";
+            QuestTrackerHUD.Instance.UpdateTrackerInfo(curCh.chapterName, nextTitle);
+        }
+
         return true;
     }
 
@@ -326,12 +307,12 @@ public class ChapterQuestController : MonoBehaviour
 
             if (allDone && c == highestUnlockedChapterIndex && highestUnlockedChapterIndex < chapterList.Count - 1)
             {
-                // Thưởng chốt chương khi hoàn thành toàn bộ
                 ChapterData doneChapter = chapterList[c];
                 GiveReward(doneChapter.rewardGold, doneChapter.rewardWood, doneChapter.rewardStone, 0);
 
                 highestUnlockedChapterIndex++;
-                Debug.Log($"<color=cyan>[QUEST] Mở khóa chương mới: {chapterList[highestUnlockedChapterIndex].chapterName}</color>");
+                currentChapterIndex = highestUnlockedChapterIndex;
+                Debug.Log($"<color=cyan>[QUEST] 🎉 Mở khóa chương mới: {chapterList[highestUnlockedChapterIndex].chapterName}</color>");
             }
         }
     }

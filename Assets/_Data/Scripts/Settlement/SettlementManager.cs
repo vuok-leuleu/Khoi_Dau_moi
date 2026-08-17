@@ -109,6 +109,8 @@ public class SettlementManager : Singleton<SettlementManager>
         currentSettlement = zone;
         Debug.Log($"[SettlementManager] Đã chọn vùng đất: {currentSettlement.settlementName} (Đã có nhà chính: {currentSettlement.isTownHallEstablished})");
 
+        if (CampaignTutorialManager.Ins != null) CampaignTutorialManager.Ins.OnSettlementOpened(zone);
+
         if (UIManager.Ins != null)
         {
             UIManager.Ins.OpenSettlementPanel();
