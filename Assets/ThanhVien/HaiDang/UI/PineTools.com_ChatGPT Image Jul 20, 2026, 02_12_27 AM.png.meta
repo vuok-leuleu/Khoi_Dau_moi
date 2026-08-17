@@ -113,13 +113,13 @@ TextureImporter:
       name: PineTools.com_ChatGPT Image Jul 20, 2026, 02_12_27 AM_0
       rect:
         serializedVersion: 2
-        x: 211
-        y: 270
-        width: 484
-        height: 568
+        x: 189
+        y: 265
+        width: 507
+        height: 574
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 48, y: 6, z: 84, w: 3}
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
@@ -135,13 +135,13 @@ TextureImporter:
       name: PineTools.com_ChatGPT Image Jul 20, 2026, 02_12_27 AM_1
       rect:
         serializedVersion: 2
-        x: 815
-        y: 279
-        width: 526
-        height: 528
+        x: 806
+        y: 265
+        width: 575
+        height: 574
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 51, y: 0, z: 56, w: 2}
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []

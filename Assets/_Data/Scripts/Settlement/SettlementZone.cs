@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
 
 /*
  * SettlementZone.cs
@@ -10,6 +12,20 @@ using UnityEngine;
 
 public class SettlementZone : MonoBehaviour
 {
+    [Header("=== HIỂN THỊ TEXT UI VÙNG ĐẤT / ẢI ===")]
+    [Tooltip("Text hiển thị Cấp độ công trình / Vùng đất (VD: Lv. 1)")]
+    public TMP_Text levelTextTMP;
+    public Text levelTextLegacy;
+
+    [Tooltip("Text hiển thị Tên vùng đất (VD: ZEFFIRA, AI 1)")]
+    public TMP_Text nameTextTMP;
+    public Text nameTextLegacy;
+
+    [Tooltip("Text hiển thị Số lượng lính hiện có tại vùng đất (VD: Lính: 0)")]
+    public TMP_Text soldierCountTextTMP;
+    public Text soldierCountTextLegacy;
+
+
     [Header("=== THÔNG TIN VÙNG ĐẤT / ẢI ===")]
     public string settlementName = "ZEFFIRA";
     public int settlementLevel = 1;
@@ -134,6 +150,130 @@ public class SettlementZone : MonoBehaviour
         {
             builtStructures.Add(building);
         }
+    }
+
+
+    private float uiUpdateTimer = 0f;
+
+    /// <summary>
+    /// Lấy tổng số lượng lính đang có tại Vùng đất này
+    /// </summary>
+    public int GetTotalSoldiersCount()
+    {
+        int total = 0;
+
+        // Quét tìm từ các Spawner lính (SpawnSoldier) thuộc Vùng đất
+        SpawnSoldier[] spawners = GetComponentsInChildren<SpawnSoldier>(true);
+        if (spawners != null && spawners.Length > 0)
+        {
+            foreach (var sp in spawners)
+            {
+                if (sp != null && sp.gameObject.activeInHierarchy)
+                {
+                    total += sp.GetActiveSoldiersCount();
+                }
+            }
+        }
+
+        if (builtStructures != null)
+        {
+            foreach (var b in builtStructures)
+            {
+                if (b != null && b.gameObject.activeInHierarchy)
+                {
+                    SpawnSoldier sp = b.GetComponent<SpawnSoldier>();
+                    if (sp == null) sp = b.GetComponentInChildren<SpawnSoldier>();
+                    if (sp != null && (spawners == null || System.Array.IndexOf(spawners, sp) < 0))
+                    {
+                        total += sp.GetActiveSoldiersCount();
+                    }
+                }
+            }
+        }
+
+        // Nếu chưa sinh lính thực tế hoặc cần đồng bộ với các ô huấn luyện đã hoàn thành
+        if (total == 0 && TroopTrainingManager.Ins != null)
+        {
+            var slots = TroopTrainingManager.Ins.GetSlotsForZone(this);
+            if (slots != null)
+            {
+                foreach (var slot in slots)
+                {
+                    if (slot != null && slot.isUnlocked && slot.isCompleted)
+                    {
+                        total++;
+                    }
+                }
+            }
+        }
+
+        return total;
+    }
+
+    /// <summary>
+    /// Cập nhật hiển thị toàn bộ 3 Text UI: Cấp độ, Tên vùng đất, Số lượng lính hiện có
+    /// </summary>
+    public void UpdateZoneVisualText()
+    {
+        UpdateLevelText();
+        UpdateNameText();
+        UpdateSoldierCountText();
+    }
+
+    public void UpdateLevelText()
+    {
+        string lvlStr;
+        if (!isUnlocked || hasEnemyOutpost)
+        {
+            lvlStr = "Khóa";
+        }
+        else if (!isTownHallEstablished || (townHallBuilding != null && townHallBuilding.IsInitialBuildNeeded))
+        {
+            lvlStr = "Lv. 0";
+        }
+        else
+        {
+            lvlStr = $"Lv. {settlementLevel}";
+        }
+
+        if (levelTextTMP != null) levelTextTMP.text = lvlStr;
+        if (levelTextLegacy != null) levelTextLegacy.text = lvlStr;
+    }
+
+    public void UpdateNameText()
+    {
+        string nameStr = string.IsNullOrEmpty(settlementName) ? gameObject.name : settlementName;
+        if (nameTextTMP != null) nameTextTMP.text = nameStr;
+        if (nameTextLegacy != null) nameTextLegacy.text = nameStr;
+    }
+
+    public void UpdateSoldierCountText()
+    {
+        int count;
+        if (!isUnlocked || hasEnemyOutpost)
+        {
+            count = enemyCountInBase;
+            if (enemySpawn != null && enemySpawn.enemyCountInBase > 0)
+            {
+                count = enemySpawn.enemyCountInBase;
+            }
+            else
+            {
+                EnemySpawn localSpawn = GetComponentInChildren<EnemySpawn>(true);
+                if (localSpawn != null && localSpawn.enemyCountInBase > 0)
+                {
+                    count = localSpawn.enemyCountInBase;
+                }
+            }
+        }
+        else
+        {
+            count = GetTotalSoldiersCount();
+        }
+
+        string countStr = $"{count}";
+        if (soldierCountTextTMP != null) soldierCountTextTMP.text = countStr;
+        if (soldierCountTextLegacy != null) soldierCountTextLegacy.text = countStr;
     }
 
     private void Awake()
@@ -338,6 +478,8 @@ public class SettlementZone : MonoBehaviour
     {
         get
         {
+            if (!isTownHallEstablished) return 0;
+
             if (PlayerPrefs.HasKey($"Settlement_{settlementName}_Level"))
             {
                 int saved = PlayerPrefs.GetInt($"Settlement_{settlementName}_Level", settlementLevel);
@@ -349,6 +491,13 @@ public class SettlementZone : MonoBehaviour
 
     private void Update()
     {
+        uiUpdateTimer += Time.deltaTime;
+        if (uiUpdateTimer >= 0.25f)
+        {
+            uiUpdateTimer = 0f;
+            UpdateZoneVisualText();
+        }
+
         // 🔒 Nếu bỏ tích hasEnemyOutpost trong Play Mode hoặc đã tiêu diệt nhưng đối tượng 3D vẫn còn -> Tự động Destroy đối tượng 3D
         if (!hasEnemyOutpost && spawnedEnemyOutpostInstance != null)
         {
@@ -560,6 +709,7 @@ public class SettlementZone : MonoBehaviour
             SettlementSidePanelUI.Ins.UpdateHeaderVisual();
             SettlementSidePanelUI.Ins.RefreshPanel();
         }
+        UpdateZoneVisualText();
     }
 
     /// <summary>
@@ -591,6 +741,8 @@ public class SettlementZone : MonoBehaviour
 
         isTownHallEstablished = true;
         settlementLevel = 1;
+        SaveSettlementState();
+        UpdateZoneVisualText();
 
         InstantiateTownHallObject();
 
@@ -634,6 +786,7 @@ public class SettlementZone : MonoBehaviour
             SettlementSidePanelUI.Ins.UpdateHeaderVisual();
             SettlementSidePanelUI.Ins.RefreshPanel();
         }
+        UpdateZoneVisualText();
     }
 
     /// <summary>

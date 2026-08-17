@@ -95,7 +95,7 @@ MonoBehaviour:
   showAttackButton: 1
   warningIconPrefab: {fileID: 0}
   warningIconHeightOffset: 3
-  routeWarningUIPrefab: {fileID: 8903762805063960052, guid: 5a07a48f39dbe2e44ba491c3f5fbfe2e, type: 3}
+  routeWarningUIPrefab: {fileID: 0}
   routeWarningHeightOffset: 0.75
   warningArrowSize: 1
   warningArrowLengthMultiplier: 1

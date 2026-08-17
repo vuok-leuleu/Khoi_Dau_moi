@@ -126,6 +126,8 @@ public class TroopTrainingManager : MonoBehaviour
 
                         // Tự động thu hoạch & Sinh lính thật tại Doanh Trại của Vùng đất
                         SpawnTrainedSoldierForZone(zoneName, slot);
+                        SettlementZone zoneObj = SettlementManager.Ins != null ? SettlementManager.Ins.GetZoneByName(zoneName) : null;
+                        if (zoneObj != null) zoneObj.UpdateZoneVisualText();
                     }
                 }
             }
@@ -327,6 +329,7 @@ public class TroopTrainingManager : MonoBehaviour
         slot.isCompleted = false;
 
         SaveZoneTrainingData(zone.settlementName);
+        zone.UpdateZoneVisualText();
         Debug.Log($"[TroopTrainingManager] ⚔️ Đã bắt đầu huấn luyện {troopType} tại Ô {slotIndex + 1} (Thời gian: 1 ngày)!");
 
         if (SettlementSidePanelUI.Ins != null)
@@ -385,6 +388,7 @@ public class TroopTrainingManager : MonoBehaviour
         slot.isTraining = false;
         slot.isCompleted = true;
         slot.remainingWaves = 0;
+        if (zone != null) zone.UpdateZoneVisualText();
     }
 
     private void SaveZoneTrainingData(string zoneName)
