@@ -103,6 +103,8 @@ public class UISceneBattle : MonoBehaviour
     public string archerSoldierName = "Cung Thủ";
     public Sprite spearSoldierIcon;
     public string spearSoldierName = "Thương Thủ";
+    public Sprite tankSoldierIcon;
+    public string tankSoldierName = "Khiên Binh";
     public Sprite defaultSoldierIcon;
 
     [Header("=== 2. VICTORY & DEFEAT RESULT PANELS ===")]
@@ -236,6 +238,10 @@ public class UISceneBattle : MonoBehaviour
             else if (objName.ToLower().Contains("thương") || objName.ToLower().Contains("spear"))
             {
                 unitKey = spearSoldierName;
+            }
+            else if (objName.ToLower().Contains("tank") || objName.ToLower().Contains("shield") || objName.ToLower().Contains("khiên"))
+            {
+                unitKey = tankSoldierName;
             }
             else
             {
@@ -612,6 +618,7 @@ public class UISceneBattle : MonoBehaviour
         int meleeCount = 0;
         int archerCount = 0;
         int spearCount = 0;
+        int tankCount = 0;
         int otherCount = 0;
 
         foreach (var u in allUnits)
@@ -619,7 +626,11 @@ public class UISceneBattle : MonoBehaviour
             if (u == null || !u.gameObject.activeInHierarchy || u.isDead) continue;
 
             string objName = u.gameObject.name.ToLower();
-            if (u.AttackMode == AttackMode.Ranged || objName.Contains("archer"))
+            if (u.AttackMode == AttackMode.Tank || objName.Contains("tank") || objName.Contains("shield") || objName.Contains("khiên"))
+            {
+                tankCount++;
+            }
+            else if (u.AttackMode == AttackMode.Ranged || objName.Contains("archer"))
             {
                 archerCount++;
             }
@@ -637,6 +648,10 @@ public class UISceneBattle : MonoBehaviour
             }
         }
 
+        if (tankCount > 0)
+        {
+            result.Add(new UnitDisplayInfo(tankSoldierName, tankSoldierIcon != null ? tankSoldierIcon : defaultSoldierIcon, tankCount));
+        }
         if (meleeCount > 0)
         {
             result.Add(new UnitDisplayInfo(meleeSoldierName, meleeSoldierIcon != null ? meleeSoldierIcon : defaultSoldierIcon, meleeCount));
