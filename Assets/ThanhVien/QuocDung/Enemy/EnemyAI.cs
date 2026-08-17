@@ -74,7 +74,7 @@ public class EnemyAI : MonoBehaviour
     public float chaseSpeed = 4f;
     public float attackRange = 2f;
 
-    public enum EnemyAttackType { Melee, Ranged }
+    public enum EnemyAttackType { Melee, Ranged, Tank }
 
     [Header("Combat")]
     public EnemyAttackType attackType = EnemyAttackType.Melee;
@@ -95,6 +95,7 @@ public class EnemyAI : MonoBehaviour
     public string moveBoolParam = "IsMove";
     public string attackBoolParam = "IsAttack";
     public string shootBoolParam = "IsShoot";
+    public string shieldBoolParam = "IsShield";
 
     [Header("Debug")]
     public bool debugLogs = true;
@@ -710,7 +711,7 @@ public class EnemyAI : MonoBehaviour
             agent.speed = chaseSpeed;
             
             float actualAttackRange = CurrentAttackRange;
-            if (attackType == EnemyAttackType.Melee && (SafeCompareTag(target.gameObject, "Main") || IsMainHouse(target.gameObject) || SafeCompareTag(target.gameObject, "Tower") || SafeCompareTag(target.gameObject, "DefenseTower") || IsTower(target.gameObject)))
+            if ((attackType == EnemyAttackType.Melee || attackType == EnemyAttackType.Tank) && (SafeCompareTag(target.gameObject, "Main") || IsMainHouse(target.gameObject) || SafeCompareTag(target.gameObject, "Tower") || SafeCompareTag(target.gameObject, "DefenseTower") || IsTower(target.gameObject)))
             {
                 actualAttackRange = Mathf.Max(actualAttackRange, 2.5f);
             }
@@ -981,7 +982,8 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        // --- Tìm kiếm theo thứ tự ưu tiên tuyệt đối: Melee Soldier -> Archer -> Tower -> Main ---
+        // --- Tìm kiếm theo thứ tự ưu tiên tuyệt đối: Tank Soldier -> Melee Soldier -> Archer -> Tower -> Main ---
+        List<Transform> aliveTankSoldiers = new List<Transform>();
         List<Transform> aliveMeleeSoldiers = new List<Transform>();
         List<Transform> aliveArcherSoldiers = new List<Transform>();
         List<Transform> aliveTowers = new List<Transform>();
@@ -999,7 +1001,11 @@ public class EnemyAI : MonoBehaviour
                 Transform t = GetEntityRoot(go, "Soldier");
                 if (t == null) t = go.transform;
 
-                if (IsArcher(go))
+                if (IsTank(go))
+                {
+                    if (!aliveTankSoldiers.Contains(t)) aliveTankSoldiers.Add(t);
+                }
+                else if (IsArcher(go))
                 {
                     if (!aliveArcherSoldiers.Contains(t)) aliveArcherSoldiers.Add(t);
                 }
@@ -1016,17 +1022,22 @@ public class EnemyAI : MonoBehaviour
             }
         }
 
-        // Ưu tiên 1: Lính Cận Chiến (Melee Soldiers) - Đánh con ở gần trước
-        if (aliveMeleeSoldiers.Count > 0)
+        // Ưu tiên 1: Lính Đỡ Đòn / Khiên (Tank Soldiers) - Đánh con ở gần trước
+        if (aliveTankSoldiers.Count > 0)
+        {
+            selected = SelectClosestTargetFromList(aliveTankSoldiers);
+        }
+        // Ưu tiên 2: Lính Cận Chiến (Melee Soldiers) - Đánh con ở gần trước
+        else if (aliveMeleeSoldiers.Count > 0)
         {
             selected = SelectClosestTargetFromList(aliveMeleeSoldiers);
         }
-        // Ưu tiên 2: Lính Bắn Xa (Archer) - Đánh con ở gần trước
+        // Ưu tiên 3: Lính Bắn Xa (Archer) - Đánh con ở gần trước
         else if (aliveArcherSoldiers.Count > 0)
         {
             selected = SelectClosestTargetFromList(aliveArcherSoldiers);
         }
-        // Ưu tiên 3: Các Tháp (Towers) - Đánh tháp ở gần trước
+        // Ưu tiên 4: Các Tháp (Towers) - Đánh tháp ở gần trước
         else if (aliveTowers.Count > 0)
         {
             selected = SelectClosestTargetFromList(aliveTowers);
@@ -1066,7 +1077,7 @@ public class EnemyAI : MonoBehaviour
     {
         PlayAttackAnimation();
 
-        if (attackType == EnemyAttackType.Melee)
+        if (attackType == EnemyAttackType.Melee || attackType == EnemyAttackType.Tank)
         {
             IDamageable damageable = target.GetComponentInParent<IDamageable>();
             if (damageable != null)
@@ -1139,6 +1150,16 @@ public class EnemyAI : MonoBehaviour
         return GetEntityRoot(go, "Soldier") != null;
     }
 
+    private bool IsTank(GameObject go)
+    {
+        if (go == null) return false;
+        UnitController uc = go.GetComponentInParent<UnitController>();
+        if (uc != null && uc.AttackMode == AttackMode.Tank) return true;
+        string n = go.name.ToLower();
+        if (n.Contains("tank") || n.Contains("shield") || n.Contains("khiên")) return true;
+        return false;
+    }
+
     private bool IsArcher(GameObject go)
     {
         if (go == null) return false;
@@ -1151,7 +1172,7 @@ public class EnemyAI : MonoBehaviour
     private bool IsMeleeSoldier(GameObject go)
     {
         if (!IsSoldier(go)) return false;
-        return !IsArcher(go);
+        return !IsArcher(go) && !IsTank(go);
     }
 
     private bool IsTower(GameObject go)
@@ -1332,7 +1353,16 @@ public class EnemyAI : MonoBehaviour
     {
         if (animator == null) return;
 
-        string paramToSet = (attackType == EnemyAttackType.Ranged) ? shootBoolParam : attackBoolParam;
+        string paramToSet = attackBoolParam;
+        if (attackType == EnemyAttackType.Ranged)
+        {
+            paramToSet = shootBoolParam;
+        }
+        else if (attackType == EnemyAttackType.Tank)
+        {
+            paramToSet = shieldBoolParam;
+        }
+
         if (!string.IsNullOrWhiteSpace(paramToSet))
         {
             if (HasAnimatorParameter(animator, paramToSet, AnimatorControllerParameterType.Trigger))
@@ -1496,6 +1526,23 @@ public class EnemyAI : MonoBehaviour
         return true;
     }
 
+    private bool IsShielding()
+    {
+        if (attackType != EnemyAttackType.Tank) return false;
+        if (chaseTarget == null || !chaseTarget.gameObject.activeInHierarchy) return false;
+
+        IDamageable damageable = chaseTarget.GetComponentInParent<IDamageable>();
+        bool isAlive = damageable == null || damageable.CurrentHealth > 0f;
+        if (!isAlive) return false;
+
+        float distToTarget = GetDistanceToCollider(chaseTarget.gameObject);
+        if (distToTarget > CurrentAttackRange) return false;
+
+        if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh && !agent.isStopped) return false;
+
+        return true;
+    }
+
     private bool IsInShootState()
     {
         if (animator == null) return false;
@@ -1589,6 +1636,49 @@ public class EnemyAI : MonoBehaviour
                 else if (HasAnimatorParameter(animator, shootBoolParam, AnimatorControllerParameterType.Bool))
                 {
                     animator.SetBool(shootBoolParam, false);
+                }
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(shieldBoolParam))
+        {
+            bool isShielding = IsShielding();
+            if (isShielding)
+            {
+                var stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+                if (stateInfo.IsName("Shield"))
+                {
+                    if (stateInfo.normalizedTime >= 0.9f && !animator.IsInTransition(0))
+                    {
+                        animator.Play("Shield", 0, 0f);
+                    }
+                }
+                else
+                {
+                    if (!animator.IsInTransition(0) || !animator.GetNextAnimatorStateInfo(0).IsName("Shield"))
+                    {
+                        animator.Play("Shield", 0, 0f);
+                    }
+                }
+
+                if (HasAnimatorParameter(animator, shieldBoolParam, AnimatorControllerParameterType.Trigger))
+                {
+                    animator.SetTrigger(shieldBoolParam);
+                }
+                else if (HasAnimatorParameter(animator, shieldBoolParam, AnimatorControllerParameterType.Bool))
+                {
+                    animator.SetBool(shieldBoolParam, true);
+                }
+            }
+            else
+            {
+                if (HasAnimatorParameter(animator, shieldBoolParam, AnimatorControllerParameterType.Trigger))
+                {
+                    animator.ResetTrigger(shieldBoolParam);
+                }
+                else if (HasAnimatorParameter(animator, shieldBoolParam, AnimatorControllerParameterType.Bool))
+                {
+                    animator.SetBool(shieldBoolParam, false);
                 }
             }
         }

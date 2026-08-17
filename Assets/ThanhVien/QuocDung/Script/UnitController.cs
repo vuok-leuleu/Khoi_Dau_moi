@@ -6,7 +6,8 @@ using UnityEngine.AI;
 public enum AttackMode
 {
     Melee,
-    Ranged
+    Ranged,
+    Tank
 }
 
 public enum UnitState
@@ -29,6 +30,7 @@ public class UnitController : MonoBehaviour
     [SerializeField] private string moveBoolParam = "IsMove";
     [SerializeField] private string attackBoolParam = "IsAttack";
     [SerializeField] private string shootBoolParam = "IsShoot";
+    [SerializeField] private string shieldBoolParam = "IsShield";
 
     [Header("Combat Config")]
     [SerializeField] float attackDamage = 15f;
@@ -572,6 +574,11 @@ public class UnitController : MonoBehaviour
             PlayAnimationTrigger(shootBoolParam);
             StartCoroutine(SpawnRangedProjectileAfterDelay(projectileSpawnDelay));
         }
+        else if (attackMode == AttackMode.Tank)
+        {
+            PlayAnimationTrigger(shieldBoolParam);
+            StartCoroutine(ApplyMeleeDamageAfterDelay(0.35f));
+        }
     }
 
     private void PlayAnimationTrigger(string paramName)
@@ -584,7 +591,18 @@ public class UnitController : MonoBehaviour
         }
         else if (HasAnimatorParameter(animator, paramName, AnimatorControllerParameterType.Bool))
         {
-            animator.SetBool(paramName, true);
+            StartCoroutine(TriggerBoolAnimation(paramName));
+        }
+    }
+
+    private IEnumerator TriggerBoolAnimation(string paramName)
+    {
+        if (animator == null || string.IsNullOrWhiteSpace(paramName)) yield break;
+        animator.SetBool(paramName, true);
+        yield return new WaitForSeconds(0.15f);
+        if (animator != null)
+        {
+            animator.SetBool(paramName, false);
         }
     }
 
@@ -721,6 +739,16 @@ public class UnitController : MonoBehaviour
         return stateInfo.IsName("Shoot");
     }
 
+    bool IsShielding()
+    {
+        if (attackMode != AttackMode.Tank) return false;
+        if (currentState == UnitState.Attacking) return true;
+        if (animator == null) return false;
+
+        var stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+        return stateInfo.IsName("Shield");
+    }
+
     void UpdateAnimation()
     {
         if (animator == null) return;
@@ -785,6 +813,49 @@ public class UnitController : MonoBehaviour
                 else if (HasAnimatorParameter(animator, shootBoolParam, AnimatorControllerParameterType.Bool))
                 {
                     animator.SetBool(shootBoolParam, false);
+                }
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(shieldBoolParam))
+        {
+            bool isShielding = IsShielding();
+            if (isShielding)
+            {
+                var stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+                if (stateInfo.IsName("Shield"))
+                {
+                    if (stateInfo.normalizedTime >= 0.9f && !animator.IsInTransition(0))
+                    {
+                        animator.Play("Shield", 0, 0f);
+                    }
+                }
+                else
+                {
+                    if (!animator.IsInTransition(0) || !animator.GetNextAnimatorStateInfo(0).IsName("Shield"))
+                    {
+                        animator.Play("Shield", 0, 0f);
+                    }
+                }
+
+                if (HasAnimatorParameter(animator, shieldBoolParam, AnimatorControllerParameterType.Trigger))
+                {
+                    animator.SetTrigger(shieldBoolParam);
+                }
+                else if (HasAnimatorParameter(animator, shieldBoolParam, AnimatorControllerParameterType.Bool))
+                {
+                    animator.SetBool(shieldBoolParam, true);
+                }
+            }
+            else
+            {
+                if (HasAnimatorParameter(animator, shieldBoolParam, AnimatorControllerParameterType.Trigger))
+                {
+                    animator.ResetTrigger(shieldBoolParam);
+                }
+                else if (HasAnimatorParameter(animator, shieldBoolParam, AnimatorControllerParameterType.Bool))
+                {
+                    animator.SetBool(shieldBoolParam, false);
                 }
             }
         }
