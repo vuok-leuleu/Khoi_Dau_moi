@@ -9,25 +9,42 @@ public class QuestTrackerHUD : MonoBehaviour
 
     [Header("--- UI COMPONENTS ---")]
     [SerializeField] private TextMeshProUGUI chapterTitleText;
-    [SerializeField] private TextMeshProUGUI activeQuestText;
-    [SerializeField] private Button openDetailBtn;
+    [SerializeField] private TextMeshProUGUI objectiveText;
+    [SerializeField] private Button arrowButton;
 
     [Header("✨ ANIMATION SETTINGS")]
     [SerializeField] private bool enableAnimations = true;
     [SerializeField] private bool useTextPunchAnim = true;
     [SerializeField] private bool useButtonPunchAnim = true;
+    [SerializeField, Min(0f)] private float revealDuration = 0.2f;
+
+
+    private RectTransform trackerRect;
+    private RectTransform revealMask;
+    private CanvasGroup canvasGroup;
+    private Vector2 originalAnchorMin;
+    private Vector2 originalAnchorMax;
+    private Vector2 originalAnchoredPosition;
+    private Vector2 originalSizeDelta;
+    private Vector2 originalPivot;
+    private float trackerHeight;
+    private bool isShown;
+    private bool isRevealing;
+    private bool isHiding;
 
     private void Awake()
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
+
+        isShown = gameObject.activeSelf;
     }
 
     private void Start()
     {
-        if (openDetailBtn != null)
+        if (arrowButton != null)
         {
-            openDetailBtn.onClick.AddListener(OnTrackerClicked);
+            arrowButton.onClick.AddListener(OnTrackerClicked);
         }
     }
 
@@ -35,23 +52,23 @@ public class QuestTrackerHUD : MonoBehaviour
     {
         if (chapterTitleText != null) chapterTitleText.text = chapterTitle;
 
-        if (activeQuestText != null)
+        if (objectiveText != null)
         {
-            if (enableAnimations && useTextPunchAnim && activeQuestText.text != activeQuestTitle)
+            if (enableAnimations && useTextPunchAnim && objectiveText.text != activeQuestTitle)
             {
-                DOTween.Kill(activeQuestText.transform);
-                activeQuestText.transform.DOPunchScale(Vector3.one * 0.12f, 0.25f, 5, 1).SetUpdate(true);
+                DOTween.Kill(objectiveText.transform);
+                objectiveText.transform.DOPunchScale(Vector3.one * 0.12f, 0.25f, 5, 1).SetUpdate(true);
             }
-            activeQuestText.text = activeQuestTitle;
+            objectiveText.text = activeQuestTitle;
         }
     }
 
     public void OnTrackerClicked()
     {
-        if (enableAnimations && useButtonPunchAnim && openDetailBtn != null)
+        if (enableAnimations && useButtonPunchAnim && arrowButton != null)
         {
-            DOTween.Kill(openDetailBtn.transform);
-            openDetailBtn.transform.DOPunchScale(Vector3.one * 0.2f, 0.15f, 5, 1).SetUpdate(true);
+            DOTween.Kill(arrowButton.transform);
+            arrowButton.transform.DOPunchScale(Vector3.one * 0.2f, 0.15f, 5, 1).SetUpdate(true);
         }
 
         if (ChapterQuestController.Instance != null)
@@ -60,60 +77,156 @@ public class QuestTrackerHUD : MonoBehaviour
         }
     }
 
+    private bool EnsureRevealMask()
+    {
+        if (revealMask != null) return true;
+
+        trackerRect = GetComponent<RectTransform>();
+        RectTransform parent = trackerRect != null ? trackerRect.parent as RectTransform : null;
+        if (trackerRect == null || parent == null) return false;
+
+        originalAnchorMin = trackerRect.anchorMin;
+        originalAnchorMax = trackerRect.anchorMax;
+        originalAnchoredPosition = trackerRect.anchoredPosition;
+        originalSizeDelta = trackerRect.sizeDelta;
+        originalPivot = trackerRect.pivot;
+        trackerHeight = trackerRect.rect.height;
+
+        GameObject maskObject = new GameObject("QuestHUDRevealMask", typeof(RectTransform), typeof(RectMask2D));
+        revealMask = maskObject.GetComponent<RectTransform>();
+        revealMask.SetParent(parent, false);
+        revealMask.anchorMin = originalAnchorMin;
+        revealMask.anchorMax = originalAnchorMax;
+        revealMask.sizeDelta = originalSizeDelta;
+        revealMask.localRotation = trackerRect.localRotation;
+        revealMask.localScale = trackerRect.localScale;
+
+        trackerRect.SetParent(revealMask, false);
+        trackerRect.localRotation = Quaternion.identity;
+        trackerRect.localScale = Vector3.one;
+        return true;
+    }
+
+    private void ConfigureRevealMask(bool revealFromBottom)
+    {
+        float verticalOffset = revealFromBottom
+            ? -trackerHeight * originalPivot.y
+            : trackerHeight * (1f - originalPivot.y);
+        float contentOffset = revealFromBottom
+            ? trackerHeight * originalPivot.y
+            : -trackerHeight * (1f - originalPivot.y);
+        float anchorY = revealFromBottom ? 0f : 1f;
+
+        float currentMaskHeight = revealMask.rect.height;
+        revealMask.pivot = new Vector2(originalPivot.x, anchorY);
+        revealMask.anchoredPosition = originalAnchoredPosition + Vector2.up * verticalOffset;
+        revealMask.sizeDelta = new Vector2(originalSizeDelta.x, currentMaskHeight);
+
+        trackerRect.anchorMin = new Vector2(originalPivot.x, anchorY);
+        trackerRect.anchorMax = new Vector2(originalPivot.x, anchorY);
+        trackerRect.pivot = originalPivot;
+        trackerRect.sizeDelta = originalSizeDelta;
+        trackerRect.anchoredPosition = new Vector2(0f, contentOffset);
+    }
+
+    private void SetRevealHeight(float height)
+    {
+        revealMask.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
+    }
+
+    private CanvasGroup GetCanvasGroup()
+    {
+        if (canvasGroup == null)
+        {
+            canvasGroup = GetComponent<CanvasGroup>();
+            if (canvasGroup == null) canvasGroup = gameObject.AddComponent<CanvasGroup>();
+        }
+
+        return canvasGroup;
+    }
+
     public void ShowTracker()
     {
-        gameObject.SetActive(true);
-        if (enableAnimations)
+        if (isRevealing || (isShown && gameObject.activeSelf && revealMask != null && !isHiding)) return;
+        if (!EnsureRevealMask())
         {
-            RectTransform rect = GetComponent<RectTransform>();
-            CanvasGroup cg = GetComponent<CanvasGroup>();
-            if (cg == null) cg = gameObject.AddComponent<CanvasGroup>();
-
-            DOTween.Kill(rect);
-            DOTween.Kill(cg);
-
-            rect.localScale = new Vector3(1f, 0.2f, 1f);
-            cg.alpha = 0f;
-
-            Sequence seq = DOTween.Sequence();
-            seq.SetUpdate(true);
-            seq.Append(rect.DOScaleY(1f, 0.25f).SetEase(Ease.OutBack));
-            seq.Join(cg.DOFade(1f, 0.2f));
+            gameObject.SetActive(true);
+            return;
         }
+
+        CanvasGroup cg = GetCanvasGroup();
+        DOTween.Kill(revealMask);
+        DOTween.Kill(trackerRect);
+        DOTween.Kill(cg);
+
+        isRevealing = true;
+        isHiding = false;
+        SetRevealHeight(0f);
+        ConfigureRevealMask(true);
+        trackerRect.localScale = Vector3.one;
+        cg.alpha = 1f;
+        cg.blocksRaycasts = false;
+        gameObject.SetActive(true);
+
+        if (!enableAnimations)
+        {
+            SetRevealHeight(trackerHeight);
+            cg.blocksRaycasts = true;
+            isRevealing = false;
+            isShown = true;
+            return;
+        }
+
+        DOTween.To(() => revealMask.rect.height, SetRevealHeight, trackerHeight, revealDuration)
+            .SetEase(Ease.Linear)
+            .SetUpdate(true)
+            .OnComplete(() =>
+            {
+                cg.blocksRaycasts = true;
+                isRevealing = false;
+                isShown = true;
+            });
     }
 
     public void HideTracker()
     {
-        if (enableAnimations && gameObject.activeInHierarchy)
-        {
-            RectTransform rect = GetComponent<RectTransform>();
-            CanvasGroup cg = GetComponent<CanvasGroup>();
-            if (cg == null) cg = GetComponent<CanvasGroup>();
-
-            if (rect != null && cg != null)
-            {
-                DOTween.Kill(rect);
-                DOTween.Kill(cg);
-
-                Sequence seq = DOTween.Sequence();
-                seq.SetUpdate(true);
-                seq.Append(rect.DOScaleY(0.1f, 0.18f).SetEase(Ease.InCubic));
-                seq.Join(cg.DOFade(0f, 0.18f));
-                seq.OnComplete(() =>
-                {
-                    gameObject.SetActive(false);
-                    rect.localScale = Vector3.one;
-                    cg.alpha = 1f;
-                });
-            }
-            else
-            {
-                gameObject.SetActive(false);
-            }
-        }
-        else
+        if (isHiding || !gameObject.activeInHierarchy) return;
+        if (!EnsureRevealMask())
         {
             gameObject.SetActive(false);
+            isShown = false;
+            return;
         }
+
+        CanvasGroup cg = GetCanvasGroup();
+        DOTween.Kill(revealMask);
+        DOTween.Kill(trackerRect);
+        DOTween.Kill(cg);
+
+        isRevealing = false;
+        isHiding = true;
+        isShown = false;
+        ConfigureRevealMask(false);
+        SetRevealHeight(trackerHeight);
+        trackerRect.localScale = Vector3.one;
+        cg.alpha = 1f;
+        cg.blocksRaycasts = false;
+
+        if (!enableAnimations)
+        {
+            gameObject.SetActive(false);
+            isHiding = false;
+            return;
+        }
+
+        DOTween.To(() => revealMask.rect.height, SetRevealHeight, 0f, revealDuration)
+            .SetEase(Ease.Linear)
+            .SetUpdate(true)
+            .OnComplete(() =>
+            {
+                SetRevealHeight(trackerHeight);
+                gameObject.SetActive(false);
+                isHiding = false;
+            });
     }
 }

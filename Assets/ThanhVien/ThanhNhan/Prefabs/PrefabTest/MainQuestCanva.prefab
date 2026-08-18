@@ -236,20 +236,22 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 88066c75e5b6f0a47934716f7fa72429, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ChapterQuestTestController
+  m_EditorClassIdentifier: Assembly-CSharp::ChapterQuestController
   prevChapterBtn: {fileID: 5022641191085900027}
   nextChapterBtn: {fileID: 4040118674623936924}
   chapterTitleText: {fileID: 166267206089606575}
-  rewardAreaPanel: {fileID: 3542877116313280012}
-  goldRewardText: {fileID: 6693927537205719061}
-  woodRewardText: {fileID: 0}
-  stoneRewardText: {fileID: 0}
+  baseResourcesContainer: {fileID: 3542877116313280012}
+  goldAmountText: {fileID: 6693927537205719061}
+  woodAmountText: {fileID: 0}
+  stoneAmountText: {fileID: 0}
   keyRewardIcon: {fileID: 8331902086192182507}
-  keyRewardTitleText: {fileID: 1731533645192325613}
-  lockedPanel: {fileID: 0}
-  contentArea: {fileID: 202165857035484848}
-  questItemPrefab: {fileID: 3086724393353960216, guid: 5d1f2417eaaf57f4bb1e1dfcd52c9fee, type: 3}
+  keyRewardNameText: {fileID: 1731533645192325613}
+  chapterLockedOverlay: {fileID: 0}
+  objectiveContainer: {fileID: 202165857035484848}
+  objectiveItemPrefab: {fileID: 3086724393353960216, guid: 5d1f2417eaaf57f4bb1e1dfcd52c9fee, type: 3}
   returnButton: {fileID: 9197587824087676667}
+  questWindowPanel: {fileID: 7261130950310234917}
+  windowSlideDistance: 90
   closeButton: {fileID: 0}
   toggleHotkey: 113
   currentChapterIndex: 0

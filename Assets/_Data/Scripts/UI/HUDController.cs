@@ -56,6 +56,25 @@ public class HUDController : MonoBehaviour
     private int _displayedStone;
     private int _displayedFood;
 
+    // Delta phát sinh trong lúc popup hiện; sẽ xử lý sau khi counter đầu tiên kết thúc.
+    private int _queuedGoldDelta;
+    private int _queuedWoodDelta;
+    private int _queuedStoneDelta;
+    private int _queuedFoodDelta;
+    private bool _goldPopupBusy;
+    private bool _woodPopupBusy;
+    private bool _stonePopupBusy;
+    private bool _foodPopupBusy;
+    private bool _suppressGoldPositivePopups;
+
+    // Bỏ qua toàn bộ popup/counter trong lần JsonDataManager broadcast dữ liệu Save đầu tiên.
+    // Sau khi đủ cả 4 loại tài nguyên được đồng bộ, các thay đổi gameplay mới dùng popup bình thường.
+    private bool _isInitialResourceSyncComplete;
+    private bool _receivedInitialGold;
+    private bool _receivedInitialWood;
+    private bool _receivedInitialStone;
+    private bool _receivedInitialFood;
+
     public static HUDController Instance { get; private set; }
 
     private void Awake()
@@ -226,64 +245,187 @@ public class HUDController : MonoBehaviour
         return transform as RectTransform;
     }
 
+    public void SuppressGoldPositivePopups(float duration = 2f)
+    {
+        _suppressGoldPositivePopups = true;
+        CancelInvoke(nameof(ClearGoldPositivePopupSuppression));
+        Invoke(nameof(ClearGoldPositivePopupSuppression), duration);
+    }
+
+    private void ClearGoldPositivePopupSuppression() => _suppressGoldPositivePopups = false;
+
     // --- CÁC HÀM CẬP NHẬT TỪ EVENT QUẢN LÝ ---
 
     public void UpdateGold(int value)
     {
+        if (!TryCompleteInitialResourceSync(ResourceType.Gold, value)) return;
+
         int delta = value - _currentGold;
         _currentGold = value;
         if (delta == 0) return;
-
-        RectTransform anchor = GetIconAnchor(ResourceType.Gold);
-        ShowFloatingTextOptimized(delta, anchor, () =>
+        if (_goldPopupBusy) { _queuedGoldDelta += delta; return; }
+        if (_suppressGoldPositivePopups && delta > 0)
         {
-            AnimateNumber(goldText, _displayedGold, _currentGold);
-            _displayedGold = _currentGold;
+            AnimateNumber(goldText, _displayedGold, _displayedGold + delta, () => _displayedGold += delta);
+            return;
+        }
+
+        _goldPopupBusy = true;
+        ShowFloatingTextOptimized(delta, GetIconAnchor(ResourceType.Gold), () =>
+        {
+            AnimateNumber(goldText, _displayedGold, _displayedGold + delta, () =>
+            {
+                _displayedGold += delta;
+                ProcessQueuedGold();
+            });
         });
     }
 
     public void UpdateWood(int value)
     {
+        if (!TryCompleteInitialResourceSync(ResourceType.Wood, value)) return;
+
         int delta = value - _currentWood;
         _currentWood = value;
         if (delta == 0) return;
+        if (_woodPopupBusy) { _queuedWoodDelta += delta; return; }
 
-        RectTransform anchor = GetIconAnchor(ResourceType.Wood);
-        ShowFloatingTextOptimized(delta, anchor, () =>
+        _woodPopupBusy = true;
+        ShowFloatingTextOptimized(delta, GetIconAnchor(ResourceType.Wood), () =>
         {
-            AnimateNumber(woodText, _displayedWood, _currentWood);
-            _displayedWood = _currentWood;
+            AnimateNumber(woodText, _displayedWood, _displayedWood + delta, () =>
+            {
+                _displayedWood += delta;
+                ProcessQueuedWood();
+            });
         });
     }
 
     public void UpdateStone(int value)
     {
+        if (!TryCompleteInitialResourceSync(ResourceType.Stone, value)) return;
+
         int delta = value - _currentStone;
         _currentStone = value;
         if (delta == 0) return;
+        if (_stonePopupBusy) { _queuedStoneDelta += delta; return; }
 
-        RectTransform anchor = GetIconAnchor(ResourceType.Stone);
-        ShowFloatingTextOptimized(delta, anchor, () =>
+        _stonePopupBusy = true;
+        ShowFloatingTextOptimized(delta, GetIconAnchor(ResourceType.Stone), () =>
         {
-            AnimateNumber(stoneText, _displayedStone, _currentStone);
-            _displayedStone = _currentStone;
+            AnimateNumber(stoneText, _displayedStone, _displayedStone + delta, () =>
+            {
+                _displayedStone += delta;
+                ProcessQueuedStone();
+            });
         });
     }
 
     public void UpdateFood(int value)
     {
+        if (!TryCompleteInitialResourceSync(ResourceType.Food, value)) return;
+
         int delta = value - _currentFood;
         _currentFood = value;
         if (delta == 0) return;
+        if (_foodPopupBusy) { _queuedFoodDelta += delta; return; }
 
-        RectTransform anchor = GetIconAnchor(ResourceType.Food);
-        ShowFloatingTextOptimized(delta, anchor, () =>
+        _foodPopupBusy = true;
+        ShowFloatingTextOptimized(delta, GetIconAnchor(ResourceType.Food), () =>
         {
-            AnimateNumber(foodText, _displayedFood, _currentFood);
-            _displayedFood = _currentFood;
+            AnimateNumber(foodText, _displayedFood, _displayedFood + delta, () =>
+            {
+                _displayedFood += delta;
+                ProcessQueuedFood();
+            });
         });
     }
 
+    // JsonDataManager.LoadGame -> BroadcastAllResources gọi lần lượt 4 Update này.
+    // Trong giai đoạn đó chỉ đồng bộ Text ngay lập tức; không dùng popup/counter.
+    private bool TryCompleteInitialResourceSync(ResourceType type, int value)
+    {
+        if (_isInitialResourceSyncComplete) return true;
+
+        switch (type)
+        {
+            case ResourceType.Gold:
+                _currentGold = _displayedGold = value;
+                SetTextInstant(goldText, value);
+                _receivedInitialGold = true;
+                break;
+            case ResourceType.Wood:
+                _currentWood = _displayedWood = value;
+                SetTextInstant(woodText, value);
+                _receivedInitialWood = true;
+                break;
+            case ResourceType.Stone:
+                _currentStone = _displayedStone = value;
+                SetTextInstant(stoneText, value);
+                _receivedInitialStone = true;
+                break;
+            case ResourceType.Food:
+                _currentFood = _displayedFood = value;
+                SetTextInstant(foodText, value);
+                _receivedInitialFood = true;
+                break;
+        }
+
+        if (_receivedInitialGold && _receivedInitialWood && _receivedInitialStone && _receivedInitialFood)
+        {
+            _isInitialResourceSyncComplete = true;
+            Debug.Log("[HUDController] ✅ Đồng bộ tài nguyên Save ban đầu hoàn tất, bật popup/counter gameplay.");
+        }
+
+        return false;
+    }
+    private void ProcessQueuedGold()
+    {
+        int delta = _queuedGoldDelta;
+        _queuedGoldDelta = 0;
+        if (delta == 0) { _goldPopupBusy = false; return; }
+        AnimateNumber(goldText, _displayedGold, _displayedGold + delta, () =>
+        {
+            _displayedGold += delta;
+            ProcessQueuedGold();
+        });
+    }
+
+    private void ProcessQueuedWood()
+    {
+        int delta = _queuedWoodDelta;
+        _queuedWoodDelta = 0;
+        if (delta == 0) { _woodPopupBusy = false; return; }
+        AnimateNumber(woodText, _displayedWood, _displayedWood + delta, () =>
+        {
+            _displayedWood += delta;
+            ProcessQueuedWood();
+        });
+    }
+
+    private void ProcessQueuedStone()
+    {
+        int delta = _queuedStoneDelta;
+        _queuedStoneDelta = 0;
+        if (delta == 0) { _stonePopupBusy = false; return; }
+        AnimateNumber(stoneText, _displayedStone, _displayedStone + delta, () =>
+        {
+            _displayedStone += delta;
+            ProcessQueuedStone();
+        });
+    }
+
+    private void ProcessQueuedFood()
+    {
+        int delta = _queuedFoodDelta;
+        _queuedFoodDelta = 0;
+        if (delta == 0) { _foodPopupBusy = false; return; }
+        AnimateNumber(foodText, _displayedFood, _displayedFood + delta, () =>
+        {
+            _displayedFood += delta;
+            ProcessQueuedFood();
+        });
+    }
     // ──────────────────────────────────────────────────────────────
     // PRIVATE – ANIMATION & FORMAT SỐ
     // ──────────────────────────────────────────────────────────────
@@ -310,9 +452,13 @@ public class HUDController : MonoBehaviour
     /// <summary>
     /// Chạy số counter tăng/giảm mượt mà từ giá trị cũ đến giá trị mới (KHÔNG phóng to thu nhỏ)
     /// </summary>
-    private void AnimateNumber(TextMeshProUGUI text, int fromValue, int toValue)
+    private void AnimateNumber(TextMeshProUGUI text, int fromValue, int toValue, System.Action onComplete = null)
     {
-        if (text == null) return;
+        if (text == null)
+        {
+            onComplete?.Invoke();
+            return;
+        }
 
         DOTween.Kill(text);
         int temp = fromValue;
@@ -323,7 +469,8 @@ public class HUDController : MonoBehaviour
             if (text != null) text.text = FormatNumber(x);
         }, toValue, numberCountDuration)
         .SetEase(Ease.OutQuad)
-        .SetId(text);
+        .SetId(text)
+        .OnComplete(() => onComplete?.Invoke());
     }
 
     private void SetTextInstant(TextMeshProUGUI text, int value)
@@ -419,3 +566,7 @@ public class HUDController : MonoBehaviour
         if (foodIcon != null) DOTween.Kill(foodIcon);
     }
 }
+
+
+
+
