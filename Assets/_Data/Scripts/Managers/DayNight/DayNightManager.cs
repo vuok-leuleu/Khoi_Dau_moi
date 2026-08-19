@@ -194,6 +194,7 @@ public class DayNightManager : Singleton<DayNightManager>
 
         // Trừ vàng và kiểm tra kết quả.
         bool spent = JsonDataManager.Ins.TrySpendGold(requiredGold);
+        if (spent && HUDController.Instance != null) HUDController.Instance.SuppressGoldPositivePopups();
         if (!spent)
         {
             Debug.LogWarning(
@@ -411,8 +412,8 @@ public class DayNightManager : Singleton<DayNightManager>
         OnNightStart?.Invoke();
         OnWaveStart?.Invoke(currentWave);
 
-        // 🌾 TỰ ĐỘNG THU HOẠCH TÀI NGUYÊN TỪ TẤT CẢ CÁC CÔNG TRÌNH (KHO GỖ, KHO ĐÁ, KHO LƯƠNG) KHI SANG NGÀY MỚI
-        WaveResourceManager.CollectBuildingResourcesForWave(currentWave);
+        // WaveResourceManager lắng nghe OnWaveStart và sẽ thu hoạch đúng một lần.
+
 
         // 💾 TỰ ĐỘNG LƯU DỮ LIỆU TOÀN BỘ GAME MỖI KHI QUA 1 NGÀY / WAVE MỚI
         if (BuildingSystem.Ins != null) BuildingSystem.Ins.SaveBuildingsToSlot(1);
@@ -695,3 +696,6 @@ public class DayNightManager : Singleton<DayNightManager>
         }
     }
 }
+
+
+

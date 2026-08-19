@@ -7,11 +7,12 @@ public class DemaciaVFXHoverManager : MonoBehaviour
     [SerializeField] private Camera mainCam;
     [SerializeField] private LayerMask buildingLayer;
     [SerializeField] private GameObject vfxPrefab;      // Kéo Prefab VFX có sẵn vào đây
-    [SerializeField] private Vector3 heightOffset = Vector3.zero; // Bù độ cao nếu gốc pivot của công trình nằm dưới đất
+    [SerializeField] private Vector3 heightOffset = Vector3.up * 0.5f; // Bù độ cao nếu gốc pivot của công trình nằm dưới đất
+    [SerializeField] private Vector3 vfxRotation = Vector3.zero;
 
     private GameObject vfxInstance;
     private ParticleSystem[] vfxParticles;
-    private Transform currentTarget;
+    private Collider currentTarget;
 
     void Awake()
     {
@@ -38,12 +39,12 @@ public class DemaciaVFXHoverManager : MonoBehaviour
         Ray ray = mainCam.ScreenPointToRay(Input.mousePosition);
         if (Physics.Raycast(ray, out RaycastHit hit, 200f, buildingLayer))
         {
-            Transform target = hit.collider.transform;
+            Collider target = hit.collider;
 
             if (currentTarget != target)
             {
                 currentTarget = target;
-                ShowVFX(currentTarget.position + heightOffset);
+                ShowVFX(GetVFXPosition(currentTarget));
             }
         }
         else
@@ -56,7 +57,7 @@ public class DemaciaVFXHoverManager : MonoBehaviour
     {
         if (vfxInstance == null) return;
 
-        vfxInstance.transform.position = position;
+        vfxInstance.transform.SetPositionAndRotation(position, Quaternion.Euler(vfxRotation));
 
         if (!vfxInstance.activeSelf)
         {
@@ -71,6 +72,12 @@ public class DemaciaVFXHoverManager : MonoBehaviour
                 ps.Play();
             }
         }
+    }
+
+    private Vector3 GetVFXPosition(Collider target)
+    {
+        Bounds bounds = target.bounds;
+        return new Vector3(bounds.center.x, bounds.min.y, bounds.center.z) + heightOffset;
     }
 
     private void ClearHover()
