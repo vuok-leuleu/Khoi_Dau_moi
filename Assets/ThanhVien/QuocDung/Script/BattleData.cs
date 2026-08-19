@@ -352,40 +352,40 @@ public static class BattleData
     private static void ApplyExpeditionVictoryResult()
     {
         // 🔓 CHINH PHỤC VÙNG ĐẤT: Giải phóng Căn cứ Địch trên SettlementZone
-        SettlementZone conqueredZone = null;
-        if (!string.IsNullOrEmpty(TargetedSettlementZoneName))
+        if (string.IsNullOrEmpty(TargetedSettlementZoneName))
         {
-            SettlementZone[] allZones = Object.FindObjectsByType<SettlementZone>(FindObjectsSortMode.None);
-            foreach (var z in allZones)
+            Debug.LogError("[BattleData] Không có tên vùng mục tiêu, hủy xử lý chinh phục để tránh phá nhầm Nhà Chính.");
+            return;
+        }
+
+        SettlementZone conqueredZone = null;
+        SettlementZone[] allZones = Object.FindObjectsByType<SettlementZone>(FindObjectsSortMode.None);
+        foreach (var z in allZones)
+        {
+            if (z != null && z.settlementName == TargetedSettlementZoneName)
             {
-                if (z != null && z.settlementName == TargetedSettlementZoneName)
-                {
-                    conqueredZone = z;
-                    break;
-                }
+                conqueredZone = z;
+                break;
             }
         }
 
         if (conqueredZone == null)
         {
-            SettlementZone[] allZones = Object.FindObjectsByType<SettlementZone>(FindObjectsSortMode.None);
-            foreach (var z in allZones)
-            {
-                if (z != null && z.hasEnemyOutpost)
-                {
-                    conqueredZone = z;
-                    break;
-                }
-            }
+            Debug.LogError($"[BattleData] Không tìm thấy vùng mục tiêu '{TargetedSettlementZoneName}', hủy xử lý chinh phục.");
+            TargetedSettlementZoneName = "";
+            return;
         }
 
-        if (conqueredZone != null)
+        if (!conqueredZone.HasValidEnemyOutpostInstance())
         {
-            conqueredZone.OnEnemyOutpostDestroyed();
-            conqueredZone.SaveSettlementState();
-            Debug.Log($"[BattleData] 🏆 XÂM CHIẾM THẮNG! Đã giải phóng vùng đất '{conqueredZone.settlementName}'. Lính xuất trận trở về an toàn!");
+            Debug.LogError($"[BattleData] Vùng '{conqueredZone.settlementName}' không có căn cứ địch hợp lệ, hủy xử lý để bảo vệ Nhà Chính.");
+            TargetedSettlementZoneName = "";
+            return;
         }
 
+        conqueredZone.OnEnemyOutpostDestroyed();
+        conqueredZone.SaveSettlementState();
+        Debug.Log($"[BattleData] 🏆 XÂM CHIẾM THẮNG! Đã giải phóng vùng đất '{conqueredZone.settlementName}'. Lính xuất trận trở về an toàn!");
         TargetedSettlementZoneName = "";
     }
 

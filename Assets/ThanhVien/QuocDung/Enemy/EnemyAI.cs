@@ -10,13 +10,9 @@ public class EnemyAI : MonoBehaviour
     public Transform villageCenter;
     public Animator animator;
 
-    [Header("Attack Button Settings")]
-    [Tooltip("Kéo thả nút Tấn công (Button / Canvas) từ Hierarchy vào ô này.")]
-    public GameObject attackButtonUI;
+    [Header("Battle Scene Settings")]
     [Tooltip("Tên scene battle sẽ chuyển sang khi bấm nút.")]
     public string battleSceneName = "SceneBattle";
-    [Tooltip("Góc xoay bù cho nút UI (Ví dụ X:0, Y:0, Z:90 để xoay ngang nút lại).")]
-    public Vector3 buttonRotationOffset = new Vector3(0, 0, 90);
 
     [Header("Mũi Tên Dưới Chân (Ground Arrow)")]
     [Tooltip("Bật/Tắt hiển thị mũi tên chỉ mục tiêu dưới chân Enemy")]
@@ -185,7 +181,6 @@ public class EnemyAI : MonoBehaviour
     [Header("Combat State Control")]
     public bool isCombatActive = false;
     public bool isWaitingAtTarget = false;
-    private UIEnemyWaveButton spawnedAttackButton;
 
     [Header("Arrival Presentation")]
     [SerializeField] private bool focusCameraOnArrival = true;
@@ -399,40 +394,7 @@ public class EnemyAI : MonoBehaviour
             squadEnemies.Add(this);
         }
 
-        SetupAttackButton();
-
         UpdateAnimationState();
-    }
-
-    private void LateUpdate()
-    {
-        // Billboard effect: Giúp nút UI luôn quay hướng thẳng song song với Camera (chỉ cho Thủ Lĩnh)
-        if (IsLeader() && attackButtonUI != null && attackButtonUI.activeSelf)
-        {
-            Camera mainCam = Camera.main;
-            if (mainCam != null)
-            {
-                attackButtonUI.transform.rotation = mainCam.transform.rotation * Quaternion.Euler(buttonRotationOffset);
-            }
-        }
-    }
-
-    public void SetupAttackButton()
-    {
-        if (attackButtonUI != null)
-        {
-            // Ban đầu ẩn nút đi, chỉ khi tới mục tiêu mới hiện lên
-            attackButtonUI.SetActive(false);
-
-            UnityEngine.UI.Button btn = attackButtonUI.GetComponent<UnityEngine.UI.Button>();
-            if (btn == null) btn = attackButtonUI.GetComponentInChildren<UnityEngine.UI.Button>();
-
-            if (btn != null)
-            {
-                btn.onClick.RemoveListener(OnAttackButtonClicked);
-                btn.onClick.AddListener(OnAttackButtonClicked);
-            }
-        }
     }
 
     private void StartArrivalPresentation(Vector3 destination)
@@ -440,10 +402,6 @@ public class EnemyAI : MonoBehaviour
         if (arrivalPresentationStarted) return;
         arrivalPresentationStarted = true;
 
-        if (attackButtonUI != null)
-        {
-            attackButtonUI.SetActive(false);
-        }
 
         if (arrivalPresentationRoutine != null)
         {
@@ -608,22 +566,12 @@ public class EnemyAI : MonoBehaviour
                     {
                         StartArrivalPresentation(destination);
                     }
-                    else
-                    {
-                        if (attackButtonUI != null && attackButtonUI.activeSelf)
-                        {
-                            attackButtonUI.SetActive(false);
-                        }
-                    }
+
                 }
                 else
                 {
                     // Khi chưa thực sự đến tường thành (ở xa ngoài map): BẮT BUỘC ẨN NÚT TẤN CÔNG
                     isWaitingAtTarget = false;
-                    if (attackButtonUI != null && attackButtonUI.activeSelf)
-                    {
-                        attackButtonUI.SetActive(false);
-                    }
                 }
 
                 UpdateAnimationState();

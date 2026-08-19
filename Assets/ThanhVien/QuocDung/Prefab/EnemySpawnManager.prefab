@@ -91,7 +91,6 @@ MonoBehaviour:
   useWaveSpawn: 0
   waveInterval: 30
   autoSpawnWaveAlways: 1
-  showAttackButton: 1
   warningIconPrefab: {fileID: 0}
   warningIconHeightOffset: 3
   warningArrowSize: 0.89

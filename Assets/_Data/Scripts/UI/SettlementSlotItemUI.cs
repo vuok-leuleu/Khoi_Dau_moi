@@ -27,6 +27,11 @@ public class SettlementSlotItemUI : MonoBehaviour, IPointerClickHandler
     [SerializeField] private TextMeshProUGUI levelTMP;
     [SerializeField] private Image iconImage;
 
+    [Header("=== HIỂN THỊ ĐƠN VỊ LÍNH ===")]
+    [SerializeField] private GameObject troopInfoRoot;
+    [SerializeField] private Image troopIconImage;
+    [SerializeField] private TextMeshProUGUI troopCountTMP;
+
     [Header("=== CÁC OBJECT HIỂN THỊ THEO TRẠNG THÁI ===")]
     [SerializeField] private GameObject emptyStateObj;     // Thể hiện ô TRỐNG (Viền sáng + Chữ TRỐNG)
     [SerializeField] private GameObject occupiedStateObj;  // Thể hiện ô ĐÃ CÓ NHÀ
@@ -35,6 +40,18 @@ public class SettlementSlotItemUI : MonoBehaviour, IPointerClickHandler
     private Vector3 plotWorldPos;
     private UpgradeableBuilding buildingOnSlot;
 
+
+    public void SetTroopInfo(Sprite troopSprite, int unitCount)
+    {
+        bool show = troopSprite != null && unitCount > 0;
+        if (troopInfoRoot != null) troopInfoRoot.SetActive(show);
+        if (troopIconImage != null)
+        {
+            troopIconImage.sprite = troopSprite;
+            troopIconImage.gameObject.SetActive(show);
+        }
+        if (troopCountTMP != null) troopCountTMP.text = show ? $"x{unitCount} đơn vị\\n({unitCount * 3} lính)" : "";
+    }
     private void Awake()
     {
         SetupButtonListeners();

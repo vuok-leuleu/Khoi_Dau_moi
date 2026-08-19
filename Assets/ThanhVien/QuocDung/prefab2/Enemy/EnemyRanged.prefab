@@ -131,7 +131,6 @@ MonoBehaviour:
   animator: {fileID: 472579318761163330}
   attackButtonUI: {fileID: 0}
   battleSceneName: SceneBattle
-  buttonRotationOffset: {x: 0, y: 0, z: 90}
   showGroundArrow: 1
   wavesToReachTarget: 3
   spawnWave: 1

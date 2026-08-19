@@ -32,7 +32,6 @@ public class HouseSpawnPanel : MonoBehaviour
 
     private void Start()
     {
-        CreateScreenSpaceUI();
     }
 
     /// <summary>

@@ -109,64 +109,34 @@ public class UIEnemyWaveButton : MonoBehaviour
         Time.timeScale = 1f;
         if (targetLeadEnemy == null) return;
 
-        // 🔥 Nếu lính đã hành quân tới căn cứ địch thành công, người chơi bấm Tấn Công sẽ vào thẳng SceneBattle
-        if (isTroopsArrivedAtTarget)
+        int enemyCount = 5;
+        EnemySpawn spawner = targetLeadEnemy.GetComponentInParent<EnemySpawn>();
+        if (spawner == null) spawner = Object.FindFirstObjectByType<EnemySpawn>();
+        if (spawner != null && spawner.enemyCountInBase > 0)
         {
-            int enemyCount = 5;
-            EnemySpawn spawner = targetLeadEnemy.GetComponentInParent<EnemySpawn>();
-            if (spawner == null) spawner = Object.FindFirstObjectByType<EnemySpawn>();
-            if (spawner != null && spawner.enemyCountInBase > 0)
-            {
-                enemyCount = spawner.enemyCountInBase;
-            }
-            else
-            {
-                SettlementZone zone = targetLeadEnemy.GetComponentInParent<SettlementZone>();
-                if (zone != null && zone.enemyCountInBase > 0)
-                {
-                    enemyCount = zone.enemyCountInBase;
-                }
-            }
-
-            Debug.Log($"[UIEnemyWaveButton] ⚔️ Người chơi bấm TẤN CÔNG khi lính đã tập kết đầy đủ! Chuyển sang {battleSceneName}...");
-            
-            // Record targeted settlement zone
-            if (targetLeadEnemy != null)
-            {
-                SettlementZone zone = FindZoneFromTarget(targetLeadEnemy);
-                if (zone != null)
-                {
-                    BattleData.TargetedSettlementZoneName = zone.settlementName;
-                    Debug.Log($"[UIEnemyWaveButton] 🎯 Đã ghi nhận Vùng đất mục tiêu chinh phục: {BattleData.TargetedSettlementZoneName}");
-                }
-            }
-
-            BattleData.RecordCurrentSceneState(enemyCount);
-            if (!string.IsNullOrEmpty(battleSceneName))
-            {
-                CloudSceneTransition.LoadSceneWithCloud(battleSceneName);
-            }
-            gameObject.SetActive(false);
-            return;
+            enemyCount = spawner.enemyCountInBase;
         }
-
-        if (targetLeadEnemy != null)
+        else
         {
-            SettlementZone zone = FindZoneFromTarget(targetLeadEnemy);
-            if (zone != null)
+            SettlementZone zone = targetLeadEnemy.GetComponentInParent<SettlementZone>();
+            if (zone != null && zone.enemyCountInBase > 0)
             {
-                BattleData.TargetedSettlementZoneName = zone.settlementName;
-                Debug.Log($"[UIEnemyWaveButton] 🎯 Đã ghi nhận Vùng đất mục tiêu chinh phục khi mở TroopDispatchUI: {BattleData.TargetedSettlementZoneName}");
+                enemyCount = zone.enemyCountInBase;
             }
         }
 
-        Vector3 attackPos = targetLeadEnemy.position;
-        Debug.Log($"[UIEnemyWaveButton] Player clicked Attack Button! Opening TroopDispatchUI panel...");
+        SettlementZone targetZone = FindZoneFromTarget(targetLeadEnemy);
+        if (targetZone != null)
+        {
+            BattleData.TargetedSettlementZoneName = targetZone.settlementName;
+            Debug.Log($"[UIEnemyWaveButton] 🎯 Đã ghi nhận Vùng đất mục tiêu chinh phục: {BattleData.TargetedSettlementZoneName}");
+        }
 
-        // Mở Bảng Chọn Quân Đội Xuất Trận (TroopDispatchUI)
-        TroopDispatchUI.OpenPanel(attackPos, targetLeadEnemy, battleSceneName);
-
-        Destroy(gameObject);
+        string sceneName = string.IsNullOrWhiteSpace(battleSceneName) ? "SceneBattle" : battleSceneName;
+        Debug.Log($"[UIEnemyWaveButton] ⚔️ Người chơi bấm TẤN CÔNG. Chuyển sang {sceneName}...");
+        BattleData.RecordCurrentSceneState(enemyCount);
+        CloudSceneTransition.LoadSceneWithCloud(sceneName);
+        gameObject.SetActive(false);
     }
 
     public static SettlementZone FindZoneFromTarget(Transform target)

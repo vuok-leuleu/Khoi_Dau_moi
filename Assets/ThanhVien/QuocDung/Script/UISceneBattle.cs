@@ -124,6 +124,16 @@ public class UISceneBattle : MonoBehaviour
     [Tooltip("Tên Scene chuyển về khi bấm Return (Mặc định: MainScene)")]
     public string returnSceneName = "MainScene";
 
+    [Header("--- Battle Speed Button ---")]
+    [Tooltip("Nút đổi tốc độ trận đấu giữa 1x và 3x")]
+    public Button battleSpeedButton;
+    [Tooltip("Text hiển thị tốc độ hiện tại trên nút")]
+    public TextMeshProUGUI battleSpeedText;
+    [Tooltip("Hệ số tốc độ bình thường của trận đấu")]
+    [Min(0.01f)] public float normalBattleSpeed = 1f;
+    [Tooltip("Hệ số tốc độ nhanh của trận đấu")]
+    [Min(0.01f)] public float fastBattleSpeed = 3f;
+
     [Header("--- Victory Elements ---")]
     [Tooltip("Container chứa danh sách phần thưởng (Horizontal Layout Group)")]
     public Transform victoryRewardContainer;
@@ -164,6 +174,7 @@ public class UISceneBattle : MonoBehaviour
     public static UISceneBattle Instance { get; private set; }
     private bool hasShownResultUI = false;
     private bool isReturning = false;
+    private bool isFastBattleSpeed = false;
     private float nextScanTime = 0f;
 
     private Dictionary<string, UnitCardUI> cachedCards = new Dictionary<string, UnitCardUI>();
@@ -177,6 +188,7 @@ public class UISceneBattle : MonoBehaviour
             audioSource = GetComponent<AudioSource>();
 
         SetupReturnButtons();
+        SetupBattleSpeedButton();
     }
 
     private void OnDisable()
@@ -187,6 +199,11 @@ public class UISceneBattle : MonoBehaviour
 
     private void OnDestroy()
     {
+        ResetBattleSpeed();
+
+        if (battleSpeedButton != null)
+            battleSpeedButton.onClick.RemoveListener(ToggleBattleSpeed);
+
         if (Instance == this) Instance = null;
         cachedCards.Clear();
     }
@@ -198,6 +215,8 @@ public class UISceneBattle : MonoBehaviour
 
         HideResultPanels();
         SetupReturnButtons();
+        SetupBattleSpeedButton();
+        SetBattleSpeed(false);
         CheckAndShowBattleDataResult();
 
         if (armyRosterPanel != null)
@@ -296,6 +315,48 @@ public class UISceneBattle : MonoBehaviour
             defeatReturnButton.onClick.RemoveAllListeners();
             defeatReturnButton.onClick.AddListener(OnReturnButtonClicked);
         }
+    }
+
+    private void SetupBattleSpeedButton()
+    {
+        if (battleSpeedButton == null) return;
+
+        if (battleSpeedText == null)
+            battleSpeedText = battleSpeedButton.GetComponentInChildren<TextMeshProUGUI>(true);
+
+        battleSpeedButton.onClick.RemoveListener(ToggleBattleSpeed);
+        battleSpeedButton.onClick.AddListener(ToggleBattleSpeed);
+        UpdateBattleSpeedLabel();
+    }
+
+    /// <summary>
+    /// Chuyển đổi tốc độ trận đấu giữa bình thường và nhanh.
+    /// Time.timeScale làm NavMesh, animation, cooldown và coroutine của cả lính lẫn Enemy chạy đồng bộ.
+    /// </summary>
+    public void ToggleBattleSpeed()
+    {
+        SetBattleSpeed(!isFastBattleSpeed);
+    }
+
+    private void SetBattleSpeed(bool useFastSpeed)
+    {
+        isFastBattleSpeed = useFastSpeed;
+        Time.timeScale = isFastBattleSpeed ? fastBattleSpeed : normalBattleSpeed;
+        UpdateBattleSpeedLabel();
+    }
+
+    private void ResetBattleSpeed()
+    {
+        isFastBattleSpeed = false;
+        Time.timeScale = normalBattleSpeed;
+    }
+
+    private void UpdateBattleSpeedLabel()
+    {
+        if (battleSpeedText == null) return;
+
+        float displayedSpeed = isFastBattleSpeed ? fastBattleSpeed : normalBattleSpeed;
+        battleSpeedText.text = $"{displayedSpeed:0.#}x";
     }
 
     private void Update()

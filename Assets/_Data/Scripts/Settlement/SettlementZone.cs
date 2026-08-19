@@ -685,8 +685,24 @@ public class SettlementZone : MonoBehaviour
         }
     }
 
+    public bool HasValidEnemyOutpostInstance()
+    {
+        if (!hasEnemyOutpost || spawnedEnemyOutpostInstance == null) return false;
+        if (townHallBuilding != null && spawnedEnemyOutpostInstance == townHallBuilding.gameObject) return false;
+
+        UpgradeableBuilding building = spawnedEnemyOutpostInstance.GetComponent<UpgradeableBuilding>();
+        if (building == null) building = spawnedEnemyOutpostInstance.GetComponentInChildren<UpgradeableBuilding>(true);
+        return building == null || !IsTownHallBuilding(building, this);
+    }
+
     public void OnEnemyOutpostDestroyed()
     {
+        if (!HasValidEnemyOutpostInstance())
+        {
+            Debug.LogError($"[SettlementZone] Từ chối phá object tại vùng {settlementName}: không phải căn cứ địch hợp lệ.");
+            return;
+        }
+
         hasEnemyOutpost = false;
         isUnlocked = true;
         SaveSettlementState();
