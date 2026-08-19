@@ -8,6 +8,7 @@ public class DemaciaVFXHoverManager : MonoBehaviour
     [SerializeField] private LayerMask buildingLayer;
     [SerializeField] private GameObject vfxPrefab;      // Kéo Prefab VFX có sẵn vào đây
     [SerializeField] private Vector3 heightOffset = Vector3.up * 0.5f; // Bù độ cao nếu gốc pivot của công trình nằm dưới đất
+    [SerializeField] private Vector3 vfxRotation = Vector3.zero;
 
     private GameObject vfxInstance;
     private ParticleSystem[] vfxParticles;
@@ -56,7 +57,7 @@ public class DemaciaVFXHoverManager : MonoBehaviour
     {
         if (vfxInstance == null) return;
 
-        vfxInstance.transform.position = position;
+        vfxInstance.transform.SetPositionAndRotation(position, Quaternion.Euler(vfxRotation));
 
         if (!vfxInstance.activeSelf)
         {
