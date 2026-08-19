@@ -222,26 +222,57 @@ public class AudioManager : MonoBehaviour
     // 3. ÂM THANH UI (UI SOUND)
     // ════════════════════════════════════════════════════════════════
 
+    private AudioClip _generatedClickClip = null;
+
+    /// <summary>
+    /// Tạo âm thanh Click pop/gỗ ngắn gọn tự động nếu chưa có file AudioClip nào được gán
+    /// </summary>
+    private AudioClip GetDefaultClickSound()
+    {
+        if (defaultButtonClickClip != null) return defaultButtonClickClip;
+        if (_generatedClickClip != null) return _generatedClickClip;
+
+        int sampleRate = 44100;
+        float duration = 0.045f; // 45ms
+        int sampleCount = (int)(sampleRate * duration);
+        float[] samples = new float[sampleCount];
+
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = (float)i / sampleRate;
+            float freq = Mathf.Lerp(1400f, 350f, (float)i / sampleCount);
+            float envelope = Mathf.Exp(-t * 90f);
+            samples[i] = Mathf.Sin(2f * Mathf.PI * freq * t) * envelope * 0.45f;
+        }
+
+        _generatedClickClip = AudioClip.Create("DefaultUIClick", sampleCount, 1, sampleRate, false);
+        _generatedClickClip.SetData(samples, 0);
+        return _generatedClickClip;
+    }
+
     /// <summary>
     /// Phát âm thanh UI giao diện.
     /// </summary>
     public void PlayUISound(AudioClip clip, float volumeScale = 1f)
     {
-        if (clip == null || isUIMuted || isMasterMuted) return;
+        if (isUIMuted || isMasterMuted) return;
+
+        AudioClip clipToPlay = clip != null ? clip : GetDefaultClickSound();
+        if (clipToPlay == null) return;
 
         float finalVol = uiVolume * masterVolume * volumeScale;
         if (uiSource != null)
         {
-            uiSource.PlayOneShot(clip, finalVol);
+            uiSource.PlayOneShot(clipToPlay, finalVol);
         }
     }
 
     // ── Các hàm tiện ích phát âm thanh UI mặc định ──
-    public void PlayButtonClick()        => PlayUISound(defaultButtonClickClip);
-    public void PlayPanelOpen()          => PlayUISound(defaultPanelOpenClip);
-    public void PlayPanelClose()         => PlayUISound(defaultPanelCloseClip);
-    public void PlayPurchaseSuccess()    => PlayUISound(defaultPurchaseSuccessClip);
-    public void PlayErrorSound()         => PlayUISound(defaultErrorClip);
+    public void PlayButtonClick(AudioClip customClip = null) => PlayUISound(customClip != null ? customClip : GetDefaultClickSound());
+    public void PlayPanelOpen()          => PlayUISound(defaultPanelOpenClip != null ? defaultPanelOpenClip : GetDefaultClickSound());
+    public void PlayPanelClose()         => PlayUISound(defaultPanelCloseClip != null ? defaultPanelCloseClip : GetDefaultClickSound());
+    public void PlayPurchaseSuccess()    => PlayUISound(defaultPurchaseSuccessClip != null ? defaultPurchaseSuccessClip : GetDefaultClickSound());
+    public void PlayErrorSound()         => PlayUISound(defaultErrorClip != null ? defaultErrorClip : GetDefaultClickSound());
 
     // ════════════════════════════════════════════════════════════════
     // QUẢN LÝ ÂM LƯỢNG & ĐIỀU CHỈNH SETTINGS
