@@ -251,6 +251,25 @@ public class ChapterQuestController : MonoBehaviour
         }
     }
 
+    public bool CompletePrologueObjective(int objectiveIndex)
+    {
+        return CompleteObjective(0, objectiveIndex);
+    }
+
+    public bool IsObjectiveCompleted(int chapterIndex, int objectiveIndex)
+    {
+        InitAllFourChapters();
+        return chapterIndex >= 0 && chapterIndex < chapterList.Count &&
+               objectiveIndex >= 0 && objectiveIndex < chapterList[chapterIndex].objectives.Count &&
+               chapterList[chapterIndex].objectives[objectiveIndex].isCompleted;
+    }
+
+    public int GetNextActiveObjectiveIndex(int chapterIndex)
+    {
+        InitAllFourChapters();
+        if (chapterIndex < 0 || chapterIndex >= chapterList.Count) return -1;
+        return chapterList[chapterIndex].objectives.FindIndex(objective => !objective.isCompleted);
+    }
     public bool CompleteObjective(int chapterIndex, int objectiveIndex)
     {
         InitAllFourChapters();
@@ -437,3 +456,4 @@ public class ChapterQuestController : MonoBehaviour
         }
     }
 }
+

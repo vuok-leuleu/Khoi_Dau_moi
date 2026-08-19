@@ -77,9 +77,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a4a7ff61e8ef1794da6fa01ea1f319b6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemySpawn
-  enemyCountInBase: 2
+  enemyCountInBase: 1
   enemyPrefab: {fileID: 370480945864454416, guid: 2d56dfb52da6a654ab4fca2a3d449e2d, type: 3}
-  spawnOnStart: 1
+  spawnOnStart: 0
   spawnPoints:
   - {fileID: 267864803989536797}
   spawnForwardOffset: 3.5
