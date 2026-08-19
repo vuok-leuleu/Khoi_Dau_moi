@@ -19,6 +19,7 @@ public class SettlementZoneClickHandler : MonoBehaviour
 
     private void OnMouseDown()
     {
+        if (MoveModeController.IsMoveModeActive) return;
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
         if (targetZone != null)

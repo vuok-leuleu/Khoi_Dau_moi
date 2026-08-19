@@ -7,6 +7,9 @@ using UnityEditor;
 public class SpawnSoldier : MonoBehaviour
 {
     [Header("Spawn Settings")]
+    [Tooltip("Danh sách các loại lính có thể sinh. Mỗi lính sẽ chọn ngẫu nhiên một prefab trong danh sách này.")]
+    [SerializeField] private List<GameObject> soldierPrefabs = new List<GameObject>();
+    [Tooltip("Prefab dự phòng cho dữ liệu cũ. Chỉ dùng khi danh sách Soldier Prefabs đang trống.")]
     [SerializeField] private GameObject soldierPrefab;
     [Tooltip("Bán kính phân bố vị trí lính quanh khu vực sinh lính")]
     [Range(0.5f, 10f)]
@@ -36,6 +39,52 @@ public class SpawnSoldier : MonoBehaviour
     private Coroutine hologramAnimationCoroutine;
 
     public float TestDuration => testDuration;
+
+    private List<GameObject> GetConfiguredSoldierPrefabs()
+    {
+        List<GameObject> configuredPrefabs = new List<GameObject>();
+
+        if (soldierPrefabs != null)
+        {
+            foreach (GameObject prefab in soldierPrefabs)
+            {
+                if (prefab != null)
+                {
+                    configuredPrefabs.Add(prefab);
+                }
+            }
+        }
+
+        if (configuredPrefabs.Count == 0 && soldierPrefab != null)
+        {
+            configuredPrefabs.Add(soldierPrefab);
+        }
+
+        return configuredPrefabs;
+    }
+
+    private GameObject GetRandomSoldierPrefab()
+    {
+        List<GameObject> configuredPrefabs = GetConfiguredSoldierPrefabs();
+        if (configuredPrefabs.Count == 0)
+        {
+            return null;
+        }
+
+        return configuredPrefabs[Random.Range(0, configuredPrefabs.Count)];
+    }
+
+    private GameObject GetSoldierPrefabByIndex(int soldierTypeIndex)
+    {
+        List<GameObject> configuredPrefabs = GetConfiguredSoldierPrefabs();
+        if (soldierTypeIndex < 0 || soldierTypeIndex >= configuredPrefabs.Count)
+        {
+            Debug.LogWarning($"[SpawnSoldier] Loại lính tại chỉ số {soldierTypeIndex} không tồn tại trên {gameObject.name}.");
+            return null;
+        }
+
+        return configuredPrefabs[soldierTypeIndex];
+    }
 
     public List<UnitController> GetActiveSoldierControllers()
     {
@@ -171,10 +220,10 @@ public class SpawnSoldier : MonoBehaviour
     /// </summary>
     public GameObject SpawnOneTrainedSoldier(GameObject customPrefab = null)
     {
-        GameObject prefabToUse = customPrefab != null ? customPrefab : soldierPrefab;
+        GameObject prefabToUse = customPrefab != null ? customPrefab : GetRandomSoldierPrefab();
         if (prefabToUse == null)
         {
-            Debug.LogWarning($"[SpawnSoldier] ⚠️ Chưa gán Prefab lính cho {gameObject.name}!");
+            Debug.LogWarning($"[SpawnSoldier] ⚠️ Chưa gán Soldier Prefabs cho {gameObject.name}!");
             return null;
         }
 
@@ -208,6 +257,15 @@ public class SpawnSoldier : MonoBehaviour
         spawnedSoldiers.Add(newSoldier);
         Debug.Log($"[SpawnSoldier] 🎉 Đã sinh 1 lính mới từ Ô Huấn Luyện tại {gameObject.name} (Lv {currentLevel})!");
         return newSoldier;
+    }
+
+    /// <summary>
+    /// Sinh một lính đã hoàn tất huấn luyện theo vị trí trong danh sách Soldier Prefabs.
+    /// </summary>
+    public GameObject SpawnOneTrainedSoldierByType(int soldierTypeIndex)
+    {
+        GameObject prefabToUse = GetSoldierPrefabByIndex(soldierTypeIndex);
+        return prefabToUse == null ? null : SpawnOneTrainedSoldier(prefabToUse);
     }
 
     private void HandleUpgradeStart()
@@ -436,9 +494,26 @@ public class SpawnSoldier : MonoBehaviour
     // Hàm dùng để spawn một số lượng lính nhất định
     public void SpawnSoldiers(int count)
     {
-        if (soldierPrefab == null)
+        SpawnSoldiersInternal(count, null);
+    }
+
+    /// <summary>
+    /// Sinh nhiều lính cùng một loại theo vị trí trong danh sách Soldier Prefabs.
+    /// </summary>
+    public void SpawnSoldiersByType(int count, int soldierTypeIndex)
+    {
+        GameObject prefabToUse = GetSoldierPrefabByIndex(soldierTypeIndex);
+        if (prefabToUse != null)
         {
-            Debug.LogWarning("Soldier Prefab chưa được gán trong Inspector!");
+            SpawnSoldiersInternal(count, prefabToUse);
+        }
+    }
+
+    private void SpawnSoldiersInternal(int count, GameObject fixedPrefab)
+    {
+        if (fixedPrefab == null && GetRandomSoldierPrefab() == null)
+        {
+            Debug.LogWarning("Soldier Prefabs chưa được gán trong Inspector!");
             return;
         }
 
@@ -459,6 +534,7 @@ public class SpawnSoldier : MonoBehaviour
 
         for (int i = 0; i < count; i++)
         {
+            GameObject prefabToUse = fixedPrefab != null ? fixedPrefab : GetRandomSoldierPrefab();
             Vector2 randomCircle = Random.insideUnitCircle * spawnRadius;
             Vector3 rawPosition = new Vector3(
                 baseSpawnCenter.x + randomCircle.x,
@@ -472,7 +548,7 @@ public class SpawnSoldier : MonoBehaviour
                 spawnPosition = hit.position;
             }
 
-            GameObject soldier = Instantiate(soldierPrefab, spawnPosition, Quaternion.identity);
+            GameObject soldier = Instantiate(prefabToUse, spawnPosition, Quaternion.identity);
 
             UnitController unit = soldier.GetComponent<UnitController>();
             if (unit != null)
@@ -588,9 +664,26 @@ public class SpawnSoldier : MonoBehaviour
     // Hàm sinh lính hologram để chạy hiệu ứng huấn luyện
     public void SpawnHologramSoldiers(int count)
     {
-        if (soldierPrefab == null)
+        SpawnHologramSoldiersInternal(count, null);
+    }
+
+    /// <summary>
+    /// Sinh lính hologram cùng một loại theo vị trí trong danh sách Soldier Prefabs.
+    /// </summary>
+    public void SpawnHologramSoldiersByType(int count, int soldierTypeIndex)
+    {
+        GameObject prefabToUse = GetSoldierPrefabByIndex(soldierTypeIndex);
+        if (prefabToUse != null)
         {
-            Debug.LogWarning("Soldier Prefab chưa được gán trong Inspector!");
+            SpawnHologramSoldiersInternal(count, prefabToUse);
+        }
+    }
+
+    private void SpawnHologramSoldiersInternal(int count, GameObject fixedPrefab)
+    {
+        if (fixedPrefab == null && GetRandomSoldierPrefab() == null)
+        {
+            Debug.LogWarning("Soldier Prefabs chưa được gán trong Inspector!");
             return;
         }
 
@@ -609,6 +702,7 @@ public class SpawnSoldier : MonoBehaviour
 
         for (int i = 0; i < count; i++)
         {
+            GameObject prefabToUse = fixedPrefab != null ? fixedPrefab : GetRandomSoldierPrefab();
             Vector2 randomCircle = Random.insideUnitCircle * spawnRadius;
             Vector3 rawPosition = new Vector3(
                 baseSpawnCenter.x + randomCircle.x,
@@ -622,8 +716,8 @@ public class SpawnSoldier : MonoBehaviour
                 spawnPosition = hit.position;
             }
 
-            GameObject hologram = Instantiate(soldierPrefab, spawnPosition, Quaternion.identity);
-            hologram.name = $"{soldierPrefab.name}_Hologram_{i}";
+            GameObject hologram = Instantiate(prefabToUse, spawnPosition, Quaternion.identity);
+            hologram.name = $"{prefabToUse.name}_Hologram_{i}";
 
             UnitController unit = hologram.GetComponent<UnitController>();
             if (unit != null)

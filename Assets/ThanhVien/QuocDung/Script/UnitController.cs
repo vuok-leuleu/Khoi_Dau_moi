@@ -87,9 +87,6 @@ public class UnitController : MonoBehaviour
     public Vector3 marchStartPosition;
     public Vector3 marchDestinationPosition;
 
-    [Header("Route Warning UI (SoldierPoint)")]
-    [SerializeField] private SoldierPoint soldierPointUIPrefab;
-    private SoldierPoint activeRouteUI;
 
     public bool isMarchingToEnemyBase => isExpeditionMarching || isRespondingToWarning || isReturning;
     public bool isDead => hpSoldier != null && hpSoldier.IsDead;
@@ -242,7 +239,6 @@ public class UnitController : MonoBehaviour
         if (hpSoldier != null && hpSoldier.IsDead)
         {
             ReleaseCurrentTargetClaim();
-            DestroyRouteUI();
             if (agent != null && agent.isOnNavMesh && !agent.isStopped)
             {
                 agent.isStopped = true;
@@ -256,45 +252,32 @@ public class UnitController : MonoBehaviour
         if (isSceneBattle)
         {
             isExpeditionMarching = false;
-            DestroyRouteUI();
         }
 
-        // 🔥 Xử lý Lính di chuyển từng nấc theo từng Wave (chỉ khi ở Main Scene)
+        // Giữ lính tại vùng xuất phát trong thời gian hành quân theo wave.
         if (isExpeditionMarching && !isSceneBattle)
         {
-            int currentWave = (DayNightManager.HasInstance && DayNightManager.Ins != null) ? DayNightManager.Ins.CurrentWave : marchStartWave;
-            int elapsedWaves = Mathf.Max(0, currentWave - marchStartWave);
-            float progress = Mathf.Clamp01((float)elapsedWaves / (float)marchWavesToReach);
-
-            Vector3 targetStepPos = Vector3.Lerp(marchStartPosition, marchDestinationPosition, progress);
+            int currentWave = DayNightManager.HasInstance && DayNightManager.Ins != null
+                ? DayNightManager.Ins.CurrentWave
+                : marchStartWave;
+            bool hasReachedDestination = currentWave >= marchTargetWave;
 
             if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh)
             {
                 agent.isStopped = true;
-                if (Vector3.Distance(transform.position, targetStepPos) > 0.05f)
-                {
-                    transform.position = Vector3.MoveTowards(transform.position, targetStepPos, 8f * Time.deltaTime);
-                }
-            }
-            else
-            {
-                if (Vector3.Distance(transform.position, targetStepPos) > 0.05f)
-                {
-                    transform.position = Vector3.MoveTowards(transform.position, targetStepPos, 8f * Time.deltaTime);
-                }
             }
 
-            Vector3 lookDir = marchDestinationPosition - transform.position;
-            lookDir.y = 0f;
-            if (lookDir.sqrMagnitude > 0.01f)
+            if (hasReachedDestination)
             {
-                transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(lookDir), 360f * Time.deltaTime);
+                transform.position = marchDestinationPosition;
+                isExpeditionMarching = false;
+                isRespondingToWarning = false;
             }
 
+            currentState = UnitState.Idle;
             UpdateAnimation();
             return;
         }
-
         // Chỉ quét tự động tìm mục tiêu nếu autoAggro = true HOẶC đang trong chế độ phản công theo nút bấm (isRespondingToWarning)
         if (autoAggro || isRespondingToWarning)
         {
@@ -475,48 +458,8 @@ public class UnitController : MonoBehaviour
         isReturning = false;
         currentState = UnitState.Moving;
 
-        CreateOrUpdateRouteUI(destinationPos, targetBuilding);
     }
 
-    private void CreateOrUpdateRouteUI(Vector3 destinationPos, Transform targetBuilding = null)
-    {
-        if (soldierPointUIPrefab == null)
-        {
-            soldierPointUIPrefab = Resources.Load<SoldierPoint>("SoldierPointUI");
-            if (soldierPointUIPrefab == null)
-            {
-                SoldierPoint sceneObj = Object.FindFirstObjectByType<SoldierPoint>();
-                if (sceneObj != null) soldierPointUIPrefab = sceneObj;
-            }
-        }
-
-        if (soldierPointUIPrefab != null)
-        {
-            if (activeRouteUI == null)
-            {
-                activeRouteUI = Instantiate(soldierPointUIPrefab);
-            }
-
-            Transform targetTr = targetBuilding;
-            if (targetTr == null)
-            {
-                GameObject dummyTarget = new GameObject("MarchDestinationTarget");
-                dummyTarget.transform.position = destinationPos;
-                targetTr = dummyTarget.transform;
-            }
-
-            activeRouteUI.Setup(transform, targetTr, this, 0.1f);
-        }
-    }
-
-    public void DestroyRouteUI()
-    {
-        if (activeRouteUI != null)
-        {
-            Destroy(activeRouteUI.gameObject);
-            activeRouteUI = null;
-        }
-    }
 
     public void EnableCombat(Vector3 enemyTargetPos)
     {
@@ -869,7 +812,6 @@ public class UnitController : MonoBehaviour
     void OnDisable()
     {
         ReleaseCurrentTargetClaim();
-        DestroyRouteUI();
 
         if (lowFreqCoroutine != null)
         {
@@ -880,7 +822,6 @@ public class UnitController : MonoBehaviour
 
     void OnDestroy()
     {
-        DestroyRouteUI();
     }
 
     void OnDrawGizmosSelected()

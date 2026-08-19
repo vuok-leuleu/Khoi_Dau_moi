@@ -21,6 +21,11 @@ public class SettlementSidePanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI settlementLevelTMP;
     [SerializeField] private Button upgradeSettlementBtn;
     [SerializeField] private TextMeshProUGUI upgradeBtnTextTMP;
+    [Header("=== ĐIỀU QUÂN ===")]
+    [SerializeField] private Button moveButton;
+    [SerializeField] private TextMeshProUGUI moveButtonTextTMP;
+    [SerializeField] private Color moveButtonNormalColor = new Color(0.08f, 0.35f, 0.62f, 1f);
+    [SerializeField] private Color moveButtonHighlightedColor = new Color(0.13f, 0.5f, 0.85f, 1f);
 
     [Header("=== SPRITE TÙY CHỈNH CHO NÚT HEADER ===")]
     [SerializeField] private Sprite upgradeHeaderSprite;   // Sprite nút Nâng cấp
@@ -35,6 +40,13 @@ public class SettlementSidePanelUI : MonoBehaviour
     [Header("=== CONTAINER CHỨA 8 Ô HUẤN LUYỆN LÍNH ===")]
     [SerializeField] private Transform troopTrainingContainer;
     [SerializeField] private GameObject troopTrainingSlotPrefab;
+    [SerializeField] private SoldierPoint soldierPointUIPrefab;
+
+    [Header("=== MOVE CAMERA / MŨI TÊN ===")]
+    [SerializeField, Min(10f)] private float moveOverviewCameraHeight = 55f;
+    [SerializeField, Min(10f)] private float moveRoutePreviewCameraHeight = 36f;
+    [SerializeField, Min(5f)] private float moveSelectedCameraHeight = 22f;
+    [SerializeField, Min(0.05f)] private float moveArrowHeightAboveTerrain = 0.8f;
 
     private List<SettlementSlotItemUI> activeSlotUIItems = new List<SettlementSlotItemUI>();
     private List<TroopTrainingSlotUI> activeTrainingSlotUIItems = new List<TroopTrainingSlotUI>();
@@ -59,6 +71,8 @@ public class SettlementSidePanelUI : MonoBehaviour
             upgradeSettlementBtn.onClick.AddListener(OnClickUpgradeSettlement);
         }
 
+        ConfigureMoveButton();
+
         UpdateHeaderVisual();
         RefreshPanel();
     }
@@ -69,8 +83,72 @@ public class SettlementSidePanelUI : MonoBehaviour
         {
             upgradeSettlementBtn.interactable = true;
         }
+        ConfigureMoveButton();
         UpdateHeaderVisual();
         RefreshPanel();
+    }
+
+    private void ConfigureMoveButton()
+    {
+        if (moveButton == null) moveButton = FindMoveButton();
+        if (moveButton == null) return;
+
+        moveButton.onClick.RemoveListener(OnClickMove);
+        moveButton.onClick.AddListener(OnClickMove);
+
+        Image background = moveButton.targetGraphic as Image;
+        if (background == null) background = moveButton.GetComponent<Image>();
+        if (background != null) background.color = moveButtonNormalColor;
+
+        ColorBlock colors = moveButton.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color(
+            moveButtonHighlightedColor.r / moveButtonNormalColor.r,
+            moveButtonHighlightedColor.g / moveButtonNormalColor.g,
+            moveButtonHighlightedColor.b / moveButtonNormalColor.b,
+            1f);
+        colors.pressedColor = new Color(0.8f, 0.9f, 1f, 1f);
+        colors.selectedColor = colors.highlightedColor;
+        moveButton.colors = colors;
+
+        if (moveButtonTextTMP == null) moveButtonTextTMP = moveButton.GetComponentInChildren<TextMeshProUGUI>(true);
+
+        if (moveButtonTextTMP != null)
+        {
+            moveButtonTextTMP.text = "MOVE";
+            moveButtonTextTMP.fontStyle = FontStyles.Bold;
+            moveButtonTextTMP.alignment = TextAlignmentOptions.Center;
+        }
+    }
+
+    public void OnClickMove()
+    {
+        SettlementZone currentZone = SettlementManager.Ins != null ? SettlementManager.Ins.CurrentSettlement : null;
+        if (currentZone == null) currentZone = Object.FindFirstObjectByType<SettlementZone>();
+        if (currentZone == null) return;
+
+        if (MoveModeController.Ins == null)
+        {
+            GameObject managerObject = new GameObject("MoveModeController");
+            managerObject.AddComponent<MoveModeController>();
+        }
+
+        MoveModeController.Ins.Configure(
+            moveOverviewCameraHeight,
+            moveRoutePreviewCameraHeight,
+            moveSelectedCameraHeight,
+            moveArrowHeightAboveTerrain);
+        MoveModeController.Ins.BeginMoveMode(currentZone, soldierPointUIPrefab);
+    }
+
+    private Button FindMoveButton()
+    {
+        Button[] buttons = GetComponentsInChildren<Button>(true);
+        foreach (Button button in buttons)
+        {
+            if (button != null && button.name.Equals("Move", System.StringComparison.OrdinalIgnoreCase)) return button;
+        }
+        return null;
     }
 
     /// <summary>

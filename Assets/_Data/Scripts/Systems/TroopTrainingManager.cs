@@ -382,7 +382,10 @@ public class TroopTrainingManager : MonoBehaviour
 
         if (targetSpawner != null)
         {
-            targetSpawner.SpawnOneTrainedSoldier();
+            for (int i = 0; i < 3; i++)
+            {
+                targetSpawner.SpawnOneTrainedSoldier();
+            }
         }
 
         // Ô huấn luyện giữ nguyên trạng thái ĐÃ HOÀN THÀNH (chứa lính)

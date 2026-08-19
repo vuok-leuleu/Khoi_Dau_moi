@@ -65,8 +65,11 @@ public class EnemySpawn : MonoBehaviour
     [Tooltip("Tự động spawn Enemy theo chu kỳ Wave độc lập khi TẮT Tutorial")]
     [SerializeField] private bool autoSpawnWaveAlways = true;
 
+    [Header("Random Enemy Wave Settings")]
+    [SerializeField, Min(1)] private int minWavesBetweenSpawns = 2;
+    [SerializeField, Min(1)] private int maxWavesBetweenSpawns = 4;
+
     [Header("Warning Icon & Attack UI Settings")]
-    [SerializeField] private bool showAttackButton = true;
     [SerializeField] private GameObject warningIconPrefab;
     [SerializeField] private float warningIconHeightOffset = 3f;
     [Header("Manual Route UI")]
@@ -99,6 +102,8 @@ public class EnemySpawn : MonoBehaviour
 
     private Coroutine waveSpawnCoroutine;
     private EnemyRouteWarningUI activeRouteWarning;
+    private readonly List<GameObject> activeWaveEnemies = new List<GameObject>();
+    private int nextSpawnWave = -1;
 
     public void SetAttackTarget(Transform target)
     {
@@ -154,15 +159,9 @@ public class EnemySpawn : MonoBehaviour
 
     private void OnWaveStartHandler(int waveIndex)
     {
-        // Khi đang Tutorial, hoàn toàn KHÔNG tự động spawn quái tấn công thành
-        if (IsTutorialActive()) return;
-
-        // Tự động Spawn đợt Quái mới phù hợp với hệ thống Wave của DayNightManager (xuất hiện ở Wave 1, Wave 4, Wave 7, ...)
-        if (waveIndex == 1 || (waveIndex > 1 && (waveIndex - 1) % 3 == 0))
-        {
-            Debug.Log($"[EnemySpawn] 🔥 DayNightManager phát sự kiện Wave {waveIndex}! Tự động Spawn đợt Quái mới.");
-            SpawnEnemy();
-        }
+        if (IsTutorialActive() || IsWaveInProgress()) return;
+        if (nextSpawnWave < 0) { ScheduleNextSpawn(waveIndex); return; }
+        if (waveIndex >= nextSpawnWave) SpawnEnemy();
     }
 
     private void Start()
@@ -170,14 +169,11 @@ public class EnemySpawn : MonoBehaviour
         SubscribeToWaveEvents();
         GetOrFindAttackTarget();
 
-        // 1. Spawn quái khởi đầu ở Wave 1 nếu spawnOnStart = true và KHÔNG phải Tutorial
-        if (spawnOnStart && !IsTutorialActive())
+        // Không spawn ngay khi vào scene.
+        if (!IsTutorialActive())
         {
-            int currentWave = (DayNightManager.HasInstance && DayNightManager.Ins != null) ? DayNightManager.Ins.CurrentWave : 1;
-            if (currentWave <= 1)
-            {
-                SpawnEnemy();
-            }
+            int currentWave = DayNightManager.HasInstance && DayNightManager.Ins != null ? DayNightManager.Ins.CurrentWave : 1;
+            ScheduleNextSpawn(currentWave);
         }
 
         // Tắt hoàn toàn timer đếm ngược 30s tự động (xóa thời gian spawn theo thời gian)
@@ -200,6 +196,8 @@ public class EnemySpawn : MonoBehaviour
             SubscribeToWaveEvents();
         }
         StopWaveSpawning();
+
+        RefreshActiveWave();
 
         // 🎯 Lắng nghe click chuột vào Căn cứ Địch để hiện nút TẤN CÔNG
         if (Input.GetMouseButtonDown(0))
@@ -293,6 +291,8 @@ public class EnemySpawn : MonoBehaviour
         // Gắn Mũi Tên & Cảnh Báo cho con Thủ Lĩnh (Lead Enemy) - Luôn nằm ở HÀNG ĐẦU VÀ VỊ TRÍ Ở GIỮA
         if (spawnedWaveEnemies.Count > 0)
         {
+            activeWaveEnemies.AddRange(spawnedWaveEnemies);
+            nextSpawnWave = -1;
             Quaternion spawnRot = (sources.Count > 0 && sources[0] != null) ? sources[0].rotation : transform.rotation;
             Vector3 spawnCenter = (sources.Count > 0 && sources[0] != null) ? sources[0].position : transform.position;
 
@@ -323,22 +323,32 @@ public class EnemySpawn : MonoBehaviour
                     activeRouteWarning.Setup(routeStart, routeTarget, leadEnemy, routeWarningHeightOffset);
                 }
             }
-
-            // Gắn Button Tấn Công cho Thủ Lĩnh
-            if (showAttackButton)
-            {
-                UIEnemyWaveButton waveBtn = UIEnemyWaveButton.CreateButton(leadEnemy, warningIconHeightOffset);
-                if (waveBtn != null)
-                {
-                    waveBtn.transform.SetParent(leadEnemy);
-                }
-            }
         }
     }
 
     /// <summary>
     /// Tìm con quái nằm ở HÀNG ĐẦU TIÊN (front row) và CHÍNH GIỮA (center column) của đội hình Wave
     /// </summary>
+    private bool IsWaveInProgress()
+    {
+        activeWaveEnemies.RemoveAll(enemy => enemy == null);
+        return activeWaveEnemies.Count > 0;
+    }
+
+    private void RefreshActiveWave()
+    {
+        if (activeWaveEnemies.Count == 0) return;
+        activeWaveEnemies.RemoveAll(enemy => enemy == null);
+        if (activeWaveEnemies.Count == 0 && !IsTutorialActive()) ScheduleNextSpawn(DayNightManager.HasInstance && DayNightManager.Ins != null ? DayNightManager.Ins.CurrentWave : 1);
+    }
+
+    private void ScheduleNextSpawn(int currentWave)
+    {
+        int minGap = Mathf.Max(1, minWavesBetweenSpawns);
+        int maxGap = Mathf.Max(minGap, maxWavesBetweenSpawns);
+        nextSpawnWave = currentWave + Random.Range(minGap, maxGap + 1);
+    }
+
     private GameObject GetFrontCenterEnemy(List<GameObject> enemies, Quaternion spawnRotation, Vector3 spawnCenter)
     {
         if (enemies == null || enemies.Count == 0) return null;
@@ -513,4 +523,9 @@ public class EnemySpawn : MonoBehaviour
         return enemy;
     }
 }
+
+
+
+
+
 
