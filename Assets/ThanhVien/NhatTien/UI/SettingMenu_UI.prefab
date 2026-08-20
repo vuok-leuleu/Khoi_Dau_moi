@@ -4516,6 +4516,7 @@ GameObject:
   - component: {fileID: 4347644367748896351}
   - component: {fileID: 7697077535287740245}
   - component: {fileID: 8049131056536005670}
+  - component: {fileID: 6646953927783467592}
   m_Layer: 0
   m_Name: SettingMenu_UI
   m_TagString: Untagged
@@ -4593,6 +4594,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SettingsCanvasFixer
   sortOrder: 100
+--- !u!114 &6646953927783467592
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4871115896110435381}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 47bb68dece92ae240be81f46b4f634dd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SettingButtonAudio
+  customClickSound: {fileID: 0}
+  autoBindChildren: 1
+  includeToggles: 1
+  includeDropdowns: 1
 --- !u!1 &4918569660279306792
 GameObject:
   m_ObjectHideFlags: 0

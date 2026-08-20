@@ -41,19 +41,19 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: a07a5fe5504a0594ea3620ae6f27a2c6, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 13.451531
+      value: 1.35
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a07a5fe5504a0594ea3620ae6f27a2c6, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.3939774
+      value: 0.00000068081476
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a07a5fe5504a0594ea3620ae6f27a2c6, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -11.498246
+      value: 4.93
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a07a5fe5504a0594ea3620ae6f27a2c6, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 1
+      value: 0.8930509
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a07a5fe5504a0594ea3620ae6f27a2c6, type: 3}
       propertyPath: m_LocalRotation.x
@@ -61,7 +61,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a07a5fe5504a0594ea3620ae6f27a2c6, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0
+      value: 0.44995558
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a07a5fe5504a0594ea3620ae6f27a2c6, type: 3}
       propertyPath: m_LocalRotation.z
@@ -73,7 +73,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a07a5fe5504a0594ea3620ae6f27a2c6, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
+      value: 53.482
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a07a5fe5504a0594ea3620ae6f27a2c6, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
@@ -87,6 +87,10 @@ PrefabInstance:
       propertyPath: m_Controller
       value: 
       objectReference: {fileID: 9100000, guid: 0435ee635fed63f47851a1cac06de02e, type: 2}
+    - target: {fileID: 5866666021909216657, guid: a07a5fe5504a0594ea3620ae6f27a2c6, type: 3}
+      propertyPath: m_ApplyRootMotion
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
