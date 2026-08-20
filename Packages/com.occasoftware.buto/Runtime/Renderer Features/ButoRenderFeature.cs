@@ -8,6 +8,7 @@ namespace OccaSoftware.Buto.Runtime
 {
     public class ButoRenderFeature : ScriptableRendererFeature
     {
+        private bool warnedXRUnsupported;
         [System.Serializable]
         public class Settings
         {
@@ -22,6 +23,10 @@ namespace OccaSoftware.Buto.Runtime
 
         public override void Create()
         {
+            renderFogPass?.Dispose();
+            if (settings == null)
+                settings = new Settings();
+
             renderFogPass = new RenderFogPass();
             renderFogPass.renderPassEvent = settings.renderPassEvent;
         }
@@ -34,15 +39,30 @@ namespace OccaSoftware.Buto.Runtime
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
-            renderFogPass.RegisterStackComponent();
-            renderFogPass.SetupMaterials(renderingData.cameraData.camera);
+            if (renderingData.cameraData.xrRendering)
+            {
+                if (!warnedXRUnsupported)
+                {
+                    Debug.LogWarning("Buto does not support XR rendering and will be skipped.", this);
+                    warnedXRUnsupported = true;
+                }
+                return;
+            }
+
+            if (renderFogPass == null)
+                return;
+
+            renderFogPass.CleanupDictionary();
 
             Shader.SetGlobalFloat(Params.ButoIsEnabled.Id, 0f);
             Shader.DisableKeyword("Buto");
             if (renderingData.cameraData.camera.cameraType == CameraType.Reflection)
                 return;
 
-#if UNITY_EDITOR 
+            if (renderingData.cameraData.renderType == CameraRenderType.Overlay)
+                return;
+
+#if UNITY_EDITOR
             bool isSceneCamera = renderingData.cameraData.camera.cameraType == CameraType.SceneView;
 
             if (isSceneCamera && UnityEditor.SceneView.currentDrawingSceneView != null && UnityEditor.SceneView.currentDrawingSceneView.sceneViewState != null)
@@ -68,17 +88,12 @@ namespace OccaSoftware.Buto.Runtime
             if (renderingData.cameraData.camera.TryGetComponent<DisableButoRendering>(out _))
                 return;
 
+            renderFogPass.SetupMaterials(renderingData.cameraData.camera);
+            renderFogPass.ConfigureInput(ScriptableRenderPassInput.Depth);
             renderer.EnqueuePass(renderFogPass);
             Shader.SetGlobalFloat(Params.ButoIsEnabled.Id, 1f);
             Shader.EnableKeyword("Buto");
         }
-
-#if !UNITY_6000_4_OR_NEWER
-        public override void SetupRenderPasses(ScriptableRenderer renderer, in RenderingData renderingData)
-        {
-            renderFogPass.ConfigureInput(ScriptableRenderPassInput.Color | ScriptableRenderPassInput.Depth | ScriptableRenderPassInput.Motion);
-        }
-#endif
 
         protected override void Dispose(bool disposing)
         {

@@ -15,7 +15,7 @@ Texture3D<float4> LightingDataTexPrevious;
 Texture3D<float4> MediaData;
 
 #define MAX_LIGHT_COUNT 16
-float _LightCountButo;
+int _LightCountButo;
 float4 _LightPosButo[MAX_LIGHT_COUNT];
 float _LightIntensityButo[MAX_LIGHT_COUNT];
 float4 _LightColorButo[MAX_LIGHT_COUNT];
@@ -219,7 +219,8 @@ float3 GetAdditionalLightData(float3 positionWS)
 {
 	float3 additionalLightsColor = float3(0,0,0);
 	
-	for (int lightIndex = 0; lightIndex < _LightCountButo; lightIndex++)
+	int lightCount = min(_LightCountButo, MAX_LIGHT_COUNT);
+	for (int lightIndex = 0; lightIndex < lightCount; lightIndex++)
 	{
     float falloff = GetLightFalloff(positionWS, _LightPosButo[lightIndex], _LightAngleButo[lightIndex], _LightDirectionButo[lightIndex], buto_LightUp[lightIndex], buto_LightRight[lightIndex], buto_AreaLightDimensions[lightIndex]);
 		float3 lightColor = 
@@ -290,7 +291,7 @@ void EvaluateColorOverrides(in float distance01, inout float3 litColor, inout fl
 		return;
 
     float3 colorSamplesLocal[3];
-	
+
 	[unroll]
   for (int i = 0; i <= 2; i++)
 	{

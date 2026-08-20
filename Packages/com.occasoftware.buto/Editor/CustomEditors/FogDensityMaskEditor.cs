@@ -29,10 +29,10 @@ namespace OccaSoftware.Buto.Editor
         public override void OnInspectorGUI()
         {
             o.Update();
-            EditorGUILayout.PropertyField(Props.shape, new GUIContent("Shape"));
+            EditorGUILayout.PropertyField(Props.shape, EditorGUIUtility.TrTextContent("Shape"));
             EditorGUILayout.PropertyField(
                 Props.mode,
-                new GUIContent(
+                EditorGUIUtility.TrTextContent(
                     "Blend Mode",
                     "Set the blend mode of this fog mask. When set to Multiplicative, the mask will multiply the base fog density by the value set in Density Multiplier. When set to Exclusive, the mask will hide fog outside of its radius."
                 )
@@ -42,7 +42,7 @@ namespace OccaSoftware.Buto.Editor
             {
                 EditorGUILayout.PropertyField(
                     Props.densityMultiplier,
-                    new GUIContent(
+                    EditorGUIUtility.TrTextContent(
                         "Density Multiplier",
                         "Set the multiplier for the base fog. Values below 1 decrease the fog; values above 1 increase the fog. Disabled when in Exclusive blend mode."
                     )
@@ -51,7 +51,7 @@ namespace OccaSoftware.Buto.Editor
 
             EditorGUILayout.PropertyField(
                 Props.blendDistance,
-                new GUIContent(
+                EditorGUIUtility.TrTextContent(
                     "Blend Distance",
                     "Set the distance from the mask's edge at which mask will take full effect. For example, a value of 1 indicates that the mask will take full effect 1 unit outside of the mask bounds."
                 )

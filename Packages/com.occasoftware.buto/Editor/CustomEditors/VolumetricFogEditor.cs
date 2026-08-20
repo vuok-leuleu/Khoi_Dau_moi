@@ -159,7 +159,7 @@ namespace OccaSoftware.Buto.Editor
                 void DrawQualityOption()
                 {
                     EditorGUI.BeginChangeCheck();
-                    PropertyField(qualityLevel, new GUIContent("Quality", "Set the overall quality level. Overrides some default properties."));
+                    PropertyField(qualityLevel, EditorGUIUtility.TrTextContent("Quality", "Set the overall quality level. Overrides some default properties."));
                     if (EditorGUI.EndChangeCheck())
                     {
                         gridPixelSize.overrideState.boolValue = true;
@@ -170,7 +170,7 @@ namespace OccaSoftware.Buto.Editor
                 void DrawIntensityOverrides()
                 {
                     EditorGUILayout.Space();
-                    EditorGUILayout.LabelField(new GUIContent("Intensity Overrides", "Overrides PBR-based intensity."), EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField(EditorGUIUtility.TrTextContent("Intensity Overrides", "Overrides PBR-based intensity."), EditorStyles.boldLabel);
 
                     PropertyField(lightIntensity);
                     PropertyField(densityInLight);
@@ -182,18 +182,18 @@ namespace OccaSoftware.Buto.Editor
                     EditorGUILayout.LabelField("Characteristics", EditorStyles.boldLabel);
                     PropertyField(
                         fogDensity,
-                        new GUIContent("Density", "Set the density of the fog. Affects how far you can see before the fog fully occludes the scene.")
+                        EditorGUIUtility.TrTextContent("Density", "Set the density of the fog. Affects how far you can see before the fog fully occludes the scene.")
                     );
                     PropertyField(
                         anisotropy,
-                        new GUIContent(
+                        EditorGUIUtility.TrTextContent(
                             "Scattering Distribution",
                             "Set how the fog responds to light. A value of 1 means that light scatters forwards, a value of -1 means that light scatters backwards."
                         )
                     );
                     PropertyField(
                         maxDistanceVolumetric,
-                        new GUIContent("View Distance", "Set the maximum extents that the fog will render relative to the camera.")
+                        EditorGUIUtility.TrTextContent("View Distance", "Set the maximum extents that the fog will render relative to the camera.")
                     );
                 }
                 void DrawGeometry()
@@ -202,18 +202,18 @@ namespace OccaSoftware.Buto.Editor
                     EditorGUILayout.LabelField("Geometry", EditorStyles.boldLabel);
                     PropertyField(
                         baseHeight,
-                        new GUIContent("Base", "Set the base of the fog (Y-Axis). Below this point, the fog has a constant density.")
+                        EditorGUIUtility.TrTextContent("Base", "Set the base of the fog (Y-Axis). Below this point, the fog has a constant density.")
                     );
                     PropertyField(
                         attenuationBoundarySize,
-                        new GUIContent("Reach", "Set the reach of the fog (Y-Axis). After the Base + Reach point, the fog is mostly gone.")
+                        EditorGUIUtility.TrTextContent("Reach", "Set the reach of the fog (Y-Axis). After the Base + Reach point, the fog is mostly gone.")
                     );
                 }
                 void DrawCustomColorSettings()
                 {
                     EditorGUILayout.Space();
                     EditorGUILayout.LabelField(
-                        new GUIContent(
+                        EditorGUIUtility.TrTextContent(
                             "Color Overrides",
                             "You can override the default fog color settings using the properties in this section. The color ramp is combined multiplicatively with the individual color settings. The resulting value is lerped to according to the influence slider."
                         ),
@@ -223,17 +223,17 @@ namespace OccaSoftware.Buto.Editor
                     using (new IndentLevelScope(15))
                     {
                         EditorGUILayout.LabelField("Individual", EditorStyles.boldLabel);
-                        PropertyField(litColor, new GUIContent("Lit", "This value will override the default fog color in lit regions of the fog."));
+                        PropertyField(litColor, EditorGUIUtility.TrTextContent("Lit", "This value will override the default fog color in lit regions of the fog."));
                         PropertyField(
                             shadowedColor,
-                            new GUIContent("Shadow", "This value will override the default fog color in shadowed regions of the fog.")
+                            EditorGUIUtility.TrTextContent("Shadow", "This value will override the default fog color in shadowed regions of the fog.")
                         );
-                        PropertyField(emitColor, new GUIContent("Emission", "This value will override the default emission color (black)."));
+                        PropertyField(emitColor, EditorGUIUtility.TrTextContent("Emission", "This value will override the default emission color (black)."));
 
                         EditorGUILayout.LabelField("Ramp", EditorStyles.boldLabel);
                         PropertyField(
                             colorRamp,
-                            new GUIContent("Texture", "This can be used to set a gradient for the lit, shadow, and emission color overrides.")
+                            EditorGUIUtility.TrTextContent("Texture", "This can be used to set a gradient for the lit, shadow, and emission color overrides.")
                         );
                     }
                 }
@@ -241,30 +241,30 @@ namespace OccaSoftware.Buto.Editor
                 {
                     EditorGUILayout.Space();
                     EditorGUILayout.LabelField(
-                        new GUIContent(
+                        EditorGUIUtility.TrTextContent(
                             "Directional Lighting",
                             "You can tint the fog relative to the main light direction. This effect is most prominent when the main light is close to the horizon."
                         ),
                         EditorStyles.boldLabel
                     );
-                    PropertyField(directionalForward, new GUIContent("Forward", "Set the color of the fog when looking toward the main light."));
-                    PropertyField(directionalBack, new GUIContent("Back", "Set the color of the fog when looking away from the main light"));
-                    PropertyField(directionalRatio, new GUIContent("Balance", "Controls the balance between the forward and back lighting."));
+                    PropertyField(directionalForward, EditorGUIUtility.TrTextContent("Forward", "Set the color of the fog when looking toward the main light."));
+                    PropertyField(directionalBack, EditorGUIUtility.TrTextContent("Back", "Set the color of the fog when looking away from the main light"));
+                    PropertyField(directionalRatio, EditorGUIUtility.TrTextContent("Balance", "Controls the balance between the forward and back lighting."));
                 }
                 void DrawQualitySettings()
                 {
                     EditorGUILayout.Space();
                     EditorGUILayout.LabelField(
-                        new GUIContent("Quality", "Configure settings that affect the baseline quality of the Volumetric Fog."),
+                        EditorGUIUtility.TrTextContent("Quality", "Configure settings that affect the baseline quality of the Volumetric Fog."),
                         EditorStyles.boldLabel
                     );
                     PropertyField(
                         gridPixelSize,
-                        new GUIContent("Grid Pixel Size", "Set the number of screen pixels per fog cell. Lower -> Higher Quality")
+                        EditorGUIUtility.TrTextContent("Grid Pixel Size", "Set the number of screen pixels per fog cell. Lower -> Higher Quality")
                     );
                     PropertyField(
                         gridSizeZ,
-                        new GUIContent(
+                        EditorGUIUtility.TrTextContent(
                             "Sample Count",
                             "Set the number of samples between the near and far plane of the fog region. Higher -> Higher Quality."
                         )
@@ -295,7 +295,7 @@ namespace OccaSoftware.Buto.Editor
                     EditorGUILayout.Space();
 
                     EditorGUILayout.LabelField(
-                        new GUIContent(
+                        EditorGUIUtility.TrTextContent(
                             "Volume Noise Source",
                             "Configure the noise texture that will be used for rendering. You can load your own 3D Texture or configure the parameters used to generate a texture."
                         ),
@@ -304,8 +304,8 @@ namespace OccaSoftware.Buto.Editor
 
                     EditorGUI.BeginChangeCheck();
                     EditorGUI.indentLevel++;
-                    EditorGUILayout.PropertyField(volumeNoise.overrideState, new GUIContent("Override Volume Noise"));
-                    EditorGUILayout.PropertyField(p_noiseType, new GUIContent("Type"));
+                    EditorGUILayout.PropertyField(volumeNoise.overrideState, EditorGUIUtility.TrTextContent("Override Volume Noise"));
+                    EditorGUILayout.PropertyField(p_noiseType, EditorGUIUtility.TrTextContent("Type"));
                     switch (p_noiseType.enumValueIndex)
                     {
                         case (int)VolumeNoise.NoiseType.None:
@@ -320,14 +320,14 @@ namespace OccaSoftware.Buto.Editor
 
                     void DrawTextureControls()
                     {
-                        EditorGUILayout.PropertyField(p_userTexture, new GUIContent("Texture"));
+                        EditorGUILayout.PropertyField(p_userTexture, EditorGUIUtility.TrTextContent("Texture"));
                     }
 
                     void DrawNoiseControls()
                     {
                         EditorGUI.indentLevel++;
-                        EditorGUILayout.PropertyField(p_noiseQuality, new GUIContent("Quality"));
-                        EditorGUILayout.IntSlider(p_frequency, 1, 32, new GUIContent("Frequency"));
+                        EditorGUILayout.PropertyField(p_noiseQuality, EditorGUIUtility.TrTextContent("Quality"));
+                        EditorGUILayout.IntSlider(p_frequency, 1, 32, EditorGUIUtility.TrTextContent("Frequency"));
                         EditorGUILayout.IntSlider(p_octaves, 1, 8);
                         using (new IndentLevelScope(15))
                         {
@@ -356,7 +356,7 @@ namespace OccaSoftware.Buto.Editor
                 {
                     EditorGUILayout.Space();
                     EditorGUILayout.LabelField(
-                        new GUIContent(
+                        EditorGUIUtility.TrTextContent(
                             "Volume Noise Rendering",
                             "Configure noise rendering parameters. Describes how the Noise Texture from the Volume Noise Source section will be sampled."
                         ),
@@ -364,12 +364,12 @@ namespace OccaSoftware.Buto.Editor
                     );
                     PropertyField(
                         noiseTiling,
-                        new GUIContent("Scale", "Set the scale of the noise texture. Bigger means the noise tiles less frequently.")
+                        EditorGUIUtility.TrTextContent("Scale", "Set the scale of the noise texture. Bigger means the noise tiles less frequently.")
                     );
-                    PropertyField(noiseWindSpeed, new GUIContent("Wind Speed", "Set the wind speed. Causes the fog to move throug the scene."));
+                    PropertyField(noiseWindSpeed, EditorGUIUtility.TrTextContent("Wind Speed", "Set the wind speed. Causes the fog to move throug the scene."));
                     PropertyField(
                         noiseMap,
-                        new GUIContent(
+                        EditorGUIUtility.TrTextContent(
                             "Remapping",
                             "Set the mapping for the fog values. Fog below the min is cut off. Fog above the max is at full density."
                         )
@@ -377,7 +377,7 @@ namespace OccaSoftware.Buto.Editor
                     EditorGUILayout.LabelField("Advanced", EditorStyles.label);
                     PropertyField(
                         octaves,
-                        new GUIContent(
+                        EditorGUIUtility.TrTextContent(
                             "Octaves",
                             "Allows you to resample the noise texture to add additional levels of detail. High performance cost."
                         )
@@ -386,14 +386,14 @@ namespace OccaSoftware.Buto.Editor
                     {
                         PropertyField(
                             lacunarity,
-                            new GUIContent(
+                            EditorGUIUtility.TrTextContent(
                                 "Lacunarity",
                                 "Sets the rate of frequency increase during resampling. A value of 2 means that each octave doubles in frequency."
                             )
                         );
                         PropertyField(
                             gain,
-                            new GUIContent(
+                            EditorGUIUtility.TrTextContent(
                                 "Gain",
                                 "Set the rate of amplitude decay during resampling. A value of 0.5 means that octave halves in strength."
                             )
@@ -405,7 +405,7 @@ namespace OccaSoftware.Buto.Editor
                 {
                     EditorGUILayout.Space();
                     EditorGUILayout.LabelField(
-                        new GUIContent(
+                        EditorGUIUtility.TrTextContent(
                             "Temporal Anti-Aliasing",
                             "Set and configure Temporal Anti-Aliasing. Temporal Anti-Aliasing reduces noise and increases overall fog quality. Can cause artifacts when the camera or objects in scene are in motion."
                         ),
@@ -421,7 +421,7 @@ namespace OccaSoftware.Buto.Editor
                     EditorGUILayout.LabelField("Advanced Settings", EditorStyles.boldLabel);
                     PropertyField(
                         depthRatio,
-                        new GUIContent(
+                        EditorGUIUtility.TrTextContent(
                             "Depth Balance",
                             "Sets the rate of change for the cell size in the forward direction. Higher values compress the cells closer to the camera. A value of 1 causes each cell to be equally sized along the forward direction. Smaller values compress the cells further from the camera. Increase this for more detail nearby at the cost of less detail far away."
                         )

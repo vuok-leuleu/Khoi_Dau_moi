@@ -1,7 +1,10 @@
 fileFormatVersion: 2
 guid: 276495728febb3444a37cceb59a42eca
 TextureImporter:
-  internalIDToNameTable: []
+  internalIDToNameTable:
+  - first:
+      213: 605162050437240712
+    second: sun_0
   externalObjects: {}
   serializedVersion: 12
   mipmaps:
@@ -120,7 +123,7 @@ TextureImporter:
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 3
-    buildTarget: iPhone
+    buildTarget: iOS
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
@@ -147,7 +150,28 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
-    sprites: []
+    sprites:
+    - serializedVersion: 2
+      name: sun_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 887dbd7bda7f56800800000000000000
+      internalID: 605162050437240712
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     physicsShape: []
     bones: []
@@ -158,7 +182,8 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      sun_0: 605162050437240712
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
@@ -168,6 +193,6 @@ AssetOrigin:
   serializedVersion: 1
   productId: 258881
   packageName: Buto - Volumetric Fog and Volumetric Lighting for URP
-  packageVersion: 7.12.7
+  packageVersion: 7.13.1
   assetPath: Packages/com.occasoftware.buto/Editor/Icons/sun.png
-  uploadId: 885194
+  uploadId: 977558

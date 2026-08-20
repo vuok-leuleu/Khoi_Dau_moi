@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using System.Linq;
 
 namespace OccaSoftware.Buto.Runtime
 {
@@ -232,10 +231,22 @@ namespace OccaSoftware.Buto.Runtime
 
         public static void SortByDistance(Vector3 c)
         {
-            _Lights = _Lights.OrderBy(x => x.GetSqrMagnitude(c)).ToList();
+            distanceComparer.Center = c;
+            _Lights.Sort(distanceComparer);
         }
 
-        private static List<ButoLight> _Lights = new List<ButoLight>();
+        private sealed class DistanceComparer : IComparer<ButoLight>
+        {
+            public Vector3 Center;
+
+            public int Compare(ButoLight x, ButoLight y)
+            {
+                return x.GetSqrMagnitude(Center).CompareTo(y.GetSqrMagnitude(Center));
+            }
+        }
+
+        private static readonly DistanceComparer distanceComparer = new DistanceComparer();
+        private static readonly List<ButoLight> _Lights = new List<ButoLight>();
         public static List<ButoLight> Lights
         {
             get { return _Lights; }
