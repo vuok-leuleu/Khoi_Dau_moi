@@ -33,36 +33,24 @@ MonoBehaviour:
   qualityLevel:
     m_OverrideState: 0
     m_Value: 2
-  sampleCount:
+  gridPixelSize:
     m_OverrideState: 0
-    m_Value: 48
-  animateSamplePosition:
+    m_Value: 12
+  gridSizeZ:
     m_OverrideState: 0
-    m_Value: 0
-  selfShadowingEnabled:
-    m_OverrideState: 0
-    m_Value: 1
-  maximumSelfShadowingOctaves:
-    m_OverrideState: 0
-    m_Value: 1
-  horizonShadowingEnabled:
-    m_OverrideState: 0
-    m_Value: 1
+    m_Value: 160
   maxDistanceVolumetric:
     m_OverrideState: 1
     m_Value: 128
-  analyticFogEnabled:
-    m_OverrideState: 1
-    m_Value: 0
-  maxDistanceAnalytic:
+  depthRatio:
     m_OverrideState: 0
-    m_Value: 5000
-  temporalAntiAliasingEnabled:
-    m_OverrideState: 1
-    m_Value: 0
-  temporalAntiAliasingIntegrationRate:
+    m_Value: 2
+  temporalAALighting:
     m_OverrideState: 0
-    m_Value: 0.03
+    m_Value: 0.05
+  temporalAAMedia:
+    m_OverrideState: 0
+    m_Value: 0.05
   fogDensity:
     m_OverrideState: 0
     m_Value: 5
@@ -72,9 +60,18 @@ MonoBehaviour:
   lightIntensity:
     m_OverrideState: 0
     m_Value: 1
-  shadowIntensity:
+  densityInLight:
     m_OverrideState: 0
     m_Value: 1
+  densityInShadow:
+    m_OverrideState: 0
+    m_Value: 1
+  overrideDefaultMaxLightDistance:
+    m_OverrideState: 0
+    m_Value: 0
+  maxLightDistance:
+    m_OverrideState: 0
+    m_Value: 64
   baseHeight:
     m_OverrideState: 0
     m_Value: 0
@@ -93,6 +90,9 @@ MonoBehaviour:
   colorRamp:
     m_OverrideState: 0
     m_Value: {fileID: 0}
+  colorRampId:
+    m_OverrideState: 0
+    m_Value: 0
   colorInfluence:
     m_OverrideState: 0
     m_Value: 0

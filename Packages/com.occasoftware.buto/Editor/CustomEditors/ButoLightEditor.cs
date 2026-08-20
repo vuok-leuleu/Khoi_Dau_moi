@@ -43,7 +43,7 @@ namespace OccaSoftware.Buto.Editor
             if (Props.inheritDataFromLightComponent.boolValue)
             {
                 EditorGUI.BeginDisabledGroup(true);
-                EditorGUILayout.PropertyField(Props.lightComponent, new GUIContent("Light"));
+                EditorGUILayout.PropertyField(Props.lightComponent, EditorGUIUtility.TrTextContent("Light"));
                 if (Props.lightComponent.objectReferenceValue != null)
                 {
                     Light light = (Light)Props.lightComponent.objectReferenceValue;
@@ -59,14 +59,14 @@ namespace OccaSoftware.Buto.Editor
 
                 EditorGUI.EndDisabledGroup();
 
-               
+
             }
 
             if (!Props.inheritDataFromLightComponent.boolValue || Props.lightComponent.objectReferenceValue == null)
             {
-                EditorGUILayout.PropertyField(Props.lightColor, new GUIContent("Color"));
-                EditorGUILayout.PropertyField(Props.lightIntensity, new GUIContent("Intensity"));
-                EditorGUILayout.PropertyField(Props.lightRange, new GUIContent("Range"));
+                EditorGUILayout.PropertyField(Props.lightColor, EditorGUIUtility.TrTextContent("Color"));
+                EditorGUILayout.PropertyField(Props.lightIntensity, EditorGUIUtility.TrTextContent("Intensity"));
+                EditorGUILayout.PropertyField(Props.lightRange, EditorGUIUtility.TrTextContent("Range"));
             }
 
             EditorGUILayout.PropertyField(Props.bias);

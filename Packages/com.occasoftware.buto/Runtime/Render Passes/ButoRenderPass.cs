@@ -4,7 +4,7 @@ using UnityEngine.Rendering.Universal;
 using System.Collections.Generic;
 using System;
 
-#if UNITY_2023_3_OR_NEWER
+#if OCCA_URP_17_OR_NEWER
 using UnityEngine.Rendering.RenderGraphModule;
 #endif
 
@@ -101,6 +101,7 @@ namespace OccaSoftware.Buto.Runtime
                 if (rt.lightingDataRtPrev != null)
                 {
                     rt.lightingDataRtPrev.Release();
+                    CoreUtils.Destroy(rt.lightingDataRtPrev);
                 }
 
                 rt.lightingDataRtPrev = new RenderTexture(volumeDescriptor);
@@ -113,6 +114,7 @@ namespace OccaSoftware.Buto.Runtime
                 if (rt.mediaDataRtPrev != null)
                 {
                     rt.mediaDataRtPrev.Release();
+                    CoreUtils.Destroy(rt.mediaDataRtPrev);
                 }
 
                 rt.mediaDataRtPrev = new RenderTexture(volumeDescriptor);
@@ -164,7 +166,10 @@ namespace OccaSoftware.Buto.Runtime
 
             foreach (KeyValuePair<Camera, RTData> kvp in kvps)
             {
-                if (kvp.Value.time - Time.realtimeSinceStartup > 0.5f)
+                if (
+                  kvp.Key == null
+                  || Time.realtimeSinceStartup - kvp.Value.time > 0.5f
+                )
                 {
                     removeList.Add(kvp.Key);
                 }
@@ -172,6 +177,9 @@ namespace OccaSoftware.Buto.Runtime
 
             foreach (Camera cam in removeList)
             {
+                RTData value = kvps[cam];
+                ReleaseAndDestroy(value.lightingDataRtPrev);
+                ReleaseAndDestroy(value.mediaDataRtPrev);
                 kvps.Remove(cam);
             }
         }
@@ -217,37 +225,45 @@ namespace OccaSoftware.Buto.Runtime
         }
 
 
-#if UNITY_2023_3_OR_NEWER
+#if OCCA_URP_17_OR_NEWER
         public class PassData
         {
+            public RenderFogPass RenderPass;
             public TextureHandle Source;
             public Camera Camera;
         }
 
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
         {
-            // Setting up the render pass in RenderGraph
-            using (var builder = renderGraph.AddUnsafePass<PassData>(profilerTag, out var passData))
-            {
-                var cameraData = frameData.Get<UniversalCameraData>();
-                var resourceData = frameData.Get<UniversalResourceData>();
+            UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
+            UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
+            TextureHandle source = resourceData.activeColorTexture;
+            if (!source.IsValid())
+                return;
 
-                TextureHandle rtHandle = UniversalRenderer.CreateRenderGraphTexture(
-                     renderGraph,
-                     ConfigurePass(cameraData.cameraTargetDescriptor, cameraData.camera),
-                     butoTextureId,
-                     false
-                 );
+            ConfigurePass(cameraData.cameraTargetDescriptor, cameraData.camera);
+            TextureHandle merge = renderGraph.ImportTexture(mergeTarget);
+            TextureHandle isolated = renderGraph.ImportTexture(isolatedBlitTarget);
+            TextureHandle media = renderGraph.ImportTexture(mediaTarget);
+            TextureHandle lighting = renderGraph.ImportTexture(lightingTarget);
+            TextureHandle integrator = renderGraph.ImportTexture(integratorTarget);
 
-                passData.Source = resourceData.cameraColor;
-                passData.Camera = cameraData.camera;
-
-                builder.UseTexture(passData.Source, AccessFlags.WriteAll);
-
-                builder.AllowPassCulling(false);
-
-                builder.SetRenderFunc((PassData data, UnsafeGraphContext context) => ExecutePass(data, context));
-            }
+            using var builder = renderGraph.AddUnsafePass<PassData>(profilerTag, out var passData);
+            passData.RenderPass = this;
+            passData.Source = source;
+            passData.Camera = cameraData.camera;
+            builder.UseTexture(source, AccessFlags.ReadWrite);
+            builder.UseTexture(merge, AccessFlags.ReadWrite);
+            builder.UseTexture(isolated, AccessFlags.ReadWrite);
+            builder.UseTexture(media, AccessFlags.ReadWrite);
+            builder.UseTexture(lighting, AccessFlags.ReadWrite);
+            builder.UseTexture(integrator, AccessFlags.ReadWrite);
+            builder.AllowPassCulling(false);
+            builder.AllowGlobalStateModification(true);
+            builder.SetRenderFunc(
+              static (PassData data, UnsafeGraphContext context) =>
+                data.RenderPass.ExecutePass(data, context)
+            );
         }
 
         private void ExecutePass(PassData data, UnsafeGraphContext context)
@@ -258,8 +274,8 @@ namespace OccaSoftware.Buto.Runtime
         }
 #endif
 
-#if !UNITY_6000_4_OR_NEWER
-#if UNITY_2023_3_OR_NEWER
+#if !OCCA_URP_17_4_OR_NEWER
+#if OCCA_URP_17_OR_NEWER
         [Obsolete]
 #endif
         public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
@@ -304,8 +320,8 @@ namespace OccaSoftware.Buto.Runtime
         }
 
 
-#if !UNITY_6000_4_OR_NEWER
-#if UNITY_2023_3_OR_NEWER
+#if !OCCA_URP_17_4_OR_NEWER
+#if OCCA_URP_17_OR_NEWER
         [Obsolete]
 #endif
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
@@ -390,23 +406,33 @@ namespace OccaSoftware.Buto.Runtime
             isolatedBlitTarget = null;
             mergeTarget = null;
 
-            try
+            foreach (RTData value in kvps.Values)
             {
-                foreach (RTData value in kvps.Values)
-                {
-                    value.lightingDataRtPrev.Release();
-                    value.mediaDataRtPrev.Release();
-                }
+                ReleaseAndDestroy(value.lightingDataRtPrev);
+                ReleaseAndDestroy(value.mediaDataRtPrev);
             }
-            catch { }
-
-
             kvps.Clear();
+
+            CoreUtils.Destroy(mergeMaterial);
+            CoreUtils.Destroy(upscaleMaterial);
+            CoreUtils.Destroy(whiteTexture);
+            mergeMaterial = null;
+            upscaleMaterial = null;
+            whiteTexture = null;
         }
 
         public override void FrameCleanup(CommandBuffer cmd)
         {
             CleanupDictionary();
+        }
+
+        private static void ReleaseAndDestroy(RenderTexture texture)
+        {
+            if (texture == null)
+                return;
+
+            texture.Release();
+            CoreUtils.Destroy(texture);
         }
 
         private void SetupData(CommandBuffer cmd, Camera camera)
@@ -640,17 +666,17 @@ namespace OccaSoftware.Buto.Runtime
         {
             UnityEngine.Profiling.Profiler.BeginSample("Buto_Setup Additional Light Data");
 
-            int lightCount = Mathf.Min(ButoLight.Lights.Count, ButoCommon._MAXLIGHTCOUNT);
+            int registeredLightCount = ButoLight.Lights.Count;
+            if (registeredLightCount > ButoCommon._MAXLIGHTCOUNT)
+            {
+                ButoLight.SortByDistance(camera.transform.position);
+            }
+
+            int lightCount = Mathf.Min(registeredLightCount, ButoCommon._MAXLIGHTCOUNT);
             cmd.SetGlobalInt(Params.LightCountButo.Id, lightCount);
 
             if (lightCount > 0)
             {
-                if (lightCount > ButoCommon._MAXLIGHTCOUNT)
-                {
-                    ButoLight.SortByDistance(camera.transform.position);
-                    lightCount = Mathf.Min(ButoLight.Lights.Count, ButoCommon._MAXLIGHTCOUNT);
-                }
-
                 for (int i = 0; i < lightCount; i++)
                 {
                     lightPosition[i] = ButoLight.Lights[i].LightPosition;

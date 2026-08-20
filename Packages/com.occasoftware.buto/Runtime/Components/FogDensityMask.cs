@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using System.Linq;
 
 namespace OccaSoftware.Buto.Runtime
 {
@@ -61,10 +60,22 @@ namespace OccaSoftware.Buto.Runtime
 
         public static void SortByDistance(Vector3 c)
         {
-            fogVolumes = fogVolumes.OrderBy(x => x.GetSqrMagnitude(c)).ToList();
+            distanceComparer.Center = c;
+            fogVolumes.Sort(distanceComparer);
         }
 
-        private static List<FogDensityMask> fogVolumes = new List<FogDensityMask>();
+        private sealed class DistanceComparer : IComparer<FogDensityMask>
+        {
+            public Vector3 Center;
+
+            public int Compare(FogDensityMask x, FogDensityMask y)
+            {
+                return x.GetSqrMagnitude(Center).CompareTo(y.GetSqrMagnitude(Center));
+            }
+        }
+
+        private static readonly DistanceComparer distanceComparer = new DistanceComparer();
+        private static readonly List<FogDensityMask> fogVolumes = new List<FogDensityMask>();
         public static List<FogDensityMask> FogVolumes
         {
             get { return fogVolumes; }

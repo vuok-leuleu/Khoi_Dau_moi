@@ -129,12 +129,12 @@ MonoBehaviour:
   volumeNoise:
     m_OverrideState: 1
     m_Value:
-      frequency: 8
-      octaves: 4
-      lacunarity: 2
-      gain: 0.35
+      frequency: 1
+      octaves: 8
+      lacunarity: 10
+      gain: 1
       seed: 0
       noiseType: 4
       noiseQuality: 2
-      invert: 0
+      invert: 1
       userTexture: {fileID: 0}

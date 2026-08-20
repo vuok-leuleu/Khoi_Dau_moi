@@ -1,4 +1,5 @@
 using System;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -7,6 +8,28 @@ namespace OccaSoftware.Buto.Runtime
     [Serializable]
     public class VolumeNoise
     {
+        private static readonly NoiseType[] NoiseTypes =
+        {
+            NoiseType.None,
+            NoiseType.Texture,
+            NoiseType.Perlin,
+            NoiseType.Worley,
+            NoiseType.PerlinWorley,
+            NoiseType.Billow,
+            NoiseType.Curl
+        };
+
+        private static readonly string[] NoiseKeywords =
+        {
+            "_TYPE_NONE",
+            "_TYPE_TEXTURE",
+            "_TYPE_PERLIN",
+            "_TYPE_WORLEY",
+            "_TYPE_PERLINWORLEY",
+            "_TYPE_BILLOW",
+            "_TYPE_CURL"
+        };
+
         Texture3D volumeTex;
         Material material;
         bool isDirty;
@@ -117,10 +140,17 @@ namespace OccaSoftware.Buto.Runtime
 
         private void BakeEmpty()
         {
-            Color[] emptyColors = new Color[resolution * resolution * resolution];
-            Array.Fill(emptyColors, Color.white);
-            volumeTex.SetPixels(emptyColors);
+            NativeArray<Color32> emptyColors = new NativeArray<Color32>(
+                resolution * resolution * resolution,
+                Allocator.Temp,
+                NativeArrayOptions.UninitializedMemory
+            );
+            Color32 white = new Color32(byte.MaxValue, byte.MaxValue, byte.MaxValue, byte.MaxValue);
+            for (int i = 0; i < emptyColors.Length; i++)
+                emptyColors[i] = white;
+            volumeTex.SetPixelData(emptyColors, 0);
             volumeTex.Apply(true);
+            emptyColors.Dispose();
         }
 
         private void BakeTexture()
@@ -152,25 +182,23 @@ namespace OccaSoftware.Buto.Runtime
 
             material.EnableKeyword("_GRAYSCALE_ON");
 
-            Array enumValues = Enum.GetValues(typeof(NoiseType));
-            foreach (NoiseType t in enumValues)
+            for (int i = 0; i < NoiseTypes.Length; i++)
             {
-                string keyword = "_TYPE_" + t.ToString().ToUpperInvariant();
-                if (t == noiseType)
-                {
-                    material.EnableKeyword(keyword);
-                }
+                if (NoiseTypes[i] == noiseType)
+                    material.EnableKeyword(NoiseKeywords[i]);
                 else
-                {
-                    material.DisableKeyword(keyword);
-                }
+                    material.DisableKeyword(NoiseKeywords[i]);
             }
 
             Texture2D tempTex = new Texture2D(resolution, resolution, TextureFormat.RGBA32, 0, true);
             RenderTexture.active = rt;
             int voxelCount = resolution * resolution * resolution;
             int sliceResolution = resolution * resolution;
-            Color[] colors = new Color[voxelCount];
+            using NativeArray<Color32> colors = new NativeArray<Color32>(
+                voxelCount,
+                Allocator.Temp,
+                NativeArrayOptions.UninitializedMemory
+            );
 
             for (int slice = 0; slice < resolution; slice++)
             {
@@ -179,18 +207,15 @@ namespace OccaSoftware.Buto.Runtime
 
                 Graphics.Blit(null, rt, material);
                 tempTex.ReadPixels(new Rect(0, 0, resolution, resolution), 0, 0);
-                Color[] sliceColors = tempTex.GetPixels();
+                NativeArray<Color32> sliceColors = tempTex.GetPixelData<Color32>(0);
 
                 int sliceBaseIndex = slice * sliceResolution;
-                for (int pixel = 0; pixel < sliceResolution; pixel++)
-                {
-                    colors[sliceBaseIndex + pixel] = sliceColors[pixel];
-                }
+                NativeArray<Color32>.Copy(sliceColors, 0, colors, sliceBaseIndex, sliceResolution);
             }
 
             CoreUtils.Destroy(tempTex);
 
-            volumeTex.SetPixels(colors);
+            volumeTex.SetPixelData(colors, 0);
             volumeTex.Apply(true);
 
             RenderTexture.active = null;

@@ -16,7 +16,7 @@ namespace OccaSoftware.Buto.Runtime
                float mipMapBias = 0,
                string name = "")
         {
-#if UNITY_2023_3_OR_NEWER
+#if OCCA_URP_17_OR_NEWER
             return RenderingUtils.ReAllocateHandleIfNeeded(ref handle, descriptor, filterMode, wrapMode, anisoLevel, mipMapBias, name);
 #else
             return RenderingUtils.ReAllocateIfNeeded(ref handle, descriptor, filterMode, wrapMode, isShadowMap, anisoLevel, mipMapBias, name);

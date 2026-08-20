@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 [Changelog also available online](https://www.occasoftware.com/changelogs/buto)
 
+## [7.13.1] - 2026-08-19
+
+### Fixed
+
+- Limited volumetric lighting to the nearest 16 Buto Lights and clamped the compute-shader light loop to the fixed GPU array capacity.
+
+## [7.13.0] - 2026-08-17
+
+### Changed
+
+- Added Unity 6.7 support.
+- Declared Collections 1.2.4 for temporary native noise-bake buffers.
+- Reused RenderGraph callbacks, sorted light and mask collections in place, and cached inspector content.
+- Added URP 17 RenderGraph support while retaining the URP 14–16 compatibility path.
+- Declared URP 14.0.7 as the minimum render-pipeline dependency.
+
+### Fixed
+
+- Kept legacy render-pass callbacks through URP 17.3 and excluded them from URP 17.4 and newer, where Unity removed the API.
+- Removed large managed arrays, per-slice pixel arrays, enum boxing, and generated keyword strings from volume-noise baking.
+- Fixed per-camera history pruning and released render passes, materials, history textures, and fallback resources correctly.
+- Deferred history allocation until after camera and volume eligibility checks and skipped overlay-camera history.
+- Restored Unity 6 depth input and declared camera color as read-write during the RenderGraph fog merge.
+- Skips unsupported XR cameras instead of rendering invalid eye data.
+- Removed the editor behavior that modified customer scripting define symbols.
+
 ## [7.12.7] - 2026-03-20
 
 ### Fixed
