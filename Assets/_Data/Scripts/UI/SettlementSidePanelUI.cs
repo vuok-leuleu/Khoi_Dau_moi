@@ -195,7 +195,7 @@ public class SettlementSidePanelUI : MonoBehaviour
         {
             if (hasEnemy)
             {
-                settlementLevelTMP.text = "<color=red>ĐÁNH ĐỊCH CHINH PHỤC</color>";
+                settlementLevelTMP.text = "<color=red>CHINH PHỤC</color>";
             }
             else if (isTownHallBuilt)
             {
@@ -203,7 +203,7 @@ public class SettlementSidePanelUI : MonoBehaviour
             }
             else
             {
-                settlementLevelTMP.text = "<color=orange>CHƯA CÓ NHÀ CHÍNH</color>";
+                settlementLevelTMP.text = "<color=orange>CHƯA CHIẾM ĐÓNG</color>";
             }
         }
 

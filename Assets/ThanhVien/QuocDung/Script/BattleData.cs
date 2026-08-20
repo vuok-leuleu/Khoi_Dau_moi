@@ -83,20 +83,7 @@ public static class BattleData
             }
             else
             {
-                // 🔥 Tải lại toàn bộ công trình từ file Save JSON khi quay lại Scene chính
-                BuildingSystem buildingSys = BuildingSystem.Ins != null ? BuildingSystem.Ins : Object.FindFirstObjectByType<BuildingSystem>();
-                if (buildingSys != null)
-                {
-                    buildingSys.LoadBuildingsFromSlot(1);
-                }
-            }
-
-            // 🔥 PHỤC HỒI TIẾN TRÌNH WAVE & TIẾN TRÌNH DI CHUYỂN CỦA QUÁI VÀ LÍNH
-            RestoreWaveAndMarchProgress();
-
-            if (HasResult)
-            {
-                ApplyBattleResultToScene();
+                BattleReturnRestoreRunner.RestoreWhenSceneReady();
             }
         }
     }
@@ -113,6 +100,15 @@ public static class BattleData
             MainSceneName = currentScene.name;
         }
 
+        SettlementZone[] settlementZones = Object.FindObjectsByType<SettlementZone>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (SettlementZone settlementZone in settlementZones)
+        {
+            if (settlementZone != null)
+            {
+                settlementZone.SaveSettlementState();
+            }
+        }
+        PlayerPrefs.Save();
         // 🔥 Lưu toàn bộ công trình hiện có ở Main Scene vào file Save JSON trước khi sang Battle Scene
         BuildingSystem buildingSys = BuildingSystem.Ins != null ? BuildingSystem.Ins : Object.FindFirstObjectByType<BuildingSystem>();
         if (buildingSys != null)
@@ -194,7 +190,7 @@ public static class BattleData
 
         // 4. Tìm tất cả các công trình UpgradeableBuilding trong scene
         UpgradeableBuilding[] buildings = Object.FindObjectsByType<UpgradeableBuilding>(FindObjectsSortMode.None);
-        
+
         foreach (var building in buildings)
         {
             if (building == null || !building.gameObject.activeInHierarchy) continue;
@@ -234,7 +230,7 @@ public static class BattleData
         Debug.Log($"[BattleData] Đã lưu dữ liệu Trận Đấu: MainScene = {MainSceneName}, CurrentWave = {SavedCurrentWave}, Enemy Wave Count = {EnemyWaveCount}, Quái hành quân = {SavedEnemyMarches.Count}, Lính xuất trận = {SavedSoldierMarches.Count}");
     }
 
-    private static void RestoreWaveAndMarchProgress()
+    internal static void RestoreWaveAndMarchProgress()
     {
         // 1. Phục hồi số Wave hiện tại trên DayNightManager
         if (DayNightManager.HasInstance && DayNightManager.Ins != null && SavedCurrentWave > 0)
@@ -494,5 +490,50 @@ public static class BattleData
             default:
                 return false;
         }
+    }
+}
+
+internal sealed class BattleReturnRestoreRunner : MonoBehaviour
+{
+    private static BattleReturnRestoreRunner instance;
+    private bool restoreQueued;
+
+    public static void RestoreWhenSceneReady()
+    {
+        if (instance == null)
+        {
+            GameObject runnerObject = new GameObject(nameof(BattleReturnRestoreRunner));
+            DontDestroyOnLoad(runnerObject);
+            instance = runnerObject.AddComponent<BattleReturnRestoreRunner>();
+        }
+
+        if (instance.restoreQueued) return;
+
+        instance.restoreQueued = true;
+        instance.StartCoroutine(instance.RestoreAfterSceneInitialization());
+    }
+
+    private System.Collections.IEnumerator RestoreAfterSceneInitialization()
+    {
+        yield return null;
+
+        BuildingSystem buildingSystem = Object.FindFirstObjectByType<BuildingSystem>();
+        if (buildingSystem != null)
+        {
+            buildingSystem.LoadBuildingsFromSlot(1);
+        }
+        else
+        {
+            Debug.LogWarning("[BattleData] Không tìm thấy BuildingSystem để khôi phục công trình sau Battle.");
+        }
+
+        BattleData.RestoreWaveAndMarchProgress();
+
+        if (BattleData.HasResult)
+        {
+            BattleData.ApplyBattleResultToScene();
+        }
+
+        restoreQueued = false;
     }
 }

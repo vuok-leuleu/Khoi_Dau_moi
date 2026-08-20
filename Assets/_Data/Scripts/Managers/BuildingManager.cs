@@ -130,6 +130,8 @@ public class BuildingManager : Singleton<BuildingManager>
                 isBuilt = true
             };
 
+            state.slotIndex = ub.slotIndex;
+
             // Lấy chính xác level hiện tại của từng công trình
             SettlementZone parentZone = ub.GetComponentInParent<SettlementZone>();
             if (parentZone == null) parentZone = FindClosestZone(ub.transform.position);
@@ -204,8 +206,14 @@ public class BuildingManager : Singleton<BuildingManager>
             SettlementZone targetZone = FindClosestZone(targetPos);
             UpgradeableBuilding targetUb = null;
 
-            // 1. Nếu là Nhà Chính (House): Khớp thẳng với Nhà Chính của Vùng đất tương ứng
-            if (state.buildingType == BuildingType.House && targetZone != null)
+            // 1. Nếu là công trình trong slot (slotIndex >= 0): Ưu tiên khớp theo slotIndex trong Vùng đất tương ứng
+            if (targetZone != null && state.slotIndex >= 0)
+            {
+                targetUb = targetZone.GetBuildingAtSlot(state.slotIndex);
+            }
+
+            // 2. Nếu là Nhà Chính (slotIndex < 0): Khớp thẳng với Nhà Chính của Vùng đất tương ứng
+            if (targetUb == null && state.slotIndex < 0 && targetZone != null)
             {
                 if (targetZone.townHallBuilding != null)
                 {
@@ -216,19 +224,13 @@ public class BuildingManager : Singleton<BuildingManager>
                     UpgradeableBuilding[] zoneUbs = targetZone.GetComponentsInChildren<UpgradeableBuilding>(true);
                     foreach (var ub in zoneUbs)
                     {
-                        if (ub != null && (ub.buildingType == BuildingType.House || SettlementZone.IsTownHallBuilding(ub, targetZone)))
+                        if (ub != null && SettlementZone.IsTownHallBuilding(ub, targetZone))
                         {
                             targetUb = ub;
                             break;
                         }
                     }
                 }
-            }
-
-            // 2. Nếu có slotIndex >= 0: Ưu tiên khớp theo slotIndex trong Vùng đất tương ứng
-            if (targetUb == null && targetZone != null && state.slotIndex >= 0)
-            {
-                targetUb = targetZone.GetBuildingAtSlot(state.slotIndex);
             }
 
             // 3. Fallback khớp theo khoảng cách trong Vùng đất tương ứng hoặc toàn Scene

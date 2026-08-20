@@ -327,8 +327,20 @@ public class SettlementZone : MonoBehaviour
 
     private void Awake()
     {
+        if (string.IsNullOrEmpty(settlementName) || (settlementName == "ZEFFIRA" && gameObject.name != "ZEFFIRA"))
+        {
+            settlementName = gameObject.name;
+        }
         if (townHallPoint == null) townHallPoint = transform;
         LoadSettlementState();
+    }
+
+    private void OnValidate()
+    {
+        if (string.IsNullOrEmpty(settlementName) || (settlementName == "ZEFFIRA" && gameObject.name != "ZEFFIRA"))
+        {
+            settlementName = gameObject.name;
+        }
     }
 
     private void Start()
@@ -548,17 +560,9 @@ public class SettlementZone : MonoBehaviour
         }
 
         // 🔒 Nếu bỏ tích hasEnemyOutpost trong Play Mode hoặc đã tiêu diệt nhưng đối tượng 3D vẫn còn -> Tự động Destroy đối tượng 3D
-        if (!hasEnemyOutpost && spawnedEnemyOutpostInstance != null)
+        if (!hasEnemyOutpost && (spawnedEnemyOutpostInstance != null || enemySpawn != null || GetComponentInChildren<EnemySpawn>(true) != null))
         {
-            GameObject outpostObj = spawnedEnemyOutpostInstance;
-            spawnedEnemyOutpostInstance = null;
-            if (outpostObj != null)
-            {
-                outpostObj.SetActive(false);
-                if (Application.isPlaying) Destroy(outpostObj);
-                else DestroyImmediate(outpostObj);
-            }
-
+            CleanUpEnemyOutposts();
             if (SettlementSidePanelUI.Ins != null)
             {
                 SettlementSidePanelUI.Ins.UpdateHeaderVisual();
@@ -680,7 +684,11 @@ public class SettlementZone : MonoBehaviour
     /// </summary>
     public void InstantiateEnemyOutpost()
     {
-        if (!hasEnemyOutpost) return;
+        if (!hasEnemyOutpost)
+        {
+            CleanUpEnemyOutposts();
+            return;
+        }
 
         // 1. Xác định vị trí spawn chuẩn của Vùng đất này
         Vector3 spawnPosition = (enemySpawnPoint != null) ? enemySpawnPoint.position : ((townHallPoint != null) ? townHallPoint.position : transform.position);
@@ -744,19 +752,42 @@ public class SettlementZone : MonoBehaviour
         return building == null || !IsTownHallBuilding(building, this);
     }
 
+    /// <summary>
+    /// Dọn dẹp / Hủy bỏ toàn bộ GameObject Căn cứ Địch & EnemySpawn thuộc về Vùng đất này khi đã giải phóng / chiếm lĩnh
+    /// </summary>
+    public void CleanUpEnemyOutposts()
+    {
+        if (spawnedEnemyOutpostInstance != null)
+        {
+            if (HasValidEnemyOutpostInstance() || (townHallBuilding != null && spawnedEnemyOutpostInstance != townHallBuilding.gameObject))
+            {
+                spawnedEnemyOutpostInstance.SetActive(false);
+                if (Application.isPlaying) Destroy(spawnedEnemyOutpostInstance);
+                else DestroyImmediate(spawnedEnemyOutpostInstance);
+            }
+            spawnedEnemyOutpostInstance = null;
+        }
+
+        // Dọn dẹp mọi EnemySpawn còn sót lại dưới transform vùng đất
+        EnemySpawn[] childSpawns = GetComponentsInChildren<EnemySpawn>(true);
+        foreach (var spawner in childSpawns)
+        {
+            if (spawner != null && spawner.gameObject != this.gameObject && (townHallBuilding == null || spawner.gameObject != townHallBuilding.gameObject))
+            {
+                spawner.gameObject.SetActive(false);
+                if (Application.isPlaying) Destroy(spawner.gameObject);
+                else DestroyImmediate(spawner.gameObject);
+            }
+        }
+        enemySpawn = null;
+    }
+
     public void OnEnemyOutpostDestroyed()
     {
         hasEnemyOutpost = false;
         isUnlocked = true;
         SaveSettlementState();
-        if (spawnedEnemyOutpostInstance != null)
-        {
-            if (HasValidEnemyOutpostInstance() || (townHallBuilding != null && spawnedEnemyOutpostInstance != townHallBuilding.gameObject))
-            {
-                Destroy(spawnedEnemyOutpostInstance);
-            }
-            spawnedEnemyOutpostInstance = null;
-        }
+        CleanUpEnemyOutposts();
 
         Debug.Log($"[SettlementZone] 🎉 CHINH PHỤC THÀNH CÔNG! Đã tiêu diệt Căn cứ Địch tại vùng đất {settlementName}!");
 
@@ -921,7 +952,12 @@ public class SettlementZone : MonoBehaviour
     {
         if (ub == null) return false;
         if (zone != null && zone.townHallBuilding == ub) return true;
-        if (ub.buildingType == BuildingType.House || ub.buildingName.ToLower().Contains("nhà chính") || ub.buildingName.ToLower().Contains("town hall") || ub.buildingName.ToLower().Contains("townhall")) return true;
+        if (ub.slotIndex >= 0) return false;
+        if (zone != null && zone.townHallPoint != null && Vector3.Distance(ub.transform.position, zone.townHallPoint.position) < 3.5f)
+        {
+            return true;
+        }
+        if (ub.buildingName.ToLower().Contains("nhà chính") || ub.buildingName.ToLower().Contains("town hall") || ub.buildingName.ToLower().Contains("townhall") || ub.name.ToLower().Contains("townhall")) return true;
         return false;
     }
 
