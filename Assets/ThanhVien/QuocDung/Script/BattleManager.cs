@@ -21,6 +21,8 @@ public class BattleManager : MonoBehaviour
 
     [Header("Player Soldier Prefabs")]
     [SerializeField] private GameObject soldierPrefab;
+    [SerializeField] private GameObject archerSoldierPrefab;
+    [SerializeField] private GameObject tankSoldierPrefab;
 
     [Header("Player Building Prefabs")]
     [SerializeField] private GameObject barracksPrefab;
@@ -712,6 +714,56 @@ public class BattleManager : MonoBehaviour
         if (buildingCtrl == null) buildingCtrl = spawnedBuilding.GetComponentInChildren<BuildingCtrl>();
     }
 
+    private GameObject GetSoldierPrefabForAttackMode(AttackMode mode)
+    {
+        switch (mode)
+        {
+            case AttackMode.Ranged:
+                if (archerSoldierPrefab != null) return archerSoldierPrefab;
+                break;
+            case AttackMode.Tank:
+                if (tankSoldierPrefab != null) return tankSoldierPrefab;
+                break;
+            case AttackMode.Melee:
+            default:
+                if (soldierPrefab != null) return soldierPrefab;
+                break;
+        }
+
+        // Tự động tìm trong Resources / Assets nếu chưa gán Inspector
+        var allSoldiers = Resources.FindObjectsOfTypeAll<UnitController>();
+        foreach (var u in allSoldiers)
+        {
+            if (u != null && u.AttackMode == mode)
+            {
+                if (!u.gameObject.scene.IsValid() || u.gameObject.name.ToLower().Contains("prefab"))
+                {
+                    return u.gameObject;
+                }
+            }
+        }
+
+        // Fallback
+        if (soldierPrefab != null) return soldierPrefab;
+        if (tankSoldierPrefab != null) return tankSoldierPrefab;
+        if (archerSoldierPrefab != null) return archerSoldierPrefab;
+        return null;
+    }
+
+    private GameObject GetSoldierPrefabForBuildingType(BuildingType buildingType)
+    {
+        switch (buildingType)
+        {
+            case BuildingType.BarracksArcher:
+                return GetSoldierPrefabForAttackMode(AttackMode.Ranged);
+            case BuildingType.BarracksSpear:
+                return GetSoldierPrefabForAttackMode(AttackMode.Tank);
+            case BuildingType.BarracksMelee:
+            default:
+                return GetSoldierPrefabForAttackMode(AttackMode.Melee);
+        }
+    }
+
     /// <summary>
     /// Spawn toàn bộ Công trình và Lính của Người Chơi ở BÊN TRÁI
     /// </summary>
@@ -724,48 +776,92 @@ public class BattleManager : MonoBehaviour
 
         int soldierTotalSpawned = 0;
 
-        // 2. Spawn toàn bộ Lính trong căn cứ
-        foreach (var buildingInfo in BattleData.PlayerBuildings)
+        // 1. Trường hợp Xuất chinh / Chinh phạt: Sinh đúng danh sách và loại lính đã cử đi
+        if (BattleData.IsAttackingExpedition)
         {
-            int countToSpawn = buildingInfo.soldierCount;
-            for (int i = 0; i < countToSpawn; i++)
+            List<AttackMode> expeditionSoldierModes = new List<AttackMode>();
+            foreach (var march in BattleData.SavedSoldierMarches)
             {
-                if (soldierPrefab != null)
+                if (march != null && march.hasReachedExpeditionDestination &&
+                    march.marchDestinationZoneName == BattleData.TargetedSettlementZoneName)
+                {
+                    expeditionSoldierModes.Add(march.attackMode);
+                }
+            }
+
+            // Nếu số lượng lính trong danh sách march chưa đủ TotalSoldiersInBase thì bổ sung
+            while (expeditionSoldierModes.Count < BattleData.TotalSoldiersInBase)
+            {
+                expeditionSoldierModes.Add(AttackMode.Melee);
+            }
+
+            for (int i = 0; i < expeditionSoldierModes.Count; i++)
+            {
+                GameObject prefab = GetSoldierPrefabForAttackMode(expeditionSoldierModes[i]);
+                if (prefab != null)
                 {
                     int row = soldierTotalSpawned / unitsPerRow;
                     int col = soldierTotalSpawned % unitsPerRow;
 
                     float sOffsetZ = (col - (unitsPerRow - 1) * 0.5f) * unitSpacing;
                     Vector3 soldierPos = soldierFrontOrigin + Vector3.left * (row * unitSpacing) + Vector3.forward * sOffsetZ;
-                    Quaternion soldierRot = Quaternion.Euler(0, 90, 0); // Quay mặt về phía Enemy (Bên Phải)
+                    Quaternion soldierRot = Quaternion.Euler(0, 90, 0);
 
-                    GameObject spawnedSoldier = Instantiate(soldierPrefab, soldierPos, soldierRot);
-                    spawnedSoldier.name = $"Player_Soldier_{soldierTotalSpawned + 1}";
+                    GameObject spawnedSoldier = Instantiate(prefab, soldierPos, soldierRot);
+                    spawnedSoldier.name = $"Player_Soldier_{soldierTotalSpawned + 1}_{expeditionSoldierModes[i]}";
                     spawnedPlayerObjects.Add(spawnedSoldier);
                 }
                 soldierTotalSpawned++;
             }
         }
-
-        // Nếu tổng số lính đã spawn chưa đủ số lính thực tế trong căn cứ
-        if (soldierTotalSpawned < BattleData.TotalSoldiersInBase)
+        else
         {
-            int remaining = BattleData.TotalSoldiersInBase - soldierTotalSpawned;
-            for (int i = 0; i < remaining; i++)
+            // 2. Trường hợp Phòng thủ: Spawn theo từng Doanh Trại tương ứng loại lính
+            foreach (var buildingInfo in BattleData.PlayerBuildings)
             {
-                if (soldierPrefab != null)
+                int countToSpawn = buildingInfo.soldierCount;
+                GameObject prefab = GetSoldierPrefabForBuildingType(buildingInfo.buildingType);
+
+                for (int i = 0; i < countToSpawn; i++)
                 {
-                    int idx = soldierTotalSpawned + i;
-                    int row = idx / unitsPerRow;
-                    int col = idx % unitsPerRow;
+                    if (prefab != null)
+                    {
+                        int row = soldierTotalSpawned / unitsPerRow;
+                        int col = soldierTotalSpawned % unitsPerRow;
 
-                    float sOffsetZ = (col - (unitsPerRow - 1) * 0.5f) * unitSpacing;
-                    Vector3 soldierPos = soldierFrontOrigin + Vector3.left * (row * unitSpacing) + Vector3.forward * sOffsetZ;
-                    Quaternion soldierRot = Quaternion.Euler(0, 90, 0);
+                        float sOffsetZ = (col - (unitsPerRow - 1) * 0.5f) * unitSpacing;
+                        Vector3 soldierPos = soldierFrontOrigin + Vector3.left * (row * unitSpacing) + Vector3.forward * sOffsetZ;
+                        Quaternion soldierRot = Quaternion.Euler(0, 90, 0);
 
-                    GameObject spawnedSoldier = Instantiate(soldierPrefab, soldierPos, soldierRot);
-                    spawnedSoldier.name = $"Player_Soldier_{idx + 1}";
-                    spawnedPlayerObjects.Add(spawnedSoldier);
+                        GameObject spawnedSoldier = Instantiate(prefab, soldierPos, soldierRot);
+                        spawnedSoldier.name = $"Player_Soldier_{soldierTotalSpawned + 1}";
+                        spawnedPlayerObjects.Add(spawnedSoldier);
+                    }
+                    soldierTotalSpawned++;
+                }
+            }
+
+            // Nếu tổng số lính đã spawn chưa đủ số lính thực tế trong căn cứ
+            if (soldierTotalSpawned < BattleData.TotalSoldiersInBase)
+            {
+                int remaining = BattleData.TotalSoldiersInBase - soldierTotalSpawned;
+                for (int i = 0; i < remaining; i++)
+                {
+                    GameObject prefab = GetSoldierPrefabForAttackMode(AttackMode.Melee);
+                    if (prefab != null)
+                    {
+                        int idx = soldierTotalSpawned + i;
+                        int row = idx / unitsPerRow;
+                        int col = idx % unitsPerRow;
+
+                        float sOffsetZ = (col - (unitsPerRow - 1) * 0.5f) * unitSpacing;
+                        Vector3 soldierPos = soldierFrontOrigin + Vector3.left * (row * unitSpacing) + Vector3.forward * sOffsetZ;
+                        Quaternion soldierRot = Quaternion.Euler(0, 90, 0);
+
+                        GameObject spawnedSoldier = Instantiate(prefab, soldierPos, soldierRot);
+                        spawnedSoldier.name = $"Player_Soldier_{idx + 1}";
+                        spawnedPlayerObjects.Add(spawnedSoldier);
+                    }
                 }
             }
         }

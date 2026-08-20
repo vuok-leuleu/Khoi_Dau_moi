@@ -213,8 +213,57 @@ public class SettlementZone : MonoBehaviour
     /// <summary>
     /// Cập nhật hiển thị toàn bộ 3 Text UI: Cấp độ, Tên vùng đất, Số lượng lính hiện có
     /// </summary>
+    private void AutoBindVisualTexts()
+    {
+        if (levelTextTMP != null && nameTextTMP != null && soldierCountTextTMP != null) return;
+
+        TMP_Text[] tmps = GetComponentsInChildren<TMP_Text>(true);
+        foreach (var t in tmps)
+        {
+            if (t == null) continue;
+            string objName = t.gameObject.name;
+            Transform p = t.transform.parent;
+            string parentName = p != null ? p.name : "";
+
+            if (levelTextTMP == null && (objName.Contains("Level") || objName.Contains("Lv") || parentName.Contains("Level") || parentName.Contains("Lv")))
+            {
+                levelTextTMP = t;
+            }
+            else if (soldierCountTextTMP == null && (objName.Contains("Soldier") || objName.Contains("Count") || objName.Contains("Linh") || parentName.Contains("Soldier") || parentName.Contains("Linh")))
+            {
+                soldierCountTextTMP = t;
+            }
+            else if (nameTextTMP == null && (objName.Contains("Name") || parentName.Contains("Name")))
+            {
+                nameTextTMP = t;
+            }
+        }
+
+        // Nếu NameLand prefab có cấu trúc cụ thể
+        if ((levelTextTMP == null || nameTextTMP == null || soldierCountTextTMP == null) && tmps.Length >= 2)
+        {
+            foreach (var t in tmps)
+            {
+                if (t == null) continue;
+                if (nameTextTMP == null && t.fontSize >= 11f && (t.text == "New Text" || t.text == settlementName))
+                {
+                    nameTextTMP = t;
+                }
+                else if (soldierCountTextTMP == null && t.text.Contains("0") && t.transform.parent != null && t.transform.parent.GetComponentInChildren<UnityEngine.UI.Image>() != null)
+                {
+                    soldierCountTextTMP = t;
+                }
+                else if (levelTextTMP == null && t != nameTextTMP && t != soldierCountTextTMP)
+                {
+                    levelTextTMP = t;
+                }
+            }
+        }
+    }
+
     public void UpdateZoneVisualText()
     {
+        AutoBindVisualTexts();
         UpdateLevelText();
         UpdateNameText();
         UpdateSoldierCountText();
@@ -697,18 +746,15 @@ public class SettlementZone : MonoBehaviour
 
     public void OnEnemyOutpostDestroyed()
     {
-        if (!HasValidEnemyOutpostInstance())
-        {
-            Debug.LogError($"[SettlementZone] Từ chối phá object tại vùng {settlementName}: không phải căn cứ địch hợp lệ.");
-            return;
-        }
-
         hasEnemyOutpost = false;
         isUnlocked = true;
         SaveSettlementState();
         if (spawnedEnemyOutpostInstance != null)
         {
-            Destroy(spawnedEnemyOutpostInstance);
+            if (HasValidEnemyOutpostInstance() || (townHallBuilding != null && spawnedEnemyOutpostInstance != townHallBuilding.gameObject))
+            {
+                Destroy(spawnedEnemyOutpostInstance);
+            }
             spawnedEnemyOutpostInstance = null;
         }
 

@@ -162,6 +162,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 32cfc10cc292ab44b92717cf0e5bf574, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpawnSoldier
+  soldierPrefabs: []
   soldierPrefab: {fileID: 5529766660109328545, guid: 6faae46d02eec1b458eaa4f73464be71, type: 3}
   spawnRadius: 5
   spawnForwardOffset: 2.5
@@ -222,8 +223,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 32cfc10cc292ab44b92717cf0e5bf574, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpawnSoldier
-  soldierPrefab: {fileID: 5529766660109328545, guid: 6faae46d02eec1b458eaa4f73464be71, type: 3}
-  spawnRadius: 5
+  soldierPrefabs:
+  - {fileID: 5529766660109328545, guid: 6faae46d02eec1b458eaa4f73464be71, type: 3}
+  - {fileID: 1999277456456185836, guid: 6f6383d8f0b521f449a9ee5eb68d04cf, type: 3}
+  - {fileID: 4430688088267481095, guid: 65837077c6ee41e48b9fe12f3faae8a4, type: 3}
+  soldierPrefab: {fileID: 0}
+  spawnRadius: 2.54
   spawnForwardOffset: 2.5
   currentLevel: 1
   testDuration: 5
@@ -537,6 +542,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 32cfc10cc292ab44b92717cf0e5bf574, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpawnSoldier
+  soldierPrefabs: []
   soldierPrefab: {fileID: 5529766660109328545, guid: 6faae46d02eec1b458eaa4f73464be71, type: 3}
   spawnRadius: 5
   spawnForwardOffset: 2.5

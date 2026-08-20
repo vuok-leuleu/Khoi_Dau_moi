@@ -86,6 +86,43 @@ public class SpawnSoldier : MonoBehaviour
         return configuredPrefabs[soldierTypeIndex];
     }
 
+    private GameObject GetTrainedSoldierPrefab(BuildingType troopType)
+    {
+        AttackMode expectedAttackMode;
+        switch (troopType)
+        {
+            case BuildingType.BarracksMelee:
+                expectedAttackMode = AttackMode.Melee;
+                break;
+            case BuildingType.BarracksArcher:
+                expectedAttackMode = AttackMode.Ranged;
+                break;
+            case BuildingType.BarracksSpear:
+                expectedAttackMode = AttackMode.Tank;
+                break;
+            default:
+                return null;
+        }
+
+        foreach (GameObject prefab in GetConfiguredSoldierPrefabs())
+        {
+            UnitController unit = prefab.GetComponent<UnitController>();
+            if (unit == null) unit = prefab.GetComponentInChildren<UnitController>();
+
+            if (unit != null && unit.AttackMode == expectedAttackMode)
+            {
+                return prefab;
+            }
+        }
+
+        return null;
+    }
+
+    public bool CanSpawnTrainedSoldier(BuildingType troopType)
+    {
+        return GetTrainedSoldierPrefab(troopType) != null;
+    }
+
     public List<UnitController> GetActiveSoldierControllers()
     {
         List<UnitController> list = new List<UnitController>();
@@ -257,6 +294,30 @@ public class SpawnSoldier : MonoBehaviour
         spawnedSoldiers.Add(newSoldier);
         Debug.Log($"[SpawnSoldier] 🎉 Đã sinh 1 lính mới từ Ô Huấn Luyện tại {gameObject.name} (Lv {currentLevel})!");
         return newSoldier;
+    }
+
+    /// <summary>
+    /// Sinh một đơn vị huấn luyện với các lính cùng loại tương ứng với doanh trại.
+    /// </summary>
+    public int SpawnTrainedSoldiers(BuildingType troopType, int count)
+    {
+        GameObject prefabToUse = GetTrainedSoldierPrefab(troopType);
+        if (prefabToUse == null)
+        {
+            Debug.LogWarning($"[SpawnSoldier] Không tìm thấy prefab phù hợp cho {troopType} trên {gameObject.name}.");
+            return 0;
+        }
+
+        int spawnedCount = 0;
+        for (int i = 0; i < count; i++)
+        {
+            if (SpawnOneTrainedSoldier(prefabToUse) != null)
+            {
+                spawnedCount++;
+            }
+        }
+
+        return spawnedCount;
     }
 
     /// <summary>

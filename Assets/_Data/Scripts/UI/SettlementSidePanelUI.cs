@@ -115,14 +115,26 @@ public class SettlementSidePanelUI : MonoBehaviour
 
         if (moveButtonTextTMP != null)
         {
-            moveButtonTextTMP.text = "MOVE";
             moveButtonTextTMP.fontStyle = FontStyles.Bold;
             moveButtonTextTMP.alignment = TextAlignmentOptions.Center;
         }
+
+        SetMoveButtonLabel(MoveModeController.IsMoveModeActive &&
+            MoveModeController.Ins != null &&
+            MoveModeController.Ins.HasPreviewDestination ? "APPLY" : "MOVE");
     }
 
     public void OnClickMove()
     {
+        if (MoveModeController.IsMoveModeActive && MoveModeController.Ins != null)
+        {
+            if (MoveModeController.Ins.HasPreviewDestination)
+            {
+                MoveModeController.Ins.ApplySelectedDestination();
+            }
+            return;
+        }
+
         SettlementZone currentZone = SettlementManager.Ins != null ? SettlementManager.Ins.CurrentSettlement : null;
         if (currentZone == null) currentZone = Object.FindFirstObjectByType<SettlementZone>();
         if (currentZone == null) return;
@@ -139,6 +151,20 @@ public class SettlementSidePanelUI : MonoBehaviour
             moveSelectedCameraHeight,
             moveArrowHeightAboveTerrain);
         MoveModeController.Ins.BeginMoveMode(currentZone, soldierPointUIPrefab);
+        SetMoveButtonLabel("MOVE");
+    }
+
+    public void SetMoveButtonLabel(string label)
+    {
+        if (moveButtonTextTMP == null && moveButton != null)
+        {
+            moveButtonTextTMP = moveButton.GetComponentInChildren<TextMeshProUGUI>(true);
+        }
+
+        if (moveButtonTextTMP != null)
+        {
+            moveButtonTextTMP.text = string.IsNullOrWhiteSpace(label) ? "MOVE" : label;
+        }
     }
 
     private Button FindMoveButton()

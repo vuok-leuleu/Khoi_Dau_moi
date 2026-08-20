@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 using TMPro;
 
@@ -216,7 +216,7 @@ public class ConstructionManager : Singleton<ConstructionManager>
         return obj.GetComponent<BuildingCtrl>();
     }
 
-    private GameObject GetPrefab(BuildingType type)
+    public GameObject GetPrefab(BuildingType type)
     {
         switch (type)
         {

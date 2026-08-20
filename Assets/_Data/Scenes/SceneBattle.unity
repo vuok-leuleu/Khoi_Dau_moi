@@ -9873,6 +9873,8 @@ MonoBehaviour:
   unitsPerRow: 4
   enemyPrefab: {fileID: 370480945864454416, guid: 2d56dfb52da6a654ab4fca2a3d449e2d, type: 3}
   soldierPrefab: {fileID: 5529766660109328545, guid: 6faae46d02eec1b458eaa4f73464be71, type: 3}
+  archerSoldierPrefab: {fileID: 1999277456456185836, guid: 6f6383d8f0b521f449a9ee5eb68d04cf, type: 3}
+  tankSoldierPrefab: {fileID: 4430688088267481095, guid: 65837077c6ee41e48b9fe12f3faae8a4, type: 3}
   barracksPrefab: {fileID: 8387842726007996306, guid: ba06fce2318fb204d8990c9767483301, type: 3}
   archerTowerPrefab: {fileID: 4605438273477018434, guid: ce5427a6e1c4aab4caa3553222a65a19, type: 3}
   watchTowerPrefab: {fileID: 1354021103751014317, guid: e295e695a3451e846a55548e181856fc, type: 3}

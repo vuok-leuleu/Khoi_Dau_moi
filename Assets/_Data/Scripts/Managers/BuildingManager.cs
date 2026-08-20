@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 
 /*
@@ -231,7 +231,7 @@ public class BuildingManager : Singleton<BuildingManager>
                 targetUb = targetZone.GetBuildingAtSlot(state.slotIndex);
             }
 
-            // 3. Fallback khớp theo khoảng cách < 3.5m trong Vùng đất tương ứng
+            // 3. Fallback khớp theo khoảng cách trong Vùng đất tương ứng hoặc toàn Scene
             if (targetUb == null && targetZone != null)
             {
                 UpgradeableBuilding[] zoneUbs = targetZone.GetComponentsInChildren<UpgradeableBuilding>(true);
@@ -239,7 +239,22 @@ public class BuildingManager : Singleton<BuildingManager>
                 {
                     if (ub != null && ub.gameObject.activeInHierarchy && ub.buildingType == state.buildingType)
                     {
-                        if (Vector3.Distance(ub.transform.position, targetPos) < 3.5f)
+                        if (Vector3.Distance(ub.transform.position, targetPos) < 4.5f)
+                        {
+                            targetUb = ub;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (targetUb == null)
+            {
+                foreach (var ub in existingUbs)
+                {
+                    if (ub != null && ub.gameObject.activeInHierarchy && ub.buildingType == state.buildingType)
+                    {
+                        if (Vector3.Distance(ub.transform.position, targetPos) < 4.5f)
                         {
                             targetUb = ub;
                             break;
@@ -292,11 +307,16 @@ public class BuildingManager : Singleton<BuildingManager>
                 // 5. Nếu chưa có trong Scene ➔ Khởi tạo mới từ Prefab tại ô Slot của Vùng đất tương ứng
                 Vector3 spawnPos = (targetZone != null && state.slotIndex >= 0) ? targetZone.GetSlotWorldPosition(state.slotIndex) : targetPos;
 
-                BuildingCtrl spawned = ConstructionManager.Ins.SpawnBuilding(
-                    state.buildingType,
-                    spawnPos,
-                    Quaternion.Euler(state.rotation.ToVector3())
-                );
+                Transform targetParent = targetZone != null ? targetZone.transform : (SettlementManager.Ins != null && SettlementManager.Ins.CurrentSettlement != null ? SettlementManager.Ins.CurrentSettlement.transform : null);
+                GameObject prefab = ConstructionManager.Ins != null ? ConstructionManager.Ins.GetPrefab(state.buildingType) : null;
+                BuildingCtrl spawned = null;
+
+                if (prefab != null)
+                {
+                    GameObject obj = Instantiate(prefab, spawnPos, Quaternion.Euler(state.rotation.ToVector3()), targetParent);
+                    obj.name = state.buildingType.ToString();
+                    spawned = obj.GetComponent<BuildingCtrl>();
+                }
 
                 if (spawned != null)
                 {

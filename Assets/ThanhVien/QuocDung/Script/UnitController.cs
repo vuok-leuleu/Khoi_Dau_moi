@@ -44,7 +44,11 @@ public class UnitController : MonoBehaviour
     public GameObject currentTarget;
     public float scanFrequency = 0.25f;
     [SerializeField] AttackMode attackMode = AttackMode.Melee;
-    public AttackMode AttackMode => attackMode;
+    public AttackMode AttackMode
+    {
+        get => attackMode;
+        set => attackMode = value;
+    }
     [SerializeField] float attackRange = 2f;
     [SerializeField] float rangedAttackRange = 5f;
     
@@ -86,6 +90,9 @@ public class UnitController : MonoBehaviour
     public int marchTargetWave = 4;
     public Vector3 marchStartPosition;
     public Vector3 marchDestinationPosition;
+    public string marchDestinationZoneName = "";
+    public bool hasReachedExpeditionDestination = false;
+    public string stationedSettlementZoneName = "";
 
 
     public bool isMarchingToEnemyBase => isExpeditionMarching || isRespondingToWarning || isReturning;
@@ -270,6 +277,8 @@ public class UnitController : MonoBehaviour
             if (hasReachedDestination)
             {
                 transform.position = marchDestinationPosition;
+                hasReachedExpeditionDestination = true;
+                stationedSettlementZoneName = marchDestinationZoneName;
                 isExpeditionMarching = false;
                 isRespondingToWarning = false;
             }
@@ -436,13 +445,24 @@ public class UnitController : MonoBehaviour
         StartExpeditionMarch(targetPosition, -1);
     }
 
-    public void StartExpeditionMarch(Vector3 destinationPos, int wavesToReach = -1, Transform targetBuilding = null)
+    public void StartExpeditionMarch(
+        Vector3 destinationPos,
+        int wavesToReach = -1,
+        Transform targetBuilding = null,
+        string destinationZoneName = "",
+        string sourceZoneName = "")
     {
         if (!isExpeditionMarching)
         {
             marchStartPosition = transform.position;
         }
+        if (!string.IsNullOrEmpty(sourceZoneName))
+        {
+            stationedSettlementZoneName = sourceZoneName;
+        }
         marchDestinationPosition = destinationPos;
+        marchDestinationZoneName = destinationZoneName;
+        hasReachedExpeditionDestination = false;
         marchStartWave = (DayNightManager.HasInstance && DayNightManager.Ins != null) ? DayNightManager.Ins.CurrentWave : 1;
 
         if (wavesToReach <= 0)
@@ -461,6 +481,16 @@ public class UnitController : MonoBehaviour
     }
 
 
+    public void CompleteExpeditionMarch()
+    {
+        transform.position = marchDestinationPosition;
+        hasReachedExpeditionDestination = true;
+        stationedSettlementZoneName = marchDestinationZoneName;
+        isExpeditionMarching = false;
+        isRespondingToWarning = false;
+        currentState = UnitState.Idle;
+        UpdateAnimation();
+    }
     public void EnableCombat(Vector3 enemyTargetPos)
     {
         autoAggro = true;

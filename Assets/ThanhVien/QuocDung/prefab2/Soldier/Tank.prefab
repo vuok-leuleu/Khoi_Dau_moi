@@ -29,7 +29,6 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 3209357847714479038}
   - {fileID: 6544633819101956881}
   - {fileID: 2753529347827224434}
   - {fileID: 2981942860583400606}
@@ -648,6 +647,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 3209357847714479038}
   - {fileID: 3408276254042053974}
   - {fileID: 4955822888600251477}
   - {fileID: 884911853497884976}
@@ -1339,7 +1339,7 @@ GameObject:
   - component: {fileID: 3911397591942053849}
   m_Layer: 0
   m_Name: Tank
-  m_TagString: Untagged
+  m_TagString: Soldier
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1427,7 +1427,7 @@ MonoBehaviour:
   shootBoolParam: IsShoot
   shieldBoolParam: IsShield
   attackDamage: 15
-  attackRate: 1.5
+  attackRate: 2.5
   projectilePrefab: {fileID: 0}
   firePoint: {fileID: 0}
   projectileSpeed: 15
@@ -1462,7 +1462,9 @@ MonoBehaviour:
   marchTargetWave: 4
   marchStartPosition: {x: 0, y: 0, z: 0}
   marchDestinationPosition: {x: 0, y: 0, z: 0}
-  soldierPointUIPrefab: {fileID: 0}
+  marchDestinationZoneName: 
+  hasReachedExpeditionDestination: 0
+  stationedSettlementZoneName: 
 --- !u!114 &3911397591942053849
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2774,13 +2776,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7357730822639342810}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.5, y: -0.5, z: 0.5, w: 0.5}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: 0, y: 0.7071068, z: 0.7071068, w: 0}
+  m_LocalPosition: {x: 0, y: -0, z: -0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 3087301833185981160}
-  m_LocalEulerAnglesHint: {x: 90, y: -90, z: 0}
+  m_Father: {fileID: 8109118721388256125}
+  m_LocalEulerAnglesHint: {x: -90, y: 180, z: 0}
 --- !u!33 &6866041341832683919
 MeshFilter:
   m_ObjectHideFlags: 0

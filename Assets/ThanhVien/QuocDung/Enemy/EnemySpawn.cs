@@ -49,6 +49,42 @@ public class EnemySpawn : MonoBehaviour
         return transform;
     }
 
+    private bool HasArrivedExpeditionForThisOutpost()
+    {
+        SettlementZone targetZone = UIEnemyWaveButton.FindZoneFromTarget(GetSpawnPoint());
+        if (targetZone == null) return false;
+
+        UnitController[] soldiers = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
+        foreach (UnitController soldier in soldiers)
+        {
+            if (soldier != null && soldier.gameObject.activeInHierarchy &&
+                soldier.hasReachedExpeditionDestination &&
+                soldier.marchDestinationZoneName == targetZone.settlementName)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public void TryShowAttackButton()
+    {
+        if (!HasArrivedExpeditionForThisOutpost()) return;
+
+        UIEnemyWaveButton.CreateButton(GetSpawnPoint(), 3.5f, true);
+    }
+
+    private void HideAttackButtonUntilTroopsArrive()
+    {
+        if (HasArrivedExpeditionForThisOutpost()) return;
+
+        UIEnemyWaveButton[] buttons = GetComponentsInChildren<UIEnemyWaveButton>(true);
+        foreach (UIEnemyWaveButton button in buttons)
+        {
+            if (button != null) Destroy(button.gameObject);
+        }
+    }
     [Header("Attack Target (Optional)")]
     [SerializeField] public Transform attackTarget;
 
@@ -185,7 +221,7 @@ public class EnemySpawn : MonoBehaviour
     private void OnMouseDown()
     {
         if (UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject()) return;
-        UIEnemyWaveButton.CreateButton(GetSpawnPoint());
+        TryShowAttackButton();
     }
 
     private void Update()
@@ -198,6 +234,7 @@ public class EnemySpawn : MonoBehaviour
         StopWaveSpawning();
 
         RefreshActiveWave();
+        HideAttackButtonUntilTroopsArrive();
 
         // 🎯 Lắng nghe click chuột vào Căn cứ Địch để hiện nút TẤN CÔNG
         if (Input.GetMouseButtonDown(0))
@@ -211,7 +248,7 @@ public class EnemySpawn : MonoBehaviour
                 {
                     if (hit.transform == transform || hit.transform.IsChildOf(transform))
                     {
-                        UIEnemyWaveButton.CreateButton(GetSpawnPoint());
+                        TryShowAttackButton();
                     }
                 }
             }

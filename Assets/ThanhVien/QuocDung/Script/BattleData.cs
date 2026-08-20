@@ -32,6 +32,10 @@ public static class BattleData
         public int marchStartWave;
         public int marchWavesToReach;
         public int marchTargetWave;
+        public string marchDestinationZoneName;
+        public string stationedSettlementZoneName;
+        public bool hasReachedExpeditionDestination;
+        public AttackMode attackMode = AttackMode.Melee;
     }
 
     public static bool HasData = false;
@@ -145,12 +149,12 @@ public static class BattleData
         // 3. Lưu tiến trình hành quân của Lính (UnitController) đang xuất trận
         SavedSoldierMarches.Clear();
         UnitController[] activeUnits = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
-        int realActiveSoldierCount = 0;
+        int battleSoldierCount = 0;
         foreach (var u in activeUnits)
         {
             if (u != null && u.gameObject.activeInHierarchy)
             {
-                if (u.isExpeditionMarching)
+                if (u.isExpeditionMarching || u.hasReachedExpeditionDestination)
                 {
                     SavedSoldierMarches.Add(new SoldierMarchInfo
                     {
@@ -159,12 +163,27 @@ public static class BattleData
                         marchDestinationPosition = u.marchDestinationPosition,
                         marchStartWave = u.marchStartWave,
                         marchWavesToReach = u.marchWavesToReach,
-                        marchTargetWave = u.marchTargetWave
+                        marchTargetWave = u.marchTargetWave,
+                        marchDestinationZoneName = u.marchDestinationZoneName,
+                        stationedSettlementZoneName = u.stationedSettlementZoneName,
+                        hasReachedExpeditionDestination = u.hasReachedExpeditionDestination,
+                        attackMode = u.AttackMode
                     });
+                }
+
+                if (IsAttackingExpedition)
+                {
+                    bool isAttackingTarget = u.hasReachedExpeditionDestination &&
+                        u.marchDestinationZoneName == TargetedSettlementZoneName;
+                    if (isAttackingTarget)
+                    {
+                        battleSoldierCount++;
+                    }
                 }
                 else
                 {
-                    realActiveSoldierCount++;
+                    // Phòng thủ dùng toàn bộ lính trên bản đồ, kể cả lính đang đóng ở vùng đất khác.
+                    battleSoldierCount++;
                 }
             }
         }
@@ -188,11 +207,12 @@ public static class BattleData
                 soldierCount = 0
             };
 
-            // Nếu là Doanh Trại, lấy số lính ĐANG Ở CĂN CỨ (không đi chinh phạt)
+            // Khi xuất chinh, BattleManager chỉ được spawn đúng đoàn đã chọn ở mục tiêu.
+            // Khi phòng thủ, vẫn giữ số quân của từng doanh trại như trước.
             SpawnSoldier spawner = building.GetComponent<SpawnSoldier>();
             if (spawner == null) spawner = building.GetComponentInChildren<SpawnSoldier>();
 
-            if (spawner != null)
+            if (!IsAttackingExpedition && spawner != null)
             {
                 int atBaseCount = 0;
                 var soldiersInBuilding = spawner.GetComponentsInChildren<UnitController>();
@@ -209,7 +229,7 @@ public static class BattleData
             PlayerBuildings.Add(info);
         }
 
-        TotalSoldiersInBase = realActiveSoldierCount;
+        TotalSoldiersInBase = battleSoldierCount;
         HasData = true;
         Debug.Log($"[BattleData] Đã lưu dữ liệu Trận Đấu: MainScene = {MainSceneName}, CurrentWave = {SavedCurrentWave}, Enemy Wave Count = {EnemyWaveCount}, Quái hành quân = {SavedEnemyMarches.Count}, Lính xuất trận = {SavedSoldierMarches.Count}");
     }
@@ -259,8 +279,12 @@ public static class BattleData
                     u.marchStartWave = info.marchStartWave;
                     u.marchWavesToReach = info.marchWavesToReach;
                     u.marchTargetWave = info.marchTargetWave;
-                    u.isExpeditionMarching = true;
-                    u.currentState = UnitState.Moving;
+                    u.marchDestinationZoneName = info.marchDestinationZoneName;
+                    u.stationedSettlementZoneName = info.stationedSettlementZoneName;
+                    u.hasReachedExpeditionDestination = info.hasReachedExpeditionDestination;
+                    u.AttackMode = info.attackMode;
+                    u.isExpeditionMarching = !info.hasReachedExpeditionDestination;
+                    u.currentState = u.isExpeditionMarching ? UnitState.Moving : UnitState.Idle;
 
                     marchingList.Add(u);
                     marchIdx++;
@@ -376,15 +400,20 @@ public static class BattleData
             return;
         }
 
-        if (!conqueredZone.HasValidEnemyOutpostInstance())
-        {
-            Debug.LogError($"[BattleData] Vùng '{conqueredZone.settlementName}' không có căn cứ địch hợp lệ, hủy xử lý để bảo vệ Nhà Chính.");
-            TargetedSettlementZoneName = "";
-            return;
-        }
-
+        conqueredZone.InstantiateEnemyOutpost();
         conqueredZone.OnEnemyOutpostDestroyed();
         conqueredZone.SaveSettlementState();
+
+        UnitController[] activeUnits = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
+        foreach (UnitController unit in activeUnits)
+        {
+            if (unit != null && unit.gameObject.activeInHierarchy &&
+                unit.hasReachedExpeditionDestination &&
+                unit.marchDestinationZoneName == TargetedSettlementZoneName)
+            {
+                unit.CompleteExpeditionMarch();
+            }
+        }
         Debug.Log($"[BattleData] 🏆 XÂM CHIẾM THẮNG! Đã giải phóng vùng đất '{conqueredZone.settlementName}'. Lính xuất trận trở về an toàn!");
         TargetedSettlementZoneName = "";
     }
@@ -398,27 +427,11 @@ public static class BattleData
         UnitController[] activeUnits = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
         foreach (var u in activeUnits)
         {
-            if (u != null && u.gameObject.activeInHierarchy && u.isExpeditionMarching)
+            if (u != null && u.gameObject.activeInHierarchy &&
+                u.hasReachedExpeditionDestination &&
+                u.marchDestinationZoneName == TargetedSettlementZoneName)
             {
                 Object.Destroy(u.gameObject);
-            }
-        }
-
-        // Xóa dữ liệu lính của Spawner và ô slot của vùng xuất trận
-        if (!string.IsNullOrEmpty(TargetedSettlementZoneName))
-        {
-            SettlementZone zone = SettlementManager.Ins != null ? SettlementManager.Ins.GetZoneByName(TargetedSettlementZoneName) : null;
-            if (zone != null)
-            {
-                SpawnSoldier[] spawners = zone.GetComponentsInChildren<SpawnSoldier>(true);
-                foreach (var s in spawners)
-                {
-                    if (s != null) s.DestroyAllSoldiers();
-                }
-                if (TroopTrainingManager.Ins != null)
-                {
-                    TroopTrainingManager.Ins.ClearZoneTrainingSlots(zone.settlementName);
-                }
             }
         }
 

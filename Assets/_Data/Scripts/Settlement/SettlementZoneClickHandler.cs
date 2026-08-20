@@ -27,8 +27,10 @@ public class SettlementZoneClickHandler : MonoBehaviour
             if (targetZone.hasEnemyOutpost)
             {
                 EnemySpawn spawner = targetZone.GetComponentInChildren<EnemySpawn>();
-                Transform btnTarget = (spawner != null) ? spawner.GetSpawnPoint() : (targetZone.spawnedEnemyOutpostInstance != null ? targetZone.spawnedEnemyOutpostInstance.transform : targetZone.transform);
-                UIEnemyWaveButton.CreateButton(btnTarget);
+                if (spawner != null)
+                {
+                    spawner.TryShowAttackButton();
+                }
             }
             else if (SettlementManager.Ins != null)
             {

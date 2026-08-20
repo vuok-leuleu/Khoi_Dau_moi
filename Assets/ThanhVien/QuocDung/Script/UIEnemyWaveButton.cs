@@ -107,7 +107,7 @@ public class UIEnemyWaveButton : MonoBehaviour
     public void OnAttackButtonClicked()
     {
         Time.timeScale = 1f;
-        if (targetLeadEnemy == null) return;
+        if (targetLeadEnemy == null || !isTroopsArrivedAtTarget) return;
 
         int enemyCount = 5;
         EnemySpawn spawner = targetLeadEnemy.GetComponentInParent<EnemySpawn>();
@@ -134,6 +134,7 @@ public class UIEnemyWaveButton : MonoBehaviour
 
         string sceneName = string.IsNullOrWhiteSpace(battleSceneName) ? "SceneBattle" : battleSceneName;
         Debug.Log($"[UIEnemyWaveButton] ⚔️ Người chơi bấm TẤN CÔNG. Chuyển sang {sceneName}...");
+        BattleData.IsAttackingExpedition = true;
         BattleData.RecordCurrentSceneState(enemyCount);
         CloudSceneTransition.LoadSceneWithCloud(sceneName);
         gameObject.SetActive(false);

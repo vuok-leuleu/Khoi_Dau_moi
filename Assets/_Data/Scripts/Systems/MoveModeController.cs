@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -23,6 +24,8 @@ public class MoveModeController : MonoBehaviour
     private RTSCameraController rtsCameraController;
     private bool isSelectingDestination;
     private Coroutine cameraRoutine;
+
+    public bool HasPreviewDestination => isSelectingDestination && previewDestination != null;
 
     private void Awake()
     {
@@ -80,16 +83,22 @@ public class MoveModeController : MonoBehaviour
             return;
         }
 
+        previewDestination = null;
+        SettlementSidePanelUI.Ins?.SetMoveButtonLabel("MOVE");
+
+        // 1. Tìm điểm đến tiếp theo ban đầu và vẽ mũi tên chỉ đến đó
         SettlementZone initialDestination = FindInitialDestination();
         if (initialDestination != null)
         {
-            SetPreviewDestination(initialDestination);
+            routePreview.Setup(GetRouteAnchor(sourceZone), GetRouteAnchor(initialDestination), (Transform)null, routePreviewHeight);
+            routePreview.gameObject.SetActive(true);
         }
         else
         {
             routePreview.gameObject.SetActive(false);
         }
 
+        // 2. Camera chuyển góc nhìn bao quát toàn cảnh (overview)
         GetMapOverview(out Vector3 overviewCenter, out float overviewHeight);
         MoveCameraTo(overviewCenter, overviewHeight);
     }
@@ -100,6 +109,7 @@ public class MoveModeController : MonoBehaviour
         sourceZone = null;
         previewDestination = null;
         if (routePreview != null) routePreview.gameObject.SetActive(false);
+                SettlementSidePanelUI.Ins?.SetMoveButtonLabel("MOVE");
     }
 
     private void EnsureRoutePreview(SoldierPoint soldierPointUIPrefab)
@@ -124,14 +134,9 @@ public class MoveModeController : MonoBehaviour
         if (!TryGetSettlementUnderPointer(out SettlementZone destination)) return;
         if (destination == sourceZone) return;
 
-        if (destination != previewDestination)
-        {
-            SetPreviewDestination(destination);
-            MoveCameraTo(GetOverviewCenter(destination), routePreviewCameraHeight);
-            return;
-        }
-
-        ConfirmDestination(destination);
+        SetPreviewDestination(destination);
+        // Khi bấm vào vùng đất tiếp theo thì camera zoom vào vùng đất đó và đổi nút sang APPLY
+        MoveCameraTo(destination.transform.position, selectedCameraHeight);
     }
 
     private void SetPreviewDestination(SettlementZone destination)
@@ -141,13 +146,30 @@ public class MoveModeController : MonoBehaviour
         previewDestination = destination;
         routePreview.Setup(GetRouteAnchor(sourceZone), GetRouteAnchor(destination), (Transform)null, routePreviewHeight);
         routePreview.gameObject.SetActive(true);
+        SettlementSidePanelUI.Ins?.SetMoveButtonLabel("APPLY");
     }
 
-    private void ConfirmDestination(SettlementZone destination)
+    public void ApplySelectedDestination()
     {
+        if (!HasPreviewDestination || sourceZone == null) return;
+
+        List<UnitController> availableSoldiers = GetSoldiersStationedInZone(sourceZone);
+        if (availableSoldiers.Count == 0)
+        {
+            Debug.LogWarning($"[MoveModeController] {sourceZone.settlementName} không có lính sẵn sàng để điều quân.");
+            return;
+        }
+
+        ConfirmDestination(previewDestination, availableSoldiers);
+    }
+
+    private void ConfirmDestination(SettlementZone destination, List<UnitController> selectedSoldiers)
+    {
+        if (destination == null || selectedSoldiers == null || selectedSoldiers.Count == 0) return;
+
         isSelectingDestination = false;
         SettlementZone selectedZone = destination;
-        UnitController routeLeader = SendSourceSoldiersToDestination(sourceZone, selectedZone);
+        UnitController routeLeader = SendSoldiersToDestination(sourceZone, selectedZone, selectedSoldiers);
         if (routePreview != null)
         {
             if (routeLeader != null)
@@ -170,15 +192,19 @@ public class MoveModeController : MonoBehaviour
             sourceZone = null;
             previewDestination = null;
         });
+        SettlementSidePanelUI.Ins?.SetMoveButtonLabel("MOVE");
     }
 
     private static Transform GetRouteAnchor(SettlementZone zone)
     {
         return zone != null && zone.townHallPoint != null ? zone.townHallPoint : zone.transform;
     }
-    private static UnitController SendSourceSoldiersToDestination(SettlementZone source, SettlementZone destination)
+    private static UnitController SendSoldiersToDestination(
+        SettlementZone source,
+        SettlementZone destination,
+        List<UnitController> selectedSoldiers)
     {
-        if (source == null || destination == null) return null;
+        if (source == null || destination == null || selectedSoldiers == null) return null;
 
         Transform sourceAnchor = GetRouteAnchor(source);
         Transform destinationAnchor = GetRouteAnchor(destination);
@@ -186,26 +212,63 @@ public class MoveModeController : MonoBehaviour
 
         int wavesToReach = Mathf.Max(1, Mathf.RoundToInt(
             Vector3.Distance(sourceAnchor.position, destinationAnchor.position) / 15f));
-        SpawnSoldier[] spawners = source.GetComponentsInChildren<SpawnSoldier>(true);
         int dispatchedCount = 0;
         UnitController routeLeader = null;
 
-        foreach (SpawnSoldier spawner in spawners)
+        foreach (UnitController soldier in selectedSoldiers)
         {
-            if (spawner == null) continue;
+            if (soldier == null || !soldier.gameObject.activeInHierarchy) continue;
 
-            foreach (UnitController soldier in spawner.GetActiveSoldierControllers())
-            {
-                if (soldier == null || !soldier.gameObject.activeInHierarchy) continue;
-
-                soldier.StartExpeditionMarch(destinationAnchor.position, wavesToReach);
-                if (routeLeader == null) routeLeader = soldier;
-                dispatchedCount++;
-            }
+            soldier.StartExpeditionMarch(
+                destinationAnchor.position,
+                wavesToReach,
+                null,
+                destination.settlementName,
+                source.settlementName);
+            if (routeLeader == null) routeLeader = soldier;
+            dispatchedCount++;
         }
 
         Debug.Log($"[MoveModeController] Đã điều {dispatchedCount} lính từ {source.settlementName} đến {destination.settlementName} trong {wavesToReach} wave.");
         return routeLeader;
+    }
+
+    private static List<UnitController> GetSoldiersStationedInZone(SettlementZone zone)
+    {
+        List<UnitController> soldiers = new List<UnitController>();
+        if (zone == null) return soldiers;
+
+        UnitController[] allUnits = FindObjectsByType<UnitController>(FindObjectsSortMode.None);
+        foreach (UnitController soldier in allUnits)
+        {
+            if (soldier == null || !soldier.gameObject.activeInHierarchy) continue;
+
+            if (soldier.hasReachedExpeditionDestination)
+            {
+                if (soldier.marchDestinationZoneName == zone.settlementName)
+                {
+                    soldiers.Add(soldier);
+                }
+                continue;
+            }
+
+            if (!string.IsNullOrEmpty(soldier.stationedSettlementZoneName))
+            {
+                if (soldier.stationedSettlementZoneName == zone.settlementName)
+                {
+                    soldiers.Add(soldier);
+                }
+                continue;
+            }
+
+            SettlementZone parentZone = soldier.GetComponentInParent<SettlementZone>();
+            if (parentZone == zone)
+            {
+                soldiers.Add(soldier);
+            }
+        }
+
+        return soldiers;
     }
     private SettlementZone FindInitialDestination()
     {
@@ -222,13 +285,14 @@ public class MoveModeController : MonoBehaviour
         {
             if (candidate == null || candidate == sourceZone || !candidate.gameObject.activeInHierarchy) continue;
 
-            int relationshipRank = candidate.previousTierZone == sourceZone
+            int candidateTier = candidate.GetEffectiveTier();
+            int relationshipRank = (candidate.GetPreviousZone() == sourceZone || candidate.previousTierZone == sourceZone)
                 ? 0
-                : candidate.GetEffectiveTier() == sourceTier + 1 ? 1 : 2;
+                : candidateTier == sourceTier + 1 ? 1 : (candidateTier > sourceTier ? 2 : 3);
             float distance = (candidate.transform.position - sourceZone.transform.position).sqrMagnitude;
 
             if (relationshipRank < bestRelationshipRank ||
-                relationshipRank == bestRelationshipRank && distance < shortestDistance)
+                (relationshipRank == bestRelationshipRank && distance < shortestDistance))
             {
                 closestZone = candidate;
                 bestRelationshipRank = relationshipRank;
@@ -348,3 +412,4 @@ public class MoveModeController : MonoBehaviour
         onComplete?.Invoke();
     }
 }
+

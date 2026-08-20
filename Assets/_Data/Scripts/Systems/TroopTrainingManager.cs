@@ -24,6 +24,7 @@ public class TroopTrainingManager : MonoBehaviour
     public static TroopTrainingManager Ins { get; private set; }
 
     public const int MAX_TRAINING_SLOTS = 8;
+    private const int SOLDIERS_PER_TRAINING_UNIT = 3;
 
     // Bộ nhớ đệm lưu danh sách Ô huấn luyện cho từng Vùng đất (Key = settlementName)
     private Dictionary<string, TroopTrainingSlotData[]> zoneSlotsDict = new Dictionary<string, TroopTrainingSlotData[]>();
@@ -361,30 +362,42 @@ public class TroopTrainingManager : MonoBehaviour
         SpawnSoldier targetSpawner = null;
         SpawnSoldier[] spawners = zone.GetComponentsInChildren<SpawnSoldier>(true);
 
-        foreach (var s in spawners)
+        foreach (SpawnSoldier spawner in spawners)
         {
-            if (s != null && s.gameObject.activeInHierarchy)
+            if (spawner == null || !spawner.gameObject.activeInHierarchy) continue;
+
+            UpgradeableBuilding building = spawner.GetComponent<UpgradeableBuilding>();
+            if (building == null) building = spawner.GetComponentInParent<UpgradeableBuilding>();
+
+            if (building != null && building.buildingType == slot.troopType && spawner.CanSpawnTrainedSoldier(slot.troopType))
             {
-                UpgradeableBuilding ub = s.GetComponent<UpgradeableBuilding>();
-                if (ub == null) ub = s.GetComponentInParent<UpgradeableBuilding>();
-                if (ub != null && (ub.buildingType == slot.troopType || IsBarracksBuilding(ub.buildingType)))
+                targetSpawner = spawner;
+                break;
+            }
+        }
+
+        if (targetSpawner == null)
+        {
+            foreach (SpawnSoldier spawner in spawners)
+            {
+                if (spawner != null && spawner.gameObject.activeInHierarchy && spawner.CanSpawnTrainedSoldier(slot.troopType))
                 {
-                    targetSpawner = s;
+                    targetSpawner = spawner;
                     break;
                 }
             }
         }
 
-        if (targetSpawner == null && spawners.Length > 0)
+        if (targetSpawner == null)
         {
-            targetSpawner = spawners[0];
+            Debug.LogWarning($"[TroopTrainingManager] Không tìm thấy spawner có prefab phù hợp cho {slot.troopType} tại vùng {zoneName}.");
         }
-
-        if (targetSpawner != null)
+        else
         {
-            for (int i = 0; i < 3; i++)
+            int spawnedCount = targetSpawner.SpawnTrainedSoldiers(slot.troopType, SOLDIERS_PER_TRAINING_UNIT);
+            if (spawnedCount != SOLDIERS_PER_TRAINING_UNIT)
             {
-                targetSpawner.SpawnOneTrainedSoldier();
+                Debug.LogWarning($"[TroopTrainingManager] {slot.troopType} chỉ spawn được {spawnedCount}/{SOLDIERS_PER_TRAINING_UNIT} lính tại vùng {zoneName}.");
             }
         }
 

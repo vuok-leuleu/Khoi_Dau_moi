@@ -168,7 +168,7 @@ public class TroopTrainingSlotUI : MonoBehaviour
         {
             case BuildingType.BarracksMelee: return "Kiếm Sĩ";
             case BuildingType.BarracksArcher: return "Cung Thủ";
-            case BuildingType.BarracksSpear: return "Thương Thủ";
+            case BuildingType.BarracksSpear: return "Hộ Vệ";
             default: return "Binh Lính";
         }
     }
