@@ -141,6 +141,15 @@ public class DayNightManager : Singleton<DayNightManager>
             defaultLightRotation = directionalLight.transform.localEulerAngles;
         }
 
+        // ✅ TỰ ĐỘNG TẠO WaveResourceManager NẾU CHƯA CÓ TRONG SCENE
+        // (Đảm bảo tài nguyên luôn được thu hoạch khi qua ngày dù không gắn trong Inspector)
+        if (UnityEngine.Object.FindFirstObjectByType<WaveResourceManager>() == null)
+        {
+            GameObject wrmObj = new GameObject("[WaveResourceManager_Auto]");
+            wrmObj.AddComponent<WaveResourceManager>();
+            Debug.Log("[DayNightManager] ✅ Đã tự động tạo WaveResourceManager trong scene.");
+        }
+
         InitCloudPositions();
         UpdateSkipButtonUI();
         Debug.Log($"[WaveManager] Hệ thống Wave đã sẵn sàng! Đang ở giai đoạn Chuẩn bị cho Wave 1");

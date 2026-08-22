@@ -53,6 +53,19 @@ public class WaveResourceManager : MonoBehaviour
 
     private void HandleWaveStart(int waveIndex)
     {
+        // ⚠️ FIX RACE CONDITION:
+        // DayNightManager.OnWaveStart được invoke NGAY TRONG cùng frame với currentWave++
+        // Coroutine xây dựng trong UpgradeableBuilding chưa kịp chạy yield return null
+        // → IsUpgrading vẫn còn = true tại thời điểm này → bị bỏ qua sai!
+        // Giải pháp: Đợi 1 frame để tất cả coroutine xây dựng kịp cập nhật xong rồi mới thu tài nguyên.
+        StartCoroutine(CollectResourcesAfterBuildingsUpdate(waveIndex));
+    }
+
+    private System.Collections.IEnumerator CollectResourcesAfterBuildingsUpdate(int waveIndex)
+    {
+        // Đợi 1 frame: cho tất cả coroutine UpgradeableBuilding kịp chạy và cập nhật IsUpgrading
+        yield return null;
+
         CollectBuildingResourcesForWave(waveIndex);
     }
 
@@ -116,7 +129,8 @@ public class WaveResourceManager : MonoBehaviour
         if (totalFoodGained > 0) JsonDataManager.Ins.AddFood(totalFoodGained);
         if (totalGoldGained > 0) JsonDataManager.Ins.AddGold(totalGoldGained);
 
-        JsonDataManager.Ins.BroadcastAllResources();
+        // KHÔNG gọi BroadcastAllResources() ở đây vì AddXxx đã invoke OnXxxChanged event rồi.
+        // Gọi thêm BroadcastAllResources sẽ dư thừa (HUDController nhận delta=0, bỏ qua).
 
         Debug.Log($"[WaveResourceManager] 🌾 NGÀY/WAVE {waveIndex}: Thu hoạch tài nguyên thành công! +{totalWoodGained} Gỗ, +{totalStoneGained} Đá, +{totalFoodGained} Lương, +{totalGoldGained} Vàng.");
 
