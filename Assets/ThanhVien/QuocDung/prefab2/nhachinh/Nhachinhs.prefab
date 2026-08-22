@@ -128,7 +128,8 @@ MonoBehaviour:
   riceStorageLevels: []
   kitchenLevels: []
   houseLevels: []
-  buildingIcons: []
+  buildingIcons:
+  - {fileID: 1165255449, guid: 8db0aa9a1b20a2140b6dd474ad1626cb, type: 3}
   ruinedVisualModel: {fileID: 2644086688663423736}
   repairWoodCost: 30
   repairStoneCost: 30

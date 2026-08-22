@@ -13327,7 +13327,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8608987700494733474, guid: e84bde37908f81d4198313cf5087d526, type: 3}
       propertyPath: chapterList.Array.data[0].objectives.Array.data[0].title
-      value: "B\u1EA5m v\xE0o Zeffira \u0111\u1EC3 m\u1EDF Settlement View"
+      value: "B\u1EA5m v\xE0o Zeffira \u0111\u1EC3 m\u1EDF giao di\u1EC7n Th\xE0nh Ph\u1ED1"
       objectReference: {fileID: 0}
     - target: {fileID: 8608987700494733474, guid: e84bde37908f81d4198313cf5087d526, type: 3}
       propertyPath: chapterList.Array.data[0].objectives.Array.data[1].title
@@ -13335,7 +13335,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8608987700494733474, guid: e84bde37908f81d4198313cf5087d526, type: 3}
       propertyPath: chapterList.Array.data[0].objectives.Array.data[2].title
-      value: "Hu\u1EA5n luy\u1EC7n 1 H\u1ED9 V\u1EC7 (Guard) t\u1EA1i Zeffira"
+      value: "Hu\u1EA5n luy\u1EC7n 1 H\u1ED9 V\u1EC7 t\u1EA1i Zeffira"
       objectReference: {fileID: 0}
     - target: {fileID: 8608987700494733474, guid: e84bde37908f81d4198313cf5087d526, type: 3}
       propertyPath: chapterList.Array.data[0].objectives.Array.data[3].title

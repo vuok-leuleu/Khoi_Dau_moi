@@ -257,7 +257,10 @@ MonoBehaviour:
   useFixedSize: 1
   fixedSize: 0.1
   minScale: 0.04
-  maxScale: 1
+  maxScale: 0.6
+  enableDistanceFade: 1
+  minVisibleDistance: 18
+  fadeTransitionRange: 6
 --- !u!1 &3199485760862314133
 GameObject:
   m_ObjectHideFlags: 0

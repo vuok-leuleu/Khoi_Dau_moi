@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
  * 
  * QUY TẮC BẮT BUỘC:
  * 1. Đồng bộ 100% với 6 nhiệm vụ trong 0. PROLOGUE của ChapterQuestTestController:
- *    - Quest 0: Bấm vào Zeffira để mở Settlement View
+ *    - Quest 0: Bấm vào Zeffira để mở giao diện Thành Phố
  *    - Quest 1: Xây dựng Xưởng Gỗ tại Zeffira (Cần Qua Ngày)
  *    - Quest 2: Huấn luyện 1 Hộ Vệ tại Zeffira (Cần Qua Ngày)
  *    - Quest 3: Di chuyển quân đến lãnh thổ địch phía Đông Zeffira (VASKASIA)
@@ -26,7 +26,7 @@ using UnityEngine.SceneManagement;
 public enum DemaciaTutorialStage
 {
     None,
-    Stage0_OpenSettlementView,    // 0. Bấm vào Zeffira để mở Settlement View
+    Stage0_OpenSettlementView,    // 0. Bấm vào Zeffira để mở giao diện Thành Phố
     Stage1_BuildWood,             // 1. Xây Xưởng Gỗ tại Zeffira
     Stage1_SkipDayWood,           // 1. Bấm qua ngày hoàn thành Xưởng Gỗ
     Stage2_TrainGuard,            // 2. Chọn huấn luyện 1 Hộ Vệ (Guard) tại Zeffira
@@ -295,7 +295,7 @@ public class CampaignTutorialManager : MonoBehaviour
             new DialogueData { speakerName = "Trưởng Làng Marcus", message = "Thưa lãnh chúa, khu định cư Zeffira của chúng ta cần được tái thiết sau những biến động. Hãy kiểm tra tình hình bên trong lãnh địa." }
         }, () =>
         {
-            ShowStepHint(1, "Hãy bấm vào Zeffira để mở Settlement View.");
+            ShowStepHint(1, "Hãy bấm vào Zeffira để mở giao diện Thành Phố.");
             if (baseZone != null)
             {
                 FocusCameraOn(baseZone.transform.position, 1.2f);
