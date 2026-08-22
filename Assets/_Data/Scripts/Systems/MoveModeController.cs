@@ -131,8 +131,11 @@ public class MoveModeController : MonoBehaviour
 
     private void TrySelectDestination()
     {
-        if (!TryGetSettlementUnderPointer(out SettlementZone destination)) return;
-        if (destination == sourceZone) return;
+        if (!TryGetSettlementUnderPointer(out SettlementZone destination) || destination == sourceZone)
+        {
+            CancelMoveMode();
+            return;
+        }
 
         SetPreviewDestination(destination);
         // Khi bấm vào vùng đất tiếp theo thì camera zoom vào vùng đất đó và đổi nút sang APPLY
@@ -210,8 +213,8 @@ public class MoveModeController : MonoBehaviour
         Transform destinationAnchor = GetRouteAnchor(destination);
         if (sourceAnchor == null || destinationAnchor == null) return null;
 
-        int wavesToReach = Mathf.Max(1, Mathf.RoundToInt(
-            Vector3.Distance(sourceAnchor.position, destinationAnchor.position) / 15f));
+        int wavesToReach = SoldierPoint.CalculateWaveCount(
+            Vector3.Distance(sourceAnchor.position, destinationAnchor.position));
         int dispatchedCount = 0;
         UnitController routeLeader = null;
 
@@ -412,4 +415,3 @@ public class MoveModeController : MonoBehaviour
         onComplete?.Invoke();
     }
 }
-

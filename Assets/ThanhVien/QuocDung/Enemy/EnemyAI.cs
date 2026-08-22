@@ -30,12 +30,26 @@ public class EnemyAI : MonoBehaviour
     private Vector3 startSpawnPosition;
     private bool isWaveInfoInitialized = false;
 
-    public void InitializeWaveArrival(int currentWave, int wavesToReach = 3)
+    public void InitializeWaveArrival(int currentWave, int wavesToReach = -1)
     {
-        wavesToReachTarget = wavesToReach > 0 ? wavesToReach : 3;
+        if (startSpawnPosition == Vector3.zero)
+        {
+            startSpawnPosition = transform.position;
+        }
+
+        if (wavesToReach <= 0)
+        {
+            Vector3 dest = (villageCenter != null) ? villageCenter.position : GetTargetDestinationPosition(startSpawnPosition);
+            float dist = Vector3.Distance(startSpawnPosition, dest);
+            wavesToReachTarget = SoldierPoint.CalculateWaveCount(dist);
+        }
+        else
+        {
+            wavesToReachTarget = wavesToReach;
+        }
+
         spawnWave = currentWave;
         targetWave = spawnWave + wavesToReachTarget;
-        startSpawnPosition = transform.position;
         isWaveInfoInitialized = true;
     }
 
@@ -337,7 +351,7 @@ public class EnemyAI : MonoBehaviour
     {
         if (!isWaveInfoInitialized)
         {
-            InitializeWaveArrival(waveIndex, wavesToReachTarget > 0 ? wavesToReachTarget : 3);
+            InitializeWaveArrival(waveIndex, -1);
         }
     }
 
@@ -381,7 +395,7 @@ public class EnemyAI : MonoBehaviour
         if (!isWaveInfoInitialized)
         {
             int currentWave = (DayNightManager.HasInstance && DayNightManager.Ins != null) ? DayNightManager.Ins.CurrentWave : 1;
-            InitializeWaveArrival(currentWave, wavesToReachTarget > 0 ? wavesToReachTarget : 3);
+            InitializeWaveArrival(currentWave, -1);
         }
 
         // Register this enemy to start marching
@@ -500,7 +514,7 @@ public class EnemyAI : MonoBehaviour
                 if (!isWaveInfoInitialized)
                 {
                     int curWave = (DayNightManager.HasInstance && DayNightManager.Ins != null) ? DayNightManager.Ins.CurrentWave : 1;
-                    InitializeWaveArrival(curWave, wavesToReachTarget > 0 ? wavesToReachTarget : 3);
+                    InitializeWaveArrival(curWave, -1);
                 }
 
                 int currentWave = (DayNightManager.HasInstance && DayNightManager.Ins != null) ? DayNightManager.Ins.CurrentWave : 1;
@@ -1750,3 +1764,4 @@ public class EnemyAI : MonoBehaviour
         return targetPos;
     }
 }
+

@@ -534,7 +534,7 @@ public class EnemySpawn : MonoBehaviour
             enemyAI.exitPlayModeWhenNoBuildings = exitPlayModeWhenNoBuildings;
 
             int curWave = (DayNightManager.HasInstance && DayNightManager.Ins != null) ? DayNightManager.Ins.CurrentWave : 1;
-            enemyAI.InitializeWaveArrival(curWave, 3);
+            enemyAI.InitializeWaveArrival(curWave, -1);
 
             if (target != null)
             {
@@ -560,6 +560,7 @@ public class EnemySpawn : MonoBehaviour
         return enemy;
     }
 }
+
 
 
 

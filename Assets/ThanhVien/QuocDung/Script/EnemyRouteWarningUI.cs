@@ -146,9 +146,12 @@ public class EnemyRouteWarningUI : MonoBehaviour
         Vector3 raisedStart = start + Vector3.up * 0.08f;
         Vector3 raisedEnd = end + Vector3.up * 0.08f;
         float routeLength = Vector3.Distance(raisedStart, raisedEnd);
-        float shaftLength = routeLength * 0.7f;
-        float headLength = routeLength * 0.3f;
-        float headWidth = worldArrowWidth * 1.8f;
+
+        const float shaftLengthRatio = 0.8f;
+        const float headLengthRatio = 0.2f;
+        float headWidth = GetMatchedHeadWidth(worldArrowShaftSprite, worldArrowHeadSprite, worldArrowWidth);
+        float shaftLength = routeLength * shaftLengthRatio;
+        float headLength = routeLength * headLengthRatio;
         Quaternion groundRotation = Quaternion.LookRotation(Vector3.up, -flatDirection);
 
         worldArrowShaft.transform.SetPositionAndRotation(raisedStart + flatDirection * (shaftLength * 0.5f), groundRotation);
@@ -157,17 +160,20 @@ public class EnemyRouteWarningUI : MonoBehaviour
         worldArrowHead.transform.localScale = GetSpriteScale(worldArrowHeadSprite, headWidth, headLength);
     }
 
-    private static Vector3 GetSpriteScale(Sprite sprite, float width, float length)
+    private static float GetMatchedHeadWidth(Sprite shaftSprite, Sprite headSprite, float shaftWidth)
     {
-        Vector2 spriteSize = sprite.bounds.size;
-        return new Vector3(width / spriteSize.x, length / spriteSize.y, 1f);
+        if (shaftSprite == null || headSprite == null) return shaftWidth;
+
+        return shaftWidth * headSprite.bounds.size.x / Mathf.Max(0.001f, shaftSprite.bounds.size.x);
     }
 
-    private static float GetSpriteLength(Sprite sprite, float width)
+    private static Vector3 GetSpriteScale(Sprite sprite, float width, float length)
     {
+        if (sprite == null) return Vector3.one;
         Vector2 spriteSize = sprite.bounds.size;
-        return width * spriteSize.y / spriteSize.x;
+        return new Vector3(width / Mathf.Max(0.001f, spriteSize.x), length / Mathf.Max(0.001f, spriteSize.y), 1f);
     }
+
 
     private void UpdateRoute()
     {
@@ -211,8 +217,10 @@ public class EnemyRouteWarningUI : MonoBehaviour
             int currentWave = DayNightManager.HasInstance && DayNightManager.Ins != null
                 ? DayNightManager.Ins.CurrentWave
                 : 1;
-            EnemyAI enemy = waveSource.GetComponent<EnemyAI>();
-            int remaining = enemy != null ? Mathf.Max(0, enemy.targetWave - currentWave) : 0;
+            EnemyAI enemy = waveSource != null ? waveSource.GetComponent<EnemyAI>() : null;
+            int remaining = enemy != null
+                ? Mathf.Max(0, enemy.targetWave - currentWave)
+                : SoldierPoint.CalculateWaveCount(distance);
             waveText.text = remaining > 0 ? $"Còn {remaining} Wave" : "Đã đến thành!";
         }
     }

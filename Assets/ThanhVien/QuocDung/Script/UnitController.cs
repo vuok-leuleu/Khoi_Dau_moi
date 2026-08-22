@@ -468,7 +468,7 @@ public class UnitController : MonoBehaviour
         if (wavesToReach <= 0)
         {
             float dist = Vector3.Distance(marchStartPosition, marchDestinationPosition);
-            wavesToReach = Mathf.Max(1, Mathf.RoundToInt(dist / 15f));
+            wavesToReach = SoldierPoint.CalculateWaveCount(dist);
         }
 
         marchWavesToReach = wavesToReach;
@@ -863,3 +863,4 @@ public class UnitController : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, GetAttackStopDistance());
     }
 }
+

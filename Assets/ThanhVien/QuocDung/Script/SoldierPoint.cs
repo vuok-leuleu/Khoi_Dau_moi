@@ -30,7 +30,17 @@ public class SoldierPoint : MonoBehaviour
     private Canvas routeCanvas;
     private Image arrowShaftImage;
     private Image arrowHeadImage;
-    private Vector2 arrowHeadDefaultSize;
+    private float baseShaftWidth = 55f;
+    private float matchedHeadWidth = 55f;
+
+    /// <summary>
+    /// Tính toán số Wave cần thiết theo khoảng cách (tối thiểu 2 wave, tối đa 10 wave).
+    /// </summary>
+    public static int CalculateWaveCount(float distance, float unitsPerWave = 20f)
+    {
+        int waves = Mathf.RoundToInt(distance / unitsPerWave);
+        return Mathf.Clamp(waves, 2, 10);
+    }
 
     public void Setup(Transform start, Transform target, Transform soldier, float heightOffset = 0.08f)
     {
@@ -64,10 +74,11 @@ public class SoldierPoint : MonoBehaviour
         routeCanvas = GetComponent<Canvas>();
         arrowShaftImage = arrowShaft != null ? arrowShaft.GetComponent<Image>() : null;
         arrowHeadImage = arrowHead != null ? arrowHead.GetComponent<Image>() : null;
-        if (arrowHead != null)
+        if (arrowShaft != null)
         {
-            arrowHeadDefaultSize = arrowHead.sizeDelta;
+            baseShaftWidth = arrowShaft.sizeDelta.x;
         }
+        matchedHeadWidth = GetMatchedHeadWidth();
         AssignWorldCamera();
     }
 
@@ -115,6 +126,18 @@ public class SoldierPoint : MonoBehaviour
         return solidSprite;
     }
 
+    private float GetMatchedHeadWidth()
+    {
+        if (arrowShaftImage == null || arrowHeadImage == null ||
+            arrowShaftImage.sprite == null || arrowHeadImage.sprite == null)
+        {
+            return baseShaftWidth;
+        }
+
+        return baseShaftWidth * arrowHeadImage.sprite.bounds.size.x /
+            Mathf.Max(0.001f, arrowShaftImage.sprite.bounds.size.x);
+    }
+
     private void UpdatePrefabRouteVisual(Vector3 start, Vector3 end, Vector3 direction)
     {
         if (arrowShaft == null || arrowHead == null) return;
@@ -123,30 +146,27 @@ public class SoldierPoint : MonoBehaviour
         if (flatDirection.sqrMagnitude < 0.001f) return;
 
         float routeLength = Vector3.Distance(start, end);
-        const float shaftLengthRatio = 0.6f;
-        const float headLengthRatio = 0.4f;
         float canvasScale = Mathf.Max(0.001f, Mathf.Abs(transform.lossyScale.x));
-        float shaftLength = routeLength * shaftLengthRatio;
-        float headLength = routeLength * headLengthRatio;
+
+        const float shaftLengthRatio = 0.7f;
+        const float headLengthRatio = 0.3f;
+        float shaftLengthWorld = routeLength * shaftLengthRatio;
+        float headLengthWorld = routeLength * headLengthRatio;
+
         Quaternion shaftRotation = Quaternion.LookRotation(Vector3.up, -flatDirection);
         Quaternion headRotation = Quaternion.LookRotation(Vector3.up, -flatDirection);
 
-        arrowShaft.gameObject.SetActive(shaftLength > 0.01f);
-        arrowShaft.position = end - flatDirection * headLength;
+        arrowShaft.gameObject.SetActive(shaftLengthWorld > 0.01f);
+        arrowShaft.position = end - flatDirection * headLengthWorld;
         arrowShaft.rotation = shaftRotation;
-        arrowShaft.sizeDelta = new Vector2(arrowShaft.sizeDelta.x, shaftLength / canvasScale);
+        // Giữ nguyên chiều ngang cố định bằng baseShaftWidth, chỉ tăng chiều dài Y
+        arrowShaft.sizeDelta = new Vector2(baseShaftWidth, shaftLengthWorld / canvasScale);
 
         arrowHead.gameObject.SetActive(true);
         arrowHead.position = end;
         arrowHead.rotation = headRotation;
-        float headWidth = arrowShaft.sizeDelta.x;
-        if (arrowShaftImage != null && arrowHeadImage != null &&
-            arrowShaftImage.sprite != null && arrowHeadImage.sprite != null)
-        {
-            headWidth *= arrowHeadImage.sprite.rect.width / arrowShaftImage.sprite.rect.width;
-        }
-
-        arrowHead.sizeDelta = new Vector2(headWidth, headLength / canvasScale);
+        // Bù theo chiều rộng sprite để phần nhìn thấy của đầu và thân bằng nhau.
+        arrowHead.sizeDelta = new Vector2(matchedHeadWidth, headLengthWorld / canvasScale);
     }
 
     private void UpdateRoute()
@@ -201,7 +221,7 @@ public class SoldierPoint : MonoBehaviour
             : 1;
         int remaining = unitController != null
             ? Mathf.Max(0, unitController.marchTargetWave - currentWave)
-            : Mathf.Max(1, Mathf.CeilToInt(distance / 15f));
+            : CalculateWaveCount(distance);
 
         waveText.text = $"Còn {remaining} Wave";
     }

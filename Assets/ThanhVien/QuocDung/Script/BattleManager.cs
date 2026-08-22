@@ -18,6 +18,7 @@ public class BattleManager : MonoBehaviour
 
     [Header("Enemy Prefab Settings")]
     [SerializeField] private GameObject enemyPrefab;
+    [SerializeField] private GameObject enemyRangedPrefab;
 
     [Header("Player Soldier Prefabs")]
     [SerializeField] private GameObject soldierPrefab;
