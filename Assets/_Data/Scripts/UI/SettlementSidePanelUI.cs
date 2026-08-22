@@ -132,6 +132,10 @@ public class SettlementSidePanelUI : MonoBehaviour
             {
                 MoveModeController.Ins.ApplySelectedDestination();
             }
+            else
+            {
+                MoveModeController.Ins.CancelMoveMode();
+            }
             return;
         }
 

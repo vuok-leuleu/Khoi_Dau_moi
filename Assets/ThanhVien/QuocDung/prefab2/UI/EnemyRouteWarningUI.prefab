@@ -717,7 +717,7 @@ MonoBehaviour:
   arrowHeightAtOneMeter: 100
   labelHeight: 220
   waveLabelWidth: 360
-  waveLabelHeight: 128
+  waveLabelHeight: 127
   waveFontSize: 52
   groundMask:
     serializedVersion: 2
