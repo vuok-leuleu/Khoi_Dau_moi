@@ -114,13 +114,13 @@ MonoBehaviour:
   - {fileID: 2348975849213083568}
   - {fileID: 4030631770309376290}
   upgradeCosts:
-  - woodCost: 0
-    stoneCost: 0
-    foodCost: 0
+  - woodCost: 1000
+    stoneCost: 1000
+    foodCost: 1000
     upgradeDuration: 2
-  - woodCost: 0
-    stoneCost: 0
-    foodCost: 0
+  - woodCost: 2000
+    stoneCost: 2000
+    foodCost: 2000
     upgradeDuration: 3
   towerLevelScripts: []
   woodStorageLevels: []
@@ -128,7 +128,10 @@ MonoBehaviour:
   riceStorageLevels: []
   kitchenLevels: []
   houseLevels: []
-  buildingIcons: []
+  buildingIcons:
+  - {fileID: 605721435, guid: 1ff3fa26257c295409c819e0a8e98999, type: 3}
+  - {fileID: -569388602, guid: b2107baf4f8790541beb53b90b310685, type: 3}
+  - {fileID: 97597049, guid: 84e8e55a6e5dc7d48ac5028ac4590a89, type: 3}
   ruinedVisualModel: {fileID: 2644086688663423736}
   repairWoodCost: 30
   repairStoneCost: 30

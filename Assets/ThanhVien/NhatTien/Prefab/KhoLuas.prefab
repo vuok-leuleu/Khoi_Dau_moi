@@ -716,7 +716,7 @@ MonoBehaviour:
   kitchenLevels: []
   houseLevels: []
   buildingIcons:
-  - {fileID: 21300000, guid: 8586eb5be42379646a755ac3306aabd1, type: 3}
+  - {fileID: 397535991, guid: 7eb7b742066931145a33cb8415196f89, type: 3}
   - {fileID: 21300000, guid: 6ed6ab34c2d48f647b451f296011f784, type: 3}
   - {fileID: 21300000, guid: 0e6ad5cc5493197448c0a9b9fcc9dbe7, type: 3}
   ruinedVisualModel: {fileID: 5857760620803889324}
