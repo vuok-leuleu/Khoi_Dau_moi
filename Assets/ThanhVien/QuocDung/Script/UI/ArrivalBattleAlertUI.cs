@@ -70,7 +70,7 @@ public sealed class ArrivalBattleAlertUI : MonoBehaviour
 
         IEnumerable<EnemyAI> enemies =
             leader != null && leader.squadEnemies != null && leader.squadEnemies.Count > 0
-                ? leader.squadEnemies
+                ? (IEnumerable<EnemyAI>)leader.squadEnemies
                 : new[] { leader };
 
         foreach (EnemyAI enemy in enemies)

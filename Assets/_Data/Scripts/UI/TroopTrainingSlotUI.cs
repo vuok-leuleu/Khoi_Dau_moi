@@ -29,15 +29,87 @@ public class TroopTrainingSlotUI : MonoBehaviour
 
     private void Awake()
     {
-        if (slotButton == null) slotButton = GetComponent<Button>();
+        AutoBindReferences();
+        ConfigureButton();
     }
 
-    private void Start()
+    private void OnEnable()
     {
-        if (slotButton != null)
+        AutoBindReferences();
+        ConfigureButton();
+    }
+
+    private void OnDisable()
+    {
+        if (slotButton != null && !HasPersistentClickListener(slotButton))
         {
             slotButton.onClick.RemoveListener(OnClickSlot);
+        }
+    }
+
+    private void ConfigureButton()
+    {
+        if (slotButton == null) return;
+
+        // Prefab hiện tại đã có persistent listener. Chỉ thêm runtime listener khi thật sự thiếu.
+        slotButton.onClick.RemoveListener(OnClickSlot);
+        if (!HasPersistentClickListener(slotButton))
+        {
             slotButton.onClick.AddListener(OnClickSlot);
+        }
+    }
+
+    private bool HasPersistentClickListener(Button button)
+    {
+        for (int i = 0; i < button.onClick.GetPersistentEventCount(); i++)
+        {
+            if (button.onClick.GetPersistentTarget(i) == this &&
+                button.onClick.GetPersistentMethodName(i) == nameof(OnClickSlot))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Fallback cho trường hợp component được thêm lúc runtime hoặc prefab bị mất reference.
+    /// </summary>
+    private void AutoBindReferences()
+    {
+        if (slotButton == null)
+        {
+            slotButton = GetComponent<Button>();
+            if (slotButton == null) slotButton = GetComponentInChildren<Button>(true);
+        }
+
+        Transform[] children = GetComponentsInChildren<Transform>(true);
+        foreach (Transform child in children)
+        {
+            if (child == null) continue;
+
+            string childName = child.name.Trim();
+            if (lockedStateObj == null && childName.Equals("LockedStateObj", System.StringComparison.OrdinalIgnoreCase))
+                lockedStateObj = child.gameObject;
+            else if (emptyStateObj == null && childName.Equals("EmptyStateObj", System.StringComparison.OrdinalIgnoreCase))
+                emptyStateObj = child.gameObject;
+            else if (trainingStateObj == null && childName.Equals("TrainingStateObj", System.StringComparison.OrdinalIgnoreCase))
+                trainingStateObj = child.gameObject;
+            else if (completedStateObj == null && childName.Equals("CompletedStateObj", System.StringComparison.OrdinalIgnoreCase))
+                completedStateObj = child.gameObject;
+
+            if (lockedTextTMP == null && childName.StartsWith("LockedText_TMP", System.StringComparison.OrdinalIgnoreCase))
+                lockedTextTMP = child.GetComponent<TextMeshProUGUI>();
+            else if (emptyTextTMP == null && childName.StartsWith("EmptyTitle_TMP", System.StringComparison.OrdinalIgnoreCase))
+                emptyTextTMP = child.GetComponent<TextMeshProUGUI>();
+            else if (troopNameTMP == null && childName.StartsWith("BuildingName_TMP", System.StringComparison.OrdinalIgnoreCase))
+                troopNameTMP = child.GetComponent<TextMeshProUGUI>();
+            else if (remainingTimeTMP == null && childName.StartsWith("RemainingTime_TMP", System.StringComparison.OrdinalIgnoreCase))
+                remainingTimeTMP = child.GetComponent<TextMeshProUGUI>();
+
+            if (troopIconImg == null && childName.Equals("TroopIcon_Img", System.StringComparison.OrdinalIgnoreCase))
+                troopIconImg = child.GetComponent<Image>();
         }
     }
 
@@ -46,6 +118,7 @@ public class TroopTrainingSlotUI : MonoBehaviour
     /// </summary>
     public void SetData(TroopTrainingSlotData data, SettlementZone zone)
     {
+        AutoBindReferences();
         currentSlotData = data;
         currentZone = zone;
 

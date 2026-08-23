@@ -28,9 +28,21 @@ public class UIManager : Singleton<UIManager>
         if (controlHintsGroup != null) controlHintsGroup.SetActive(false);
         if (settingUI != null) settingUI.SetActive(false);
 
-        if (buildButton != null) buildButton.onClick.AddListener(OpenSettlementPanel);
-        if (toolsButton != null) toolsButton.onClick.AddListener(OnClickToolsButton);
-        if (settingButton != null) settingButton.onClick.AddListener(OnClickSettingButton);
+        if (buildButton != null)
+        {
+            buildButton.onClick.RemoveListener(OpenSettlementPanel);
+            buildButton.onClick.AddListener(OpenSettlementPanel);
+        }
+        if (toolsButton != null)
+        {
+            toolsButton.onClick.RemoveListener(OnClickToolsButton);
+            toolsButton.onClick.AddListener(OnClickToolsButton);
+        }
+        if (settingButton != null)
+        {
+            settingButton.onClick.RemoveListener(OnClickSettingButton);
+            settingButton.onClick.AddListener(OnClickSettingButton);
+        }
     }
 
     // ====================================================================
@@ -40,6 +52,13 @@ public class UIManager : Singleton<UIManager>
     public void OpenSettlementPanel()
     {
         CloseAllPopups();
+
+        if (BuildTrainingUIManager.Ins != null)
+        {
+            BuildTrainingUIManager.Ins.ShowSettlementPanel();
+            return;
+        }
+
         if (settlementSidePanel != null)
         {
             settlementSidePanel.SetActive(true);
@@ -54,6 +73,12 @@ public class UIManager : Singleton<UIManager>
 
     public void CloseSettlementPanel()
     {
+        if (BuildTrainingUIManager.Ins != null)
+        {
+            BuildTrainingUIManager.Ins.CloseAllWindows();
+            return;
+        }
+
         if (settlementSidePanel != null) settlementSidePanel.SetActive(false);
         if (SettlementSidePanelUI.Ins != null) SettlementSidePanelUI.Ins.gameObject.SetActive(false);
     }
@@ -66,6 +91,12 @@ public class UIManager : Singleton<UIManager>
     {
         Debug.Log("[UIManager] 🛒 OpenBuildMenu được gọi!");
         HideUpgradePanel();
+
+        if (BuildTrainingUIManager.Ins != null)
+        {
+            BuildTrainingUIManager.Ins.ShowBuildWindow();
+            return;
+        }
 
         if (buildingShopPopup != null)
         {
@@ -87,6 +118,7 @@ public class UIManager : Singleton<UIManager>
     {
         if (buildingShopPopup != null) buildingShopPopup.SetActive(false);
         if (BuildingShopUI.Ins != null) BuildingShopUI.Ins.gameObject.SetActive(false);
+        BuildTrainingUIManager.Ins?.NotifyWindowClosed(BuildTrainingUIManager.ManagedWindow.Build);
     }
 
     public void ToggleBuildMenu()
@@ -107,6 +139,7 @@ public class UIManager : Singleton<UIManager>
         if (building == null) return;
 
         CloseBuildMenu();
+        BuildTrainingUIManager.Ins?.ShowUpgradeWindow();
 
         // 1. Đảm bảo Bảng Thủ Đô (Settlement Panel) bên trái LUÔN hiển thị song song!
         if (settlementSidePanel != null && !settlementSidePanel.activeSelf)
@@ -141,6 +174,7 @@ public class UIManager : Singleton<UIManager>
     {
         if (BuildingUpgradeSidePanelUI.Ins != null) BuildingUpgradeSidePanelUI.Ins.ClosePanel();
         if (buildingUpgradeSidePanel != null) buildingUpgradeSidePanel.SetActive(false);
+        BuildTrainingUIManager.Ins?.NotifyWindowClosed(BuildTrainingUIManager.ManagedWindow.Upgrade);
     }
 
     public void CloseUpgradePanel() => HideUpgradePanel();
@@ -150,6 +184,7 @@ public class UIManager : Singleton<UIManager>
         if (zone == null) return;
 
         CloseBuildMenu();
+        BuildTrainingUIManager.Ins?.ShowUpgradeWindow();
 
         // 1. Đảm bảo Bảng Thủ Đô bên trái luôn hiển thị
         if (settlementSidePanel != null && !settlementSidePanel.activeSelf)
@@ -263,6 +298,8 @@ public class UIManager : Singleton<UIManager>
 
     public void CloseAllPopups()
     {
+        BuildTrainingUIManager.Ins?.CloseSecondaryWindows();
+
         if (buildingShopPopup != null) buildingShopPopup.SetActive(false);
         if (BuildingShopUI.Ins != null) BuildingShopUI.Ins.gameObject.SetActive(false);
 

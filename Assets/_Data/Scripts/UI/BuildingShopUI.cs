@@ -50,15 +50,22 @@ public class BuildingShopUI : MonoBehaviour
         else Destroy(gameObject);
     }
 
+    private void OnDestroy()
+    {
+        if (Ins == this) Ins = null;
+    }
+
     private void Start()
     {
         if (closeBtn != null)
         {
+            closeBtn.onClick.RemoveListener(CloseShop);
             closeBtn.onClick.AddListener(CloseShop);
         }
 
         if (constructBtn != null)
         {
+            constructBtn.onClick.RemoveListener(OnClickConstructButton);
             constructBtn.onClick.AddListener(OnClickConstructButton);
         }
 
@@ -67,7 +74,10 @@ public class BuildingShopUI : MonoBehaviour
 
     private void OnEnable()
     {
-        if (BuildingUpgradeSidePanelUI.Ins != null) BuildingUpgradeSidePanelUI.Ins.ClosePanel();
+        if (BuildTrainingUIManager.Ins == null && BuildingUpgradeSidePanelUI.Ins != null)
+        {
+            BuildingUpgradeSidePanelUI.Ins.ClosePanel();
+        }
         RefreshAllItems();
 
         if (CampaignTutorialManager.Ins != null)
@@ -154,17 +164,15 @@ public class BuildingShopUI : MonoBehaviour
 
                 item.RefreshItemName();
                 item.SetSelected(false);
+                item.EnsureButtonListener();
 
                 Button b = item.GetComponent<Button>();
-                if (b == null) b = item.GetComponentInChildren<Button>();
+                if (b == null) b = item.GetComponentInChildren<Button>(true);
                 if (b != null)
                 {
                     b.interactable = isUnlockedAtZone;
+                    // Xóa listener cũ do BuildingShopUI từng tự thêm. Item tự quản lý đúng một listener.
                     b.onClick.RemoveListener(item.OnClickFromShop);
-                    if (isUnlockedAtZone)
-                    {
-                        b.onClick.AddListener(item.OnClickFromShop);
-                    }
                 }
             }
         }
@@ -331,5 +339,6 @@ public class BuildingShopUI : MonoBehaviour
     public void CloseShop()
     {
         gameObject.SetActive(false);
+        BuildTrainingUIManager.Ins?.NotifyWindowClosed(BuildTrainingUIManager.ManagedWindow.Build);
     }
 }
