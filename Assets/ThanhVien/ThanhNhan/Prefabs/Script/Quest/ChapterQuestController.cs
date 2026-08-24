@@ -66,6 +66,11 @@ public class ChapterQuestController : MonoBehaviour
     private Vector2 windowRestPosition;
     private bool hasWindowRestPosition;
 
+    // Tiến độ Chapter Quest phải tồn tại qua SceneBattle; tutorial cũng đổi scene giữa Prologue.
+    private const string QuestProgressSaveKey = "ChapterQuestProgress_V1";
+    private const string HighestUnlockedChapterSaveKey = "ChapterQuestHighestUnlocked_V1";
+    private const string CurrentChapterSaveKey = "ChapterQuestCurrentChapter_V1";
+
     // Bảng màu chuẩn
     private readonly string colorActiveQuest = "#4A2E18";   // Nâu đậm nổi bật
     private readonly string colorQuestionMark = "#5C4A38";  // Nâu xám tiệp màu chữ
@@ -74,9 +79,15 @@ public class ChapterQuestController : MonoBehaviour
     private void Awake()
     {
         if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
 
         InitAllFourChapters();
+        LoadQuestProgress();
+        SynchronizePrologueProgressFromTutorial();
         CacheWindowAnimationReferences();
     }
 
@@ -321,6 +332,59 @@ public class ChapterQuestController : MonoBehaviour
         return CompleteObjective(0, objectiveIndex);
     }
 
+    /// <summary>
+    /// Khôi phục các tick Prologue nếu ChapterQuestController bị tạo lại sau khi tutorial đã đổi Scene.
+    /// Đồng bộ này không cộng lại phần thưởng, vì phần thưởng của các mục tiêu trước đó có thể đã được nhận.
+    /// </summary>
+    public bool SynchronizePrologueObjectivesThrough(int objectiveIndex)
+    {
+        InitAllFourChapters();
+        if (chapterList == null || chapterList.Count == 0 || objectiveIndex < 0) return false;
+
+        ChapterData prologue = chapterList[0];
+        if (prologue.objectives == null || prologue.objectives.Count == 0) return false;
+
+        int lastObjectiveIndex = Mathf.Min(objectiveIndex, prologue.objectives.Count - 1);
+        bool changed = false;
+
+        for (int i = 0; i <= lastObjectiveIndex; i++)
+        {
+            QuestObjective objective = prologue.objectives[i];
+            if (objective.isCompleted) continue;
+
+            objective.targetProgress = Mathf.Max(1, objective.targetProgress);
+            objective.currentProgress = objective.targetProgress;
+            objective.isCompleted = true;
+            changed = true;
+        }
+
+        if (AreAllObjectivesCompletedInChapter(prologue))
+        {
+            if (!prologue.isCompleted || !prologue.isRewardClaimed)
+            {
+                changed = true;
+            }
+
+            prologue.isCompleted = true;
+            prologue.isRewardClaimed = true;
+            int unlockedChapterIndex = Mathf.Max(highestUnlockedChapterIndex, Mathf.Min(1, chapterList.Count - 1));
+            if (highestUnlockedChapterIndex != unlockedChapterIndex)
+            {
+                changed = true;
+            }
+
+            highestUnlockedChapterIndex = unlockedChapterIndex;
+            if (currentChapterIndex != highestUnlockedChapterIndex)
+            {
+                changed = true;
+            }
+            currentChapterIndex = highestUnlockedChapterIndex;
+        }
+
+        if (changed) SaveQuestProgress();
+        return true;
+    }
+
     public bool IsObjectiveCompleted(int chapterIndex, int objectiveIndex)
     {
         InitAllFourChapters();
@@ -368,6 +432,7 @@ public class ChapterQuestController : MonoBehaviour
 
         GiveReward(obj.rewardGold, obj.rewardWood, obj.rewardStone, obj.rewardWheat);
         CheckChapterProgress();
+        SaveQuestProgress();
 
         if (gameObject.activeInHierarchy)
         {
@@ -403,6 +468,7 @@ public class ChapterQuestController : MonoBehaviour
 
         if (objective.currentProgress < objective.targetProgress)
         {
+            SaveQuestProgress();
             if (gameObject.activeInHierarchy) DisplayChapter(currentChapterIndex);
             return true;
         }
@@ -439,6 +505,139 @@ public class ChapterQuestController : MonoBehaviour
                 }
             }
         }
+    }
+
+    private bool AreAllObjectivesCompletedInChapter(ChapterData chapter)
+    {
+        return chapter != null &&
+               chapter.objectives != null &&
+               chapter.objectives.Count > 0 &&
+               !chapter.objectives.Exists(objective => !objective.isCompleted);
+    }
+
+    private void SaveQuestProgress()
+    {
+        InitAllFourChapters();
+        if (chapterList == null) return;
+
+        PlayerPrefs.SetInt(QuestProgressSaveKey, 1);
+        PlayerPrefs.SetInt(HighestUnlockedChapterSaveKey, highestUnlockedChapterIndex);
+        PlayerPrefs.SetInt(CurrentChapterSaveKey, currentChapterIndex);
+
+        for (int chapterIndex = 0; chapterIndex < chapterList.Count; chapterIndex++)
+        {
+            ChapterData chapter = chapterList[chapterIndex];
+            PlayerPrefs.SetInt(GetChapterProgressKey(chapterIndex, "Completed"), chapter.isCompleted ? 1 : 0);
+            PlayerPrefs.SetInt(GetChapterProgressKey(chapterIndex, "RewardClaimed"), chapter.isRewardClaimed ? 1 : 0);
+
+            if (chapter.objectives == null) continue;
+
+            for (int objectiveIndex = 0; objectiveIndex < chapter.objectives.Count; objectiveIndex++)
+            {
+                QuestObjective objective = chapter.objectives[objectiveIndex];
+                PlayerPrefs.SetInt(GetObjectiveProgressKey(chapterIndex, objectiveIndex, "Completed"), objective.isCompleted ? 1 : 0);
+                PlayerPrefs.SetInt(GetObjectiveProgressKey(chapterIndex, objectiveIndex, "Current"), objective.currentProgress);
+                PlayerPrefs.SetInt(GetObjectiveProgressKey(chapterIndex, objectiveIndex, "Target"), objective.targetProgress);
+            }
+        }
+
+        PlayerPrefs.Save();
+    }
+
+    private void LoadQuestProgress()
+    {
+        InitAllFourChapters();
+        if (chapterList == null || chapterList.Count == 0 || !PlayerPrefs.HasKey(QuestProgressSaveKey)) return;
+
+        highestUnlockedChapterIndex = Mathf.Clamp(
+            PlayerPrefs.GetInt(HighestUnlockedChapterSaveKey, highestUnlockedChapterIndex),
+            0,
+            chapterList.Count - 1);
+        currentChapterIndex = Mathf.Clamp(
+            PlayerPrefs.GetInt(CurrentChapterSaveKey, currentChapterIndex),
+            0,
+            chapterList.Count - 1);
+
+        for (int chapterIndex = 0; chapterIndex < chapterList.Count; chapterIndex++)
+        {
+            ChapterData chapter = chapterList[chapterIndex];
+            chapter.isCompleted = PlayerPrefs.GetInt(
+                GetChapterProgressKey(chapterIndex, "Completed"),
+                chapter.isCompleted ? 1 : 0) == 1;
+            chapter.isRewardClaimed = PlayerPrefs.GetInt(
+                GetChapterProgressKey(chapterIndex, "RewardClaimed"),
+                chapter.isRewardClaimed ? 1 : 0) == 1;
+
+            if (chapter.objectives == null) continue;
+
+            for (int objectiveIndex = 0; objectiveIndex < chapter.objectives.Count; objectiveIndex++)
+            {
+                QuestObjective objective = chapter.objectives[objectiveIndex];
+                objective.isCompleted = PlayerPrefs.GetInt(
+                    GetObjectiveProgressKey(chapterIndex, objectiveIndex, "Completed"),
+                    objective.isCompleted ? 1 : 0) == 1;
+                objective.targetProgress = Mathf.Max(1, PlayerPrefs.GetInt(
+                    GetObjectiveProgressKey(chapterIndex, objectiveIndex, "Target"),
+                    objective.targetProgress));
+                objective.currentProgress = Mathf.Clamp(PlayerPrefs.GetInt(
+                    GetObjectiveProgressKey(chapterIndex, objectiveIndex, "Current"),
+                    objective.currentProgress),
+                    0,
+                    objective.targetProgress);
+
+                if (objective.isCompleted) objective.currentProgress = objective.targetProgress;
+            }
+        }
+    }
+
+    private void SynchronizePrologueProgressFromTutorial()
+    {
+        int completedObjectiveCount = GetCompletedPrologueObjectiveCountFromTutorial();
+        if (completedObjectiveCount > 0)
+        {
+            SynchronizePrologueObjectivesThrough(completedObjectiveCount - 1);
+        }
+    }
+
+    private int GetCompletedPrologueObjectiveCountFromTutorial()
+    {
+        if (PlayerPrefs.GetInt("TutorialCompleted", 0) == 1) return 6;
+
+        DemaciaTutorialStage savedStage = (DemaciaTutorialStage)PlayerPrefs.GetInt(
+            "PrologueTutorialStage",
+            (int)DemaciaTutorialStage.Stage0_OpenSettlementView);
+
+        switch (savedStage)
+        {
+            case DemaciaTutorialStage.Stage1_BuildWood:
+            case DemaciaTutorialStage.Stage1_SkipDayWood:
+                return 1;
+            case DemaciaTutorialStage.Stage2_TrainGuard:
+            case DemaciaTutorialStage.Stage2_SkipDayTroop:
+                return 2;
+            case DemaciaTutorialStage.Stage3_MarchToEnemyEast:
+                return 3;
+            case DemaciaTutorialStage.Stage4_AttackEnemyBattle:
+                return 4;
+            case DemaciaTutorialStage.Stage4_VictoryComplete:
+            case DemaciaTutorialStage.Stage5_EstablishVaskasia:
+            case DemaciaTutorialStage.Stage5_SkipDayTownHall:
+                return 5;
+            case DemaciaTutorialStage.Completed:
+                return 6;
+            default:
+                return 0;
+        }
+    }
+
+    private static string GetChapterProgressKey(int chapterIndex, string field)
+    {
+        return $"{QuestProgressSaveKey}_Chapter_{chapterIndex}_{field}";
+    }
+
+    private static string GetObjectiveProgressKey(int chapterIndex, int objectiveIndex, string field)
+    {
+        return $"{QuestProgressSaveKey}_Chapter_{chapterIndex}_Objective_{objectiveIndex}_{field}";
     }
 
     private void GiveReward(int gold, int wood, int stone, int wheat)
@@ -653,4 +852,3 @@ public class ChapterQuestController : MonoBehaviour
         }
     }
 }
-

@@ -35,6 +35,7 @@ public enum DemaciaTutorialStage
     Stage4_AttackEnemyBattle,     // 4. Chuẩn bị và giành chiến thắng trong trận đánh đầu
     Stage4_VictoryComplete,       // 4. Hoàn thành trận đánh đầu
     Stage5_EstablishVaskasia,     // 5. Xây dựng Vaskasia trên vùng đất trống
+    Stage5_SkipDayTownHall,       // 5. Chờ Nhà Chính Vaskasia xây dựng xong
     Completed
 }
 
@@ -162,6 +163,9 @@ public class CampaignTutorialManager : MonoBehaviour
             case DemaciaTutorialStage.Stage5_EstablishVaskasia:
                 StartStage5_EstablishVaskasia();
                 break;
+            case DemaciaTutorialStage.Stage5_SkipDayTownHall:
+                ResumeStage5TownHallConstruction();
+                break;
             default:
                 StartStage0_OpenSettlementView();
                 break;
@@ -272,6 +276,26 @@ public class CampaignTutorialManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Stage 4 có hai câu thoại với hai thời điểm khác nhau:
+    /// phần tử 0 trước khi vào trận, phần tử 1 sau khi chiến thắng trở về.
+    /// Chỉ truyền một phần tử cho UI để không phát cả hai câu trong cùng một lần.
+    /// </summary>
+    private void PlayStage4Dialogue(int dialogueIndex, DialogueData fallbackDialogue, System.Action onComplete = null)
+    {
+        DialogueData[] selectedDialogue = null;
+
+        if (stage4Dialogues != null &&
+            dialogueIndex >= 0 &&
+            dialogueIndex < stage4Dialogues.Length &&
+            stage4Dialogues[dialogueIndex] != null)
+        {
+            selectedDialogue = new[] { stage4Dialogues[dialogueIndex] };
+        }
+
+        PlayDialogueSequence(selectedDialogue, new[] { fallbackDialogue }, onComplete);
+    }
+
     public bool CompleteQuestObjective(int questIndex)
     {
         if (ChapterQuestController.Instance == null)
@@ -280,7 +304,15 @@ public class CampaignTutorialManager : MonoBehaviour
             return false;
         }
 
-        return ChapterQuestController.Instance.CompletePrologueObjective(questIndex);
+        if (ChapterQuestController.Instance.CompletePrologueObjective(questIndex))
+        {
+            return true;
+        }
+
+        // Khi controller được tạo lại sau SceneBattle, trạng thái quest cũ có thể chưa kịp tải.
+        // Tutorial là nguồn trạng thái chuẩn ở luồng này, nên khôi phục các tick đến đúng bước hiện tại.
+        Debug.LogWarning($"[CampaignTutorialManager] Đồng bộ lại Prologue đến mục tiêu {questIndex + 1}.");
+        return ChapterQuestController.Instance.SynchronizePrologueObjectivesThrough(questIndex);
     }
 
     // ====================================================================
@@ -344,7 +376,7 @@ public class CampaignTutorialManager : MonoBehaviour
         }
         else if (currentStage == DemaciaTutorialStage.Stage5_EstablishVaskasia && type == BuildingType.House)
         {
-            ShowStepHint(6, "Nhà Chính Vaskasia đang được khởi công. Hãy chờ xác nhận vùng đất mới.");
+            StartStage5TownHallConstruction();
         }
     }
 
@@ -449,10 +481,9 @@ public class CampaignTutorialManager : MonoBehaviour
     {
         SetStage(DemaciaTutorialStage.Stage4_AttackEnemyBattle);
 
-        PlayDialogueSequence(stage4Dialogues, new DialogueData[]
-        {
-            new DialogueData { speakerName = "Trưởng Làng Marcus", message = "Quân địch đã dàn trận sẵn sàng! Hãy chỉ huy lực lượng tiến công và giành lấy chiến thắng đầu tiên!" }
-        }, () =>
+        // Chỉ phát Message 1 (phần tử 0) trước khi chuyển sang SceneBattle.
+        PlayStage4Dialogue(0,
+            new DialogueData { speakerName = "Trưởng Làng Marcus", message = "Quân địch đã dàn trận sẵn sàng! Hãy chỉ huy lực lượng tiến công và giành lấy chiến thắng đầu tiên!" }, () =>
         {
             ShowStepHint(5, "Hãy chọn căn cứ địch và bấm nút Tấn Công để tham chiến.");
 
@@ -517,10 +548,10 @@ public class CampaignTutorialManager : MonoBehaviour
         CompleteQuestObjective(4); // Tick xong Quest 4: Giành chiến thắng trong trận đánh đầu
 
         bool dialogueDone = false;
-        PlayDialogueSequence(stage4Dialogues, new DialogueData[]
-        {
-            new DialogueData { speakerName = "Trưởng Làng Marcus", message = "Chiến thắng vang dội! Lực lượng địch đã bị quét sạch, vùng đất Vaskasia đã được giải phóng hoàn toàn." }
-        }, () => { dialogueDone = true; });
+        // Chỉ phát Message 2 (phần tử 1) sau khi chiến thắng và quay về từ SceneBattle.
+        PlayStage4Dialogue(1,
+            new DialogueData { speakerName = "Trưởng Làng Marcus", message = "Chiến thắng vang dội! Lực lượng địch đã bị quét sạch, vùng đất Vaskasia đã được giải phóng hoàn toàn." },
+            () => { dialogueDone = true; });
 
         while (!dialogueDone) yield return null;
 
@@ -536,7 +567,16 @@ public class CampaignTutorialManager : MonoBehaviour
 
         if (enemyZone != null && enemyZone.isTownHallEstablished)
         {
-            CompleteTutorial();
+            // Vùng đất được đánh dấu đã lập ngay khi bắt đầu xây Nhà Chính.
+            // Chỉ hoàn tất tutorial nếu công trình thực tế đã xây xong.
+            if (IsStage5TownHallConstructionComplete())
+            {
+                CompleteTutorial();
+            }
+            else
+            {
+                StartStage5TownHallConstruction();
+            }
             return;
         }
 
@@ -557,11 +597,38 @@ public class CampaignTutorialManager : MonoBehaviour
         });
     }
 
+    private void StartStage5TownHallConstruction()
+    {
+        SetStage(DemaciaTutorialStage.Stage5_SkipDayTownHall);
+        ShowStepHint(6, "Nhà Chính Vaskasia đang xây dựng. Hãy bấm Qua Ngày cho đến khi công trình hoàn tất.");
+        PointAtSkipDayButton();
+    }
+
+    private void ResumeStage5TownHallConstruction()
+    {
+        if (IsStage5TownHallConstructionComplete())
+        {
+            CompleteTutorial();
+            return;
+        }
+
+        StartStage5TownHallConstruction();
+    }
+
+    private bool IsStage5TownHallConstructionComplete()
+    {
+        if (enemyZone == null || !enemyZone.isTownHallEstablished) return false;
+
+        UpgradeableBuilding townHall = enemyZone.TownHallBuilding;
+        return townHall != null && !townHall.IsUpgrading && !townHall.IsInitialBuildNeeded;
+    }
+
     public void OnTownHallEstablished(SettlementZone zone)
     {
         if (currentStage == DemaciaTutorialStage.Stage5_EstablishVaskasia && zone == enemyZone)
         {
-            CompleteTutorial();
+            // EstablishTownHall được gọi khi vừa đặt công trình, không phải khi xây xong.
+            StartStage5TownHallConstruction();
         }
     }
 
@@ -616,6 +683,15 @@ public class CampaignTutorialManager : MonoBehaviour
 
     public void OnBuildingConstructionFinished(BuildingType buildingType)
     {
+        // Nhà Chính Vaskasia đã hoàn tất sau một hoặc nhiều lượt Qua Ngày.
+        if (currentStage == DemaciaTutorialStage.Stage5_SkipDayTownHall &&
+            buildingType == BuildingType.House &&
+            IsStage5TownHallConstructionComplete())
+        {
+            CompleteTutorial();
+            return;
+        }
+
         OnDayOrWaveIncremented();
     }
 
