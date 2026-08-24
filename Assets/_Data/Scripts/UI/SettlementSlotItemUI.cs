@@ -39,6 +39,7 @@ public class SettlementSlotItemUI : MonoBehaviour, IPointerClickHandler
 
     private Vector3 plotWorldPos;
     private UpgradeableBuilding buildingOnSlot;
+    private Button slotButton;
 
 
     public void SetTroopInfo(Sprite troopSprite, int unitCount)
@@ -64,16 +65,41 @@ public class SettlementSlotItemUI : MonoBehaviour, IPointerClickHandler
 
     private void SetupButtonListeners()
     {
-        Button[] allButtons = GetComponentsInChildren<Button>(true);
-        foreach (var btn in allButtons)
+        if (slotButton == null)
         {
-            btn.onClick.RemoveListener(OnClickSlot);
-            btn.onClick.AddListener(OnClickSlot);
+            slotButton = GetComponent<Button>();
+            if (slotButton == null) slotButton = GetComponentInChildren<Button>(true);
         }
+
+        if (slotButton == null) return;
+
+        // Không thêm listener thứ hai nếu prefab đã gán OnClickSlot trong Inspector.
+        slotButton.onClick.RemoveListener(OnClickSlot);
+        if (!HasPersistentClickListener(slotButton))
+        {
+            slotButton.onClick.AddListener(OnClickSlot);
+        }
+    }
+
+    private bool HasPersistentClickListener(Button button)
+    {
+        for (int i = 0; i < button.onClick.GetPersistentEventCount(); i++)
+        {
+            if (button.onClick.GetPersistentTarget(i) == this &&
+                button.onClick.GetPersistentMethodName(i) == nameof(OnClickSlot))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
+        // Button trên cùng GameObject đã phát onClick, không xử lý lại pointer event lần hai.
+        if (slotButton != null && slotButton.gameObject == gameObject) return;
+
         Debug.Log($"[SettlementSlotItemUI] OnPointerClick trigger trên {gameObject.name}");
         OnClickSlot();
     }

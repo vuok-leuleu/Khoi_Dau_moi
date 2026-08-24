@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -36,6 +37,12 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
     [SerializeField] private Button upgradeBtn;  // Nút 🔨 UPGRADE
     [SerializeField] private Button demolishBtn; // Nút ❌ Phá dỡ
 
+    [Header("=== XÁC NHẬN PHÁ DỠ ===")]
+    [Tooltip("Kéo GameObject gốc của bảng xác nhận vào đây (object chứa Cancel, OK và Text).")]
+    [SerializeField] private GameObject demolishConfirmPanel;
+    [SerializeField] private Button demolishCancelBtn;
+    [SerializeField] private Button demolishConfirmBtn;
+
     [Header("=== SPRITE TÙY CHỈNH CHO NÚT BẤM ===")]
     [SerializeField] private Sprite upgradeBtnSprite;  // Sprite cho nút NÂNG CẤP
     [SerializeField] private Sprite buildBtnSprite;    // Sprite cho nút XÂY NHÀ CHÍNH / XÂY DỰNG
@@ -47,6 +54,7 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
 
     private UpgradeableBuilding targetBuilding;
     private SettlementZone targetEstablishZone;
+    private UpgradeableBuilding pendingDemolishBuilding;
     private bool isEstablishMode = false;
 
     private void Awake()
@@ -55,11 +63,38 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
         else Destroy(gameObject);
     }
 
+    private void OnDestroy()
+    {
+        if (Ins == this) Ins = null;
+    }
+
+    private void OnDisable()
+    {
+        // ManagerUI có thể đóng panel trực tiếp khi chuyển sang Xây dựng/Huấn luyện.
+        // Khi đó cũng phải hủy hộp xác nhận đang mở.
+        HideManualDemolishConfirmation();
+        BuildingDemolishConfirmUI.Ins?.Hide();
+    }
+
     private void Start()
     {
-        if (closeBtn != null) closeBtn.onClick.AddListener(ClosePanel);
-        if (upgradeBtn != null) upgradeBtn.onClick.AddListener(OnClickUpgrade);
-        if (demolishBtn != null) demolishBtn.onClick.AddListener(OnClickDemolish);
+        if (closeBtn != null)
+        {
+            closeBtn.onClick.RemoveListener(ClosePanel);
+            closeBtn.onClick.AddListener(ClosePanel);
+        }
+        if (upgradeBtn != null)
+        {
+            upgradeBtn.onClick.RemoveListener(OnClickUpgrade);
+            upgradeBtn.onClick.AddListener(OnClickUpgrade);
+        }
+        if (demolishBtn != null)
+        {
+            demolishBtn.onClick.RemoveListener(OnClickDemolish);
+            demolishBtn.onClick.AddListener(OnClickDemolish);
+        }
+
+        ConfigureManualDemolishConfirmation();
     }
 
     /// <summary>
@@ -69,7 +104,7 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
     {
         if (building == null) return;
 
-        if (BuildingShopUI.Ins != null) BuildingShopUI.Ins.CloseShop();
+        BuildTrainingUIManager.Ins?.ShowUpgradeWindow();
 
         targetBuilding = building;
         isEstablishMode = false;
@@ -87,7 +122,7 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
     {
         if (zone == null) return;
 
-        if (BuildingShopUI.Ins != null) BuildingShopUI.Ins.CloseShop();
+        BuildTrainingUIManager.Ins?.ShowUpgradeWindow();
 
         targetEstablishZone = zone;
         isEstablishMode = true;
@@ -423,36 +458,135 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
     {
         if (targetBuilding == null) return;
 
-        // Bảo vệ bổ sung: Không thể phá dỡ Nhà Chính
-        bool isTownHall = targetBuilding.buildingType == BuildingType.House || 
-                         targetBuilding.buildingName.Contains("Nhà chính") || 
-                         targetBuilding.buildingName.Contains("Town Hall");
-        if (isTownHall)
+        if (IsTownHall(targetBuilding))
         {
             if (UIManager.Ins != null) UIManager.Ins.ShowWarning("Không thể phá dỡ Nhà Chính!");
             return;
         }
 
+        if (ShowManualDemolishConfirmation(targetBuilding))
+        {
+            return;
+        }
+
+        // Fallback cho Scene chưa dựng bảng xác nhận riêng.
+        BuildingDemolishConfirmUI demolishConfirmUI = BuildingDemolishConfirmUI.Ins;
+        if (demolishConfirmUI == null)
+        {
+            demolishConfirmUI = FindFirstObjectByType<BuildingDemolishConfirmUI>(FindObjectsInactive.Include);
+        }
+
+        if (demolishConfirmUI == null || !demolishConfirmUI.Show(targetBuilding, DemolishBuilding))
+        {
+            Debug.LogWarning("[BuildingUpgradeSidePanelUI] Không thể mở hộp xác nhận phá dỡ.", this);
+        }
+    }
+
+    private void DemolishBuilding(UpgradeableBuilding building)
+    {
+        if (building == null || IsTownHall(building)) return;
+
         SettlementZone currentZone = (SettlementManager.Ins != null) ? SettlementManager.Ins.CurrentSettlement : null;
         if (currentZone != null && currentZone.builtStructures != null)
         {
-            currentZone.builtStructures.Remove(targetBuilding);
+            currentZone.builtStructures.Remove(building);
         }
 
         if (BuildingManager.Ins != null)
         {
-            var bCtrl = targetBuilding.GetComponent<BuildingCtrl>();
+            var bCtrl = building.GetComponent<BuildingCtrl>();
             if (bCtrl != null) BuildingManager.Ins.RemoveBuilding(bCtrl);
         }
 
-        targetBuilding.gameObject.SetActive(false);
-        Destroy(targetBuilding.gameObject);
+        building.gameObject.SetActive(false);
+        Destroy(building.gameObject);
         ClosePanel();
 
         if (SettlementSidePanelUI.Ins != null)
         {
             SettlementSidePanelUI.Ins.RefreshPanel();
         }
+    }
+
+    private static bool IsTownHall(UpgradeableBuilding building)
+    {
+        if (building == null) return false;
+
+        string buildingName = building.buildingName ?? string.Empty;
+        return building.buildingType == BuildingType.House ||
+               buildingName.IndexOf("Nhà chính", StringComparison.OrdinalIgnoreCase) >= 0 ||
+               buildingName.IndexOf("Town Hall", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    private void ConfigureManualDemolishConfirmation()
+    {
+        if (demolishConfirmPanel == null) return;
+
+        FindManualDemolishReferences();
+
+        if (demolishCancelBtn != null)
+        {
+            demolishCancelBtn.onClick.RemoveListener(HideManualDemolishConfirmation);
+            demolishCancelBtn.onClick.AddListener(HideManualDemolishConfirmation);
+        }
+
+        if (demolishConfirmBtn != null)
+        {
+            demolishConfirmBtn.onClick.RemoveListener(ConfirmManualDemolish);
+            demolishConfirmBtn.onClick.AddListener(ConfirmManualDemolish);
+        }
+
+        demolishConfirmPanel.SetActive(false);
+    }
+
+    private bool ShowManualDemolishConfirmation(UpgradeableBuilding building)
+    {
+        if (demolishConfirmPanel == null) return false;
+
+        FindManualDemolishReferences();
+        if (demolishCancelBtn == null || demolishConfirmBtn == null)
+        {
+            Debug.LogWarning("[BuildingUpgradeSidePanelUI] Bảng hủy công trình cần có Button tên Cancel và OK (hoặc gán hai Button trong Inspector).", this);
+            return false;
+        }
+
+        pendingDemolishBuilding = building;
+        demolishConfirmPanel.SetActive(true);
+        demolishConfirmPanel.transform.SetAsLastSibling();
+        return true;
+    }
+
+    private void ConfirmManualDemolish()
+    {
+        UpgradeableBuilding building = pendingDemolishBuilding;
+        HideManualDemolishConfirmation();
+        DemolishBuilding(building);
+    }
+
+    private void HideManualDemolishConfirmation()
+    {
+        if (demolishConfirmPanel != null) demolishConfirmPanel.SetActive(false);
+        pendingDemolishBuilding = null;
+    }
+
+    private void FindManualDemolishReferences()
+    {
+        if (demolishConfirmPanel == null) return;
+
+        Button[] buttons = demolishConfirmPanel.GetComponentsInChildren<Button>(true);
+        foreach (Button button in buttons)
+        {
+            string buttonName = button.name.ToLowerInvariant();
+            if (demolishCancelBtn == null && (buttonName.Contains("cancel") || buttonName.Contains("huy")))
+            {
+                demolishCancelBtn = button;
+            }
+            else if (demolishConfirmBtn == null && (buttonName == "ok" || buttonName.Contains("confirm") || buttonName.Contains("xac nhan")))
+            {
+                demolishConfirmBtn = button;
+            }
+        }
+
     }
 
     /// <summary>
@@ -574,6 +708,8 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
 
     public void ClosePanel()
     {
+        BuildingDemolishConfirmUI.Ins?.Hide();
         gameObject.SetActive(false);
+        BuildTrainingUIManager.Ins?.NotifyWindowClosed(BuildTrainingUIManager.ManagedWindow.Upgrade);
     }
 }

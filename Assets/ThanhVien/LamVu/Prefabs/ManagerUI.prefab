@@ -14,6 +14,8 @@ GameObject:
   - component: {fileID: 7575496506135636067}
   - component: {fileID: 4591091938283024842}
   - component: {fileID: 8489202680056509558}
+  - component: {fileID: 9100000000000000001}
+  - component: {fileID: 9100000000000000002}
   m_Layer: 0
   m_Name: ManagerUI
   m_TagString: Untagged
@@ -158,3 +160,38 @@ MonoBehaviour:
   countDuration: 1.5
   gameplaySceneName: GameplayScene
   mainMenuSceneName: MainMenuScene
+--- !u!114 &9100000000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3684323063936383575}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5a1d40d6d493486e86e2ce7c5a877198, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::BuildTrainingUIManager
+  settlementPanel: {fileID: 0}
+  buildPanel: {fileID: 0}
+  trainingPanel: {fileID: 0}
+  upgradePanel: {fileID: 0}
+  keepSettlementVisible: 1
+  closeSecondaryWindowsOnStart: 1
+  clearSelectedButtonWhenSwitching: 1
+  logMissingReferences: 1
+--- !u!114 &9100000000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3684323063936383575}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8d34f1a959b4960a83257a6d1c0fe82, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::BuildingDemolishConfirmUI
+  title: "Xóa công trình?"
+  cancelLabel: "HỦY"
+  confirmLabel: "XÁC NHẬN"

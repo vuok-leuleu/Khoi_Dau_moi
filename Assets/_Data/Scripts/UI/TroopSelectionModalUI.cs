@@ -25,7 +25,18 @@ public class TroopSelectionModalUI : MonoBehaviour
     private void Awake()
     {
         if (Ins == null) Ins = this;
+        else if (Ins != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         InitListeners();
+    }
+
+    private void OnDestroy()
+    {
+        if (Ins == this) Ins = null;
     }
 
     private void InitListeners()
@@ -35,37 +46,44 @@ public class TroopSelectionModalUI : MonoBehaviour
 
         if (trainMeleeBtn != null)
         {
-            trainMeleeBtn.onClick.RemoveAllListeners();
-            trainMeleeBtn.onClick.AddListener(() => OnSelectTroop(BuildingType.BarracksMelee));
+            trainMeleeBtn.onClick.RemoveListener(OnClickMelee);
+            trainMeleeBtn.onClick.AddListener(OnClickMelee);
         }
 
         if (trainArcherBtn != null)
         {
-            trainArcherBtn.onClick.RemoveAllListeners();
-            trainArcherBtn.onClick.AddListener(() => OnSelectTroop(BuildingType.BarracksArcher));
+            trainArcherBtn.onClick.RemoveListener(OnClickArcher);
+            trainArcherBtn.onClick.AddListener(OnClickArcher);
         }
 
         if (trainSpearBtn != null)
         {
-            trainSpearBtn.onClick.RemoveAllListeners();
-            trainSpearBtn.onClick.AddListener(() => OnSelectTroop(BuildingType.BarracksSpear));
+            trainSpearBtn.onClick.RemoveListener(OnClickSpear);
+            trainSpearBtn.onClick.AddListener(OnClickSpear);
         }
 
         if (closeBtn != null)
         {
-            closeBtn.onClick.RemoveAllListeners();
+            closeBtn.onClick.RemoveListener(CloseModal);
             closeBtn.onClick.AddListener(CloseModal);
         }
     }
 
     public void OpenModal(SettlementZone zone, int slotIndex)
     {
+        if (zone == null || slotIndex < 0 || slotIndex >= TroopTrainingManager.MAX_TRAINING_SLOTS)
+        {
+            Debug.LogWarning("[TroopSelectionModalUI] Không thể mở bảng huấn luyện vì vùng hoặc ô huấn luyện không hợp lệ.", this);
+            return;
+        }
+
         if (Ins == null) Ins = this;
         InitListeners();
 
         targetZone = zone;
         targetSlotIndex = slotIndex;
 
+        BuildTrainingUIManager.Ins?.ShowTrainingWindow();
         gameObject.SetActive(true);
         transform.SetAsLastSibling(); // Đưa Popup lên trên cùng của Canvas để không bị che bởi các UI khác
     }
@@ -73,14 +91,27 @@ public class TroopSelectionModalUI : MonoBehaviour
     public void CloseModal()
     {
         gameObject.SetActive(false);
+        targetZone = null;
+        targetSlotIndex = -1;
+        BuildTrainingUIManager.Ins?.NotifyWindowClosed(BuildTrainingUIManager.ManagedWindow.Training);
     }
+
+    private void OnClickMelee() => OnSelectTroop(BuildingType.BarracksMelee);
+    private void OnClickArcher() => OnSelectTroop(BuildingType.BarracksArcher);
+    private void OnClickSpear() => OnSelectTroop(BuildingType.BarracksSpear);
 
     private void OnSelectTroop(BuildingType troopType)
     {
-        if (targetZone != null && TroopTrainingManager.Ins != null)
+        if (targetZone == null || TroopTrainingManager.Ins == null)
         {
-            TroopTrainingManager.Ins.StartTraining(targetZone, targetSlotIndex, troopType);
+            Debug.LogWarning("[TroopSelectionModalUI] Thiếu SettlementZone hoặc TroopTrainingManager; yêu cầu huấn luyện chưa được thực hiện.", this);
+            return;
         }
-        CloseModal();
+
+        if (TroopTrainingManager.Ins.StartTraining(targetZone, targetSlotIndex, troopType))
+        {
+            SettlementSidePanelUI.Ins?.RefreshTroopTrainingSlots();
+            CloseModal();
+        }
     }
 }

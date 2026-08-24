@@ -51,11 +51,22 @@ public class BuildingShopItemUI : MonoBehaviour
 
     private void Awake()
     {
-        btn = GetComponent<Button>();
-        if (btn == null) btn = GetComponentInChildren<Button>();
+        EnsureButtonListener();
+    }
+
+    private void OnEnable()
+    {
+        EnsureButtonListener();
+    }
+
+    public void EnsureButtonListener()
+    {
+        if (btn == null) btn = GetComponent<Button>();
+        if (btn == null) btn = GetComponentInChildren<Button>(true);
 
         if (btn != null)
         {
+            btn.onClick.RemoveListener(OnClickItem);
             btn.onClick.AddListener(OnClickItem);
         }
     }
@@ -95,7 +106,7 @@ public class BuildingShopItemUI : MonoBehaviour
 
     public void OnClickFromShop()
     {
-        if (BuildingShopUI.Ins != null)
+        if (IsUnlocked && BuildingShopUI.Ins != null)
         {
             BuildingShopUI.Ins.SelectBuildingItem(this);
         }
