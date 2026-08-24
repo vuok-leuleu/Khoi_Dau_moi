@@ -1495,7 +1495,7 @@ MonoBehaviour:
   initialBuildDuration: 1
   slotIndex: -1
   buildingType: 2
-  buildingName: "Kho g\u1ED7"
+  buildingName: "X\u01B0\u1EDFng g\u1ED7"
   visualModels:
   - {fileID: 7014466855736572080}
   - {fileID: 203775512815804865}
@@ -1519,7 +1519,7 @@ MonoBehaviour:
   kitchenLevels: []
   houseLevels: []
   buildingIcons:
-  - {fileID: 21300000, guid: 9a198188e043c8c4aa6f1eb25b0f1533, type: 3}
+  - {fileID: -582494528, guid: 03b5b44d865c9ab4f849362bfcb76c89, type: 3}
   - {fileID: 21300000, guid: c7eb428113b428f46833f8a20c0ed76c, type: 3}
   - {fileID: 21300000, guid: 0644633800341a44294ef2ad2d4f6258, type: 3}
   ruinedVisualModel: {fileID: 2338130543464661434}
