@@ -466,6 +466,13 @@ public class EnemyAI : MonoBehaviour
         if (CloudSceneTransition.IsTransitioning) return;
         Time.timeScale = 1f;
         int waveCount = (squadEnemies != null && squadEnemies.Count > 0) ? squadEnemies.Count : 1;
+
+        // Preserve the settlement being attacked so BattleData can select only its
+        // garrison.  Previously an enemy battle had no target-zone context.
+        SettlementZone targetZone = villageCenter != null ? villageCenter.GetComponentInParent<SettlementZone>() : null;
+        if (targetZone == null) targetZone = UIEnemyWaveButton.FindZoneFromTarget(transform);
+        if (targetZone != null) BattleData.TargetedSettlementZoneName = targetZone.settlementName;
+        BattleData.IsAttackingExpedition = false;
         BattleData.RecordCurrentSceneState(waveCount);
 
         Debug.Log($"[EnemyAI] Bấm nút Tấn Công (Wave = {waveCount} Enemy) -> Đang chuyển sang Scene: {battleSceneName}");

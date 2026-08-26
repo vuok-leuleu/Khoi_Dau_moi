@@ -14,7 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
   m_GroupName: Default Local Group
   m_GUID: 7dcb0787eb6baa34383dfc89ee360020
-  m_SerializeEntries: []
+  m_SerializeEntries:
+  - m_GUID: 4cd883ae69f384a8d975251d52eef8c9
+    m_Address: Assets/InfinityPBR - Magic Pig Games/Characters/Dragons/Textures &
+      Materials/Low Poly/Dragon_ColorShifter.mat
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 2cf10acad5ebc794b92db4589ae23859, type: 2}
   m_SchemaSet:

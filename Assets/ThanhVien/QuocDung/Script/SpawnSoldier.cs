@@ -153,6 +153,30 @@ public class SpawnSoldier : MonoBehaviour
         return list;
     }
 
+    /// <summary>
+    /// Gives newly trained units an explicit settlement owner.  Units are not
+    /// necessarily children of their barracks, so transform hierarchy must not be
+    /// used as the source of truth once they can march between settlements.
+    /// </summary>
+    private void AssignHomeSettlement(UnitController unit)
+    {
+        if (unit == null) return;
+
+        SettlementZone ownerZone = GetComponentInParent<SettlementZone>();
+        if (ownerZone != null)
+        {
+            unit.stationedSettlementZoneName = ownerZone.settlementName;
+        }
+    }
+
+    private bool IsUnitAvailableAtThisBarracks(UnitController unit)
+    {
+        if (unit == null || unit.isDead || unit.isExpeditionMarching) return false;
+
+        SettlementZone ownerZone = GetComponentInParent<SettlementZone>();
+        return ownerZone == null || unit.IsStationedInZone(ownerZone.settlementName);
+    }
+
     private bool IsBarracksBuildingType(BuildingType type)
     {
         return type == BuildingType.BarracksMelee ||
@@ -289,6 +313,7 @@ public class SpawnSoldier : MonoBehaviour
         {
             unit.SetHomePosition(spawnPosition);
             unit.SetAttackDamage(damage);
+            AssignHomeSettlement(unit);
         }
 
         spawnedSoldiers.Add(newSoldier);
@@ -523,7 +548,7 @@ public class SpawnSoldier : MonoBehaviour
             {
                 UnitController uc = s.GetComponent<UnitController>();
                 if (uc == null) uc = s.GetComponentInChildren<UnitController>();
-                if (uc != null && !uc.isDead) count++;
+                if (IsUnitAvailableAtThisBarracks(uc)) count++;
             }
         }
         return count;
@@ -537,7 +562,31 @@ public class SpawnSoldier : MonoBehaviour
 
     public void DestroyAllSoldiers()
     {
-        ClearSpawnedSoldiers();
+        SettlementZone ownerZone = GetComponentInParent<SettlementZone>();
+        if (ownerZone == null)
+        {
+            ClearSpawnedSoldiers();
+            return;
+        }
+
+        // spawnedSoldiers retains references after an expedition.  Never use that
+        // historical list to kill a squad that has since moved to another region.
+        for (int i = spawnedSoldiers.Count - 1; i >= 0; i--)
+        {
+            GameObject soldier = spawnedSoldiers[i];
+            UnitController unit = soldier != null ? soldier.GetComponent<UnitController>() : null;
+            if (unit == null && soldier != null) unit = soldier.GetComponentInChildren<UnitController>();
+
+            if (unit != null && unit.IsStationedInZone(ownerZone.settlementName))
+            {
+                Destroy(soldier);
+                spawnedSoldiers.RemoveAt(i);
+            }
+            else if (soldier == null)
+            {
+                spawnedSoldiers.RemoveAt(i);
+            }
+        }
     }
 
     // Hàm lấy sát thương của lính dựa theo Level
@@ -616,6 +665,7 @@ public class SpawnSoldier : MonoBehaviour
             {
                 unit.SetHomePosition(spawnPosition);
                 unit.SetAttackDamage(damage);
+                AssignHomeSettlement(unit);
             }
 
             // Đảm bảo lính thực TẮT IsTrain và quay về hoạt ảnh Idle ban đầu

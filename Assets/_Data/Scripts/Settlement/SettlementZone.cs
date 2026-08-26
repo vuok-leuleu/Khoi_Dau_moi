@@ -162,32 +162,16 @@ public class SettlementZone : MonoBehaviour
     {
         int total = 0;
 
-        // Quét tìm từ các Spawner lính (SpawnSoldier) thuộc Vùng đất
-        SpawnSoldier[] spawners = GetComponentsInChildren<SpawnSoldier>(true);
-        if (spawners != null && spawners.Length > 0)
+        // Ownership is stored on the unit, rather than inferred from the barracks
+        // that originally created it.  This lets a moved squad disappear from the
+        // source UI and appear in its destination UI without being counted twice.
+        UnitController[] units = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
+        foreach (UnitController unit in units)
         {
-            foreach (var sp in spawners)
+            if (unit != null && unit.gameObject.activeInHierarchy &&
+                unit.IsStationedInZone(settlementName) && !unit.isDead)
             {
-                if (sp != null && sp.gameObject.activeInHierarchy)
-                {
-                    total += sp.GetActiveSoldiersCount();
-                }
-            }
-        }
-
-        if (builtStructures != null)
-        {
-            foreach (var b in builtStructures)
-            {
-                if (b != null && b.gameObject.activeInHierarchy)
-                {
-                    SpawnSoldier sp = b.GetComponent<SpawnSoldier>();
-                    if (sp == null) sp = b.GetComponentInChildren<SpawnSoldier>();
-                    if (sp != null && (spawners == null || System.Array.IndexOf(spawners, sp) < 0))
-                    {
-                        total += sp.GetActiveSoldiersCount();
-                    }
-                }
+                total++;
             }
         }
 
@@ -599,10 +583,6 @@ public class SettlementZone : MonoBehaviour
     public int GetUnlockedSlotCount()
     {
         if (!isTownHallEstablished) return 0;
-
-        // Chỉ ẩn slot khi Nhà Chính đang trong tiến trình XÂY DỰNG BAN ĐẦU
-        if (townHallBuilding != null && townHallBuilding.IsInitialBuildNeeded)
-            return 0;
 
         int totalSlotCount = (slotPoints.Count > 0) ? slotPoints.Count : 12;
         int level = SettlementLevel;
