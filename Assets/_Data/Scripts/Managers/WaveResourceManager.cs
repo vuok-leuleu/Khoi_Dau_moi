@@ -53,19 +53,9 @@ public class WaveResourceManager : MonoBehaviour
 
     private void HandleWaveStart(int waveIndex)
     {
-        // ⚠️ FIX RACE CONDITION:
-        // DayNightManager.OnWaveStart được invoke NGAY TRONG cùng frame với currentWave++
-        // Coroutine xây dựng trong UpgradeableBuilding chưa kịp chạy yield return null
-        // → IsUpgrading vẫn còn = true tại thời điểm này → bị bỏ qua sai!
-        // Giải pháp: Đợi 1 frame để tất cả coroutine xây dựng kịp cập nhật xong rồi mới thu tài nguyên.
-        StartCoroutine(CollectResourcesAfterBuildingsUpdate(waveIndex));
-    }
-
-    private System.Collections.IEnumerator CollectResourcesAfterBuildingsUpdate(int waveIndex)
-    {
-        // Đợi 1 frame: cho tất cả coroutine UpgradeableBuilding kịp chạy và cập nhật IsUpgrading
-        yield return null;
-
+        // Thu thập tài nguyên trực tiếp khi bắt đầu ngày mới.
+        // Các công trình đang xây và vừa hoàn thành trong ngày này sẽ KHÔNG cộng ngay (đang IsInitialBuildNeeded/IsUpgrading).
+        // Chỉ những công trình đã xây xong hoàn tất từ trước mới được thu hoạch khi qua ngày.
         CollectBuildingResourcesForWave(waveIndex);
     }
 
@@ -96,7 +86,6 @@ public class WaveResourceManager : MonoBehaviour
 
             bool isWood = b.buildingType == BuildingType.WoodCutter || b.buildingType == BuildingType.Wood || nameLower.Contains("wood") || nameLower.Contains("gỗ") || bNameLower.Contains("gỗ") || bNameLower.Contains("mộc");
             bool isStone = b.buildingType == BuildingType.StoneMine || b.buildingType == BuildingType.StoneStorage || b.buildingType == BuildingType.Stone || nameLower.Contains("stone") || nameLower.Contains("đá") || bNameLower.Contains("đá");
-            bool isFood = b.buildingType == BuildingType.Kitchen || b.buildingType == BuildingType.FoodStorage || b.buildingType == BuildingType.Rice || nameLower.Contains("food") || nameLower.Contains("lương") || nameLower.Contains("lúa") || nameLower.Contains("bếp") || bNameLower.Contains("lương") || bNameLower.Contains("lúa");
             bool isHouse = b.buildingType == BuildingType.House || nameLower.Contains("house") || nameLower.Contains("chính");
 
             if (isWood)
@@ -108,11 +97,6 @@ public class WaveResourceManager : MonoBehaviour
             {
                 int stoneAmount = (lvl + 1) * 30;
                 totalStoneGained += stoneAmount;
-            }
-            else if (isFood)
-            {
-                int foodAmount = (lvl + 1) * 30;
-                totalFoodGained += foodAmount;
             }
             else if (isHouse)
             {
@@ -126,17 +110,19 @@ public class WaveResourceManager : MonoBehaviour
 
         if (totalWoodGained > 0) JsonDataManager.Ins.AddWood(totalWoodGained);
         if (totalStoneGained > 0) JsonDataManager.Ins.AddStone(totalStoneGained);
-        if (totalFoodGained > 0) JsonDataManager.Ins.AddFood(totalFoodGained);
         if (totalGoldGained > 0) JsonDataManager.Ins.AddGold(totalGoldGained);
 
-        // KHÔNG gọi BroadcastAllResources() ở đây vì AddXxx đã invoke OnXxxChanged event rồi.
-        // Gọi thêm BroadcastAllResources sẽ dư thừa (HUDController nhận delta=0, bỏ qua).
-
-        Debug.Log($"[WaveResourceManager] 🌾 NGÀY/WAVE {waveIndex}: Thu hoạch tài nguyên thành công! +{totalWoodGained} Gỗ, +{totalStoneGained} Đá, +{totalFoodGained} Lương, +{totalGoldGained} Vàng.");
-
-        if (UIManager.Ins != null && (totalWoodGained > 0 || totalStoneGained > 0 || totalFoodGained > 0 || totalGoldGained > 0))
+        // 🌾 Lúa mì (Food): KHÔNG tăng theo Wave, đồng bộ theo Cấp Nhà Lúa & Slot Lính đã huấn luyện
+        if (TroopTrainingManager.Ins != null)
         {
-            UIManager.Ins.ShowWarning($"🌾 Ngày {waveIndex}: Thu hoạch +{totalWoodGained} Gỗ, +{totalStoneGained} Đá, +{totalFoodGained} Lương, +{totalGoldGained} Vàng!");
+            TroopTrainingManager.Ins.SyncFoodToDataManager();
+        }
+
+        Debug.Log($"[WaveResourceManager] 🌾 NGÀY/WAVE {waveIndex}: Thu hoạch tài nguyên thành công! +{totalWoodGained} Gỗ, +{totalStoneGained} Đá, +{totalGoldGained} Vàng.");
+
+        if (UIManager.Ins != null && (totalWoodGained > 0 || totalStoneGained > 0 || totalGoldGained > 0))
+        {
+            UIManager.Ins.ShowWarning($"🌾 Ngày {waveIndex}: Thu hoạch +{totalWoodGained} Gỗ, +{totalStoneGained} Đá, +{totalGoldGained} Vàng!");
         }
     }
 }

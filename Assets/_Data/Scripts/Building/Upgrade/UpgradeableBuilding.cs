@@ -435,6 +435,9 @@ public class UpgradeableBuilding : MonoBehaviour
         if (BuildingUpgradeSidePanelUI.Ins != null) BuildingUpgradeSidePanelUI.Ins.RefreshPanel();
         if (SettlementSidePanelUI.Ins != null) SettlementSidePanelUI.Ins.RefreshPanel();
 
+        // 🌾 Đồng bộ lại chỉ số Lúa mì nếu đây là Nhà Lúa
+        TroopTrainingManager.Ins?.SyncFoodToDataManager();
+
         // 🔥 Tự động lưu trạng thái công trình đã xây xong vào Save Slot 1
         BuildingSystem.Ins?.SaveBuildingsToSlot(1);
     }
@@ -540,6 +543,9 @@ public class UpgradeableBuilding : MonoBehaviour
             SettlementSidePanelUI.Ins.RefreshPanel();
         }
 
+        // 🌾 Đồng bộ lại chỉ số Lúa mì khi nâng cấp xong
+        TroopTrainingManager.Ins?.SyncFoodToDataManager();
+
         // 🔥 Tự động lưu trạng thái công trình đã nâng cấp xong vào Save Slot 1
         BuildingSystem.Ins?.SaveBuildingsToSlot(1);
     }
@@ -635,6 +641,9 @@ public class UpgradeableBuilding : MonoBehaviour
         if (targetProgressUI != null) targetProgressUI.HandleCompleteSequence();
         if (BuildingUpgradeSidePanelUI.Ins != null) BuildingUpgradeSidePanelUI.Ins.RefreshPanel();
         if (SettlementSidePanelUI.Ins != null) SettlementSidePanelUI.Ins.RefreshPanel();
+
+        // 🌾 Đồng bộ lại chỉ số Lúa mì khi sửa chữa xong
+        TroopTrainingManager.Ins?.SyncFoodToDataManager();
 
         // 🔥 Tự động lưu trạng thái công trình đã sửa chữa xong vào Save Slot 1
         BuildingSystem.Ins?.SaveBuildingsToSlot(1);

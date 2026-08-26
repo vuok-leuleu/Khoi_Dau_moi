@@ -40,7 +40,7 @@ public class JsonDataManager : Singleton<JsonDataManager>
     public int gold { get; private set; } = 200;
     public int wood { get; private set; } = 500;
     public int stone { get; private set; } = 500;
-    public int food { get; private set; } = 500;
+    public int food { get; private set; } = 0;
 
     // ──────────────────────────────────────────────
     // BỔ SUNG: TÀI NGUYÊN TÍCH LŨY SUỐT TRẬN ĐẤU (Phục vụ EndGameUI)
@@ -87,6 +87,12 @@ public class JsonDataManager : Singleton<JsonDataManager>
     {
         food = Mathf.Max(0, food + amount); // Giữ tài nguyên luôn >= 0
         if (amount > 0) TotalFoodCollected += amount;
+        OnFoodChanged?.Invoke(food);
+    }
+
+    public void SetFood(int amount)
+    {
+        food = Mathf.Max(0, amount);
         OnFoodChanged?.Invoke(food);
     }
 

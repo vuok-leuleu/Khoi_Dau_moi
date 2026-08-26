@@ -57,11 +57,13 @@ public class TroopTrainingManager : MonoBehaviour
     private void Start()
     {
         SubscribeDayNight();
+        SyncFoodToDataManager();
     }
 
     private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
     {
         SubscribeDayNight();
+        SyncFoodToDataManager();
     }
 
     private void SubscribeDayNight()
@@ -135,6 +137,9 @@ public class TroopTrainingManager : MonoBehaviour
             SaveZoneTrainingData(zoneName);
         }
 
+        // 🌾 Đồng bộ lại số lúa khả dụng lên HUD
+        SyncFoodToDataManager();
+
         if (SettlementSidePanelUI.Ins != null)
         {
             SettlementSidePanelUI.Ins.RefreshPanel();
@@ -160,6 +165,103 @@ public class TroopTrainingManager : MonoBehaviour
         }
         zoneSlotsDict[zoneName] = slots;
         SaveZoneTrainingData(zoneName);
+
+        // 🌾 Giải phóng slot lính -> hoàn trả lại lúa khả dụng
+        SyncFoodToDataManager();
+    }
+
+    /// <summary>
+    /// 🌾 TÍNH TỔNG LƯỢNG LÚA MÌ CUNG CẤP TỪ CÁC NHÀ LÚA ĐÃ XÂY XONG
+    /// - Mặc định ban đầu luôn có 1 Lúa cơ bản (chưa có kho lúa nào = 1)
+    /// - Xây / Nâng cấp Kho Lúa sẽ cộng thêm tương ứng vào Tổng Lúa
+    /// </summary>
+    public int GetTotalFoodCapacity()
+    {
+        int total = 1; // 🌾 Mặc định ban đầu luôn có 1 Lúa cơ bản
+
+        UpgradeableBuilding[] allBuildings = Object.FindObjectsByType<UpgradeableBuilding>(FindObjectsSortMode.None);
+        if (allBuildings == null || allBuildings.Length == 0) return total;
+
+        foreach (var b in allBuildings)
+        {
+            if (b == null || !b.gameObject.activeInHierarchy || b.IsInitialBuildNeeded || b.IsRuined || b.IsUpgrading) continue;
+
+            string nameLower = b.gameObject.name.ToLower();
+            string bNameLower = b.buildingName != null ? b.buildingName.ToLower() : "";
+
+            bool isFoodBuilding = b.buildingType == BuildingType.FoodStorage ||
+                                  b.buildingType == BuildingType.Rice ||
+                                  nameLower.Contains("food") || nameLower.Contains("lúa") || nameLower.Contains("lương") ||
+                                  bNameLower.Contains("lúa") || bNameLower.Contains("lương");
+
+            if (isFoodBuilding)
+            {
+                total += (b.CurrentLevel + 1); // Cấp 1 (Lv.1) +1, Cấp 2 (Lv.2) +2...
+            }
+        }
+        return total;
+    }
+
+    /// <summary>
+    /// 🌾 TÍNH TỔNG SỐ LÚA ĐANG BỊ CHIẾM DỤNG BỞI CÁC Ô LÍNH (Đang huấn luyện hoặc đã có lính)
+    /// </summary>
+    public int GetTotalUsedFoodCount()
+    {
+        int usedCount = 0;
+        List<string> zoneKeys = new List<string>(zoneSlotsDict.Keys);
+
+        if (SettlementManager.Ins != null && SettlementManager.Ins.AllSettlements != null)
+        {
+            foreach (var z in SettlementManager.Ins.AllSettlements)
+            {
+                if (z != null && !zoneKeys.Contains(z.settlementName))
+                {
+                    zoneKeys.Add(z.settlementName);
+                }
+            }
+        }
+
+        foreach (string zoneName in zoneKeys)
+        {
+            TroopTrainingSlotData[] slots = zoneSlotsDict.ContainsKey(zoneName) ? zoneSlotsDict[zoneName] : LoadZoneTrainingData(zoneName);
+            if (slots == null) continue;
+
+            for (int i = 0; i < MAX_TRAINING_SLOTS; i++)
+            {
+                if (slots[i] != null && (slots[i].isTraining || slots[i].isCompleted))
+                {
+                    usedCount++;
+                }
+            }
+        }
+        return usedCount;
+    }
+
+    /// <summary>
+    /// 🌾 SỐ LƯỢNG LÚA KHẢ DỤNG HIỆN TẠI ĐỂ HUẤN LUYỆN LÍNH MỚI
+    /// </summary>
+    public int GetAvailableFoodCount()
+    {
+        int capacity = GetTotalFoodCapacity();
+        int used = GetTotalUsedFoodCount();
+        return Mathf.Max(0, capacity - used);
+    }
+
+    /// <summary>
+    /// 🌾 ĐỒNG BỘ CHỈ SỐ LÚA KHẢ DỤNG SANG JsonDataManager VÀ HUD (Định dạng {Used}/{Max})
+    /// </summary>
+    public void SyncFoodToDataManager()
+    {
+        int available = GetAvailableFoodCount();
+        if (JsonDataManager.Ins != null)
+        {
+            JsonDataManager.Ins.SetFood(available);
+        }
+
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.RefreshFoodDisplay();
+        }
     }
 
     /// <summary>
@@ -324,6 +426,15 @@ public class TroopTrainingManager : MonoBehaviour
             return false;
         }
 
+        // 🌾 KIỂM TRA ĐỦ LÚA MÌ: Mỗi ô lính cần 1 đơn vị Lúa mì khả dụng từ Nhà Lúa
+        if (GetAvailableFoodCount() < 1)
+        {
+            string warnMsg = "🌾 Không đủ Lúa mì! Cần 1 Lúa cho mỗi ô lính. Hãy xây thêm hoặc nâng cấp Nhà Lúa!";
+            if (UIManager.Ins != null) UIManager.Ins.ShowWarning(warnMsg);
+            Debug.LogWarning($"[TroopTrainingManager] {warnMsg}");
+            return false;
+        }
+
         slot.isTraining = true;
         slot.troopType = troopType;
         slot.remainingWaves = 1; // 1 Wave / Ngày
@@ -332,7 +443,11 @@ public class TroopTrainingManager : MonoBehaviour
         SaveZoneTrainingData(zone.settlementName);
         if (CampaignTutorialManager.Ins != null) CampaignTutorialManager.Ins.OnTroopTrainingStarted(troopType);
         zone.UpdateZoneVisualText();
-        Debug.Log($"[TroopTrainingManager] ⚔️ Đã bắt đầu huấn luyện {troopType} tại Ô {slotIndex + 1} (Thời gian: 1 ngày)!");
+        
+        // 🌾 Đồng bộ số lúa khả dụng (giảm 1 lúa đã dùng) lên JsonDataManager và HUD
+        SyncFoodToDataManager();
+
+        Debug.Log($"[TroopTrainingManager] ⚔️ Đã bắt đầu huấn luyện {troopType} tại Ô {slotIndex + 1} (Thời gian: 1 ngày, Tiêu hao: 1 Lúa)!");
 
         if (SettlementSidePanelUI.Ins != null)
         {
