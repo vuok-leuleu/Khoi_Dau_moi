@@ -13,6 +13,7 @@ public class DemaciaVFXHoverManager : MonoBehaviour
     private GameObject vfxInstance;
     private ParticleSystem[] vfxParticles;
     private Collider currentTarget;
+    private Transform selectedSettlementTarget;
 
     void Awake()
     {
@@ -29,6 +30,14 @@ public class DemaciaVFXHoverManager : MonoBehaviour
 
     void Update()
     {
+        // Focus của thành được chọn có ưu tiên hơn hover chuột. VFX sẽ bám
+        // đúng vị trí thành trong lúc bảng thành đang mở.
+        if (selectedSettlementTarget != null)
+        {
+            UpdateSettlementFocusVFX();
+            return;
+        }
+
         // Chặn hover khi trỏ chuột lên các bảng UI (Quest, Topbar...)
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
         {
@@ -51,6 +60,40 @@ public class DemaciaVFXHoverManager : MonoBehaviour
         {
             ClearHover();
         }
+    }
+
+    /// <summary>
+    /// Bật VFX tại thành đang chọn. Có thể gọi cả khi GameObject đang tắt.
+    /// </summary>
+    public void ShowSettlementFocus(Transform target)
+    {
+        if (target == null) return;
+
+        // BuildTrainingUIManager có thể nhận hai event click từ collider thành.
+        // Cùng target đang hiển thị thì giữ VFX hiện tại, không Clear/Play lại.
+        if (selectedSettlementTarget == target && vfxInstance != null && vfxInstance.activeSelf)
+        {
+            return;
+        }
+
+        if (!gameObject.activeSelf)
+        {
+            gameObject.SetActive(true);
+        }
+
+        selectedSettlementTarget = target;
+        currentTarget = null;
+        ShowVFX(GetVFXPosition(target));
+    }
+
+    /// <summary>
+    /// Bỏ VFX focus thành; hover chuột sẽ trở lại bình thường ở frame tiếp theo.
+    /// </summary>
+    public void ClearSettlementFocus()
+    {
+        selectedSettlementTarget = null;
+        currentTarget = null;
+        HideVFX();
     }
 
     private void ShowVFX(Vector3 position)
@@ -80,16 +123,39 @@ public class DemaciaVFXHoverManager : MonoBehaviour
         return new Vector3(bounds.center.x, bounds.min.y, bounds.center.z) + heightOffset;
     }
 
+    private Vector3 GetVFXPosition(Transform target)
+    {
+        Collider targetCollider = target.GetComponentInChildren<Collider>();
+        return targetCollider != null ? GetVFXPosition(targetCollider) : target.position + heightOffset;
+    }
+
+    private void UpdateSettlementFocusVFX()
+    {
+        if (vfxInstance == null) return;
+
+        Vector3 focusPosition = GetVFXPosition(selectedSettlementTarget);
+        vfxInstance.transform.SetPositionAndRotation(focusPosition, Quaternion.Euler(vfxRotation));
+        if (!vfxInstance.activeSelf)
+        {
+            vfxInstance.SetActive(true);
+        }
+    }
+
     private void ClearHover()
     {
         if (currentTarget != null)
         {
             currentTarget = null;
-            if (vfxInstance != null && vfxInstance.activeSelf)
-            {
-                // Dừng phát hạt mới để hạt cũ tan tự nhiên (hoặc dùng SetActive(false) nếu muốn tắt ngay)
-                vfxInstance.SetActive(false);
-            }
+            HideVFX();
+        }
+    }
+
+    private void HideVFX()
+    {
+        if (vfxInstance != null && vfxInstance.activeSelf)
+        {
+            // Dừng phát hạt mới để hạt cũ tan tự nhiên (hoặc dùng SetActive(false) nếu muốn tắt ngay)
+            vfxInstance.SetActive(false);
         }
     }
 }

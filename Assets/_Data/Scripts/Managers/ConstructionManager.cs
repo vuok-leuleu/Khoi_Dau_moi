@@ -136,6 +136,13 @@ public class ConstructionManager : Singleton<ConstructionManager>
 
     public void PlaceBuilding(BuildingType type, Vector3 position, Quaternion rotation)
     {
+        if (TroopTrainingManager.IsCentralBarracksType(type))
+        {
+            Debug.LogWarning("[ConstructionManager] Trại Lính là công trình trung tâm, không thể xây thêm.");
+            UIManager.Ins?.ShowWarning("Trại Lính chỉ có sẵn tại thành đầu tiên và không thể xây thêm!");
+            return;
+        }
+
         BuildingCost cost = GetBuildingCost(type);
 
         if (JsonDataManager.Ins != null)

@@ -143,6 +143,120 @@ public class TroopTrainingSlotUI : MonoBehaviour, IPointerEnterHandler, IPointer
     }
 
     /// <summary>
+    /// Sao chép phần trình bày của bốn trạng thái từ một ô mẫu.
+    /// Dữ liệu lính và sự kiện click của từng ô không bị sao chép.
+    /// </summary>
+    public void CopyVisualStyleFrom(TroopTrainingSlotUI template)
+    {
+        if (template == null || template == this) return;
+
+        template.AutoBindReferences();
+        AutoBindReferences();
+
+        CopyStateVisualStyle(template.lockedStateObj, lockedStateObj);
+        CopyStateVisualStyle(template.emptyStateObj, emptyStateObj);
+        CopyStateVisualStyle(template.trainingStateObj, trainingStateObj);
+        CopyStateVisualStyle(template.completedStateObj, completedStateObj);
+    }
+
+    private static void CopyStateVisualStyle(GameObject source, GameObject destination)
+    {
+        if (source == null || destination == null) return;
+
+        CopyVisualHierarchy(source.transform, destination.transform);
+    }
+
+    private static void CopyVisualHierarchy(Transform source, Transform destination)
+    {
+        CopyRectTransform(source as RectTransform, destination as RectTransform);
+
+        Image sourceImage = source.GetComponent<Image>();
+        Image destinationImage = destination.GetComponent<Image>();
+        if (sourceImage != null && destinationImage != null)
+        {
+            destinationImage.sprite = sourceImage.sprite;
+            destinationImage.color = sourceImage.color;
+            destinationImage.material = sourceImage.material;
+            destinationImage.type = sourceImage.type;
+            destinationImage.preserveAspect = sourceImage.preserveAspect;
+            destinationImage.raycastTarget = sourceImage.raycastTarget;
+            destinationImage.maskable = sourceImage.maskable;
+        }
+
+        TextMeshProUGUI sourceText = source.GetComponent<TextMeshProUGUI>();
+        TextMeshProUGUI destinationText = destination.GetComponent<TextMeshProUGUI>();
+        if (sourceText != null && destinationText != null)
+        {
+            destinationText.font = sourceText.font;
+            destinationText.fontSharedMaterial = sourceText.fontSharedMaterial;
+            destinationText.fontSize = sourceText.fontSize;
+            destinationText.enableAutoSizing = sourceText.enableAutoSizing;
+            destinationText.fontSizeMin = sourceText.fontSizeMin;
+            destinationText.fontSizeMax = sourceText.fontSizeMax;
+            destinationText.fontStyle = sourceText.fontStyle;
+            destinationText.alignment = sourceText.alignment;
+            destinationText.color = sourceText.color;
+            destinationText.enableWordWrapping = sourceText.enableWordWrapping;
+            destinationText.overflowMode = sourceText.overflowMode;
+            destinationText.margin = sourceText.margin;
+            destinationText.characterSpacing = sourceText.characterSpacing;
+            destinationText.wordSpacing = sourceText.wordSpacing;
+            destinationText.lineSpacing = sourceText.lineSpacing;
+            destinationText.paragraphSpacing = sourceText.paragraphSpacing;
+            destinationText.raycastTarget = sourceText.raycastTarget;
+            destinationText.maskable = sourceText.maskable;
+        }
+
+        for (int i = 0; i < source.childCount; i++)
+        {
+            Transform sourceChild = source.GetChild(i);
+            Transform destinationChild = FindChildByTrimmedName(destination, sourceChild.name);
+            if (destinationChild != null)
+            {
+                CopyVisualHierarchy(sourceChild, destinationChild);
+            }
+        }
+    }
+
+    private static Transform FindChildByTrimmedName(Transform parent, string childName)
+    {
+        string targetName = childName.Trim();
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            if (child.name.Trim().Equals(targetName, System.StringComparison.OrdinalIgnoreCase))
+            {
+                return child;
+            }
+        }
+
+        return null;
+    }
+
+    private static void CopyRectTransform(RectTransform source, RectTransform destination)
+    {
+        if (source == null || destination == null) return;
+
+        destination.anchorMin = source.anchorMin;
+        destination.anchorMax = source.anchorMax;
+        destination.pivot = source.pivot;
+
+        if (source.anchorMin == source.anchorMax)
+        {
+            destination.anchoredPosition3D = source.anchoredPosition3D;
+            destination.sizeDelta = source.sizeDelta;
+        }
+        else
+        {
+            destination.offsetMin = source.offsetMin;
+            destination.offsetMax = source.offsetMax;
+        }
+
+        destination.localRotation = source.localRotation;
+        destination.localScale = source.localScale;
+    }
+
+    /// <summary>
     /// Cập nhật dữ liệu và hiển thị trực quan cho Ô Huấn Luyện
     /// </summary>
     public void SetData(TroopTrainingSlotData data, SettlementZone zone)
@@ -150,6 +264,9 @@ public class TroopTrainingSlotUI : MonoBehaviour, IPointerEnterHandler, IPointer
         AutoBindReferences();
         currentSlotData = data;
         currentZone = zone;
+
+        bool isGarrisonView = TroopTrainingManager.Ins != null &&
+                              !TroopTrainingManager.Ins.IsCentralTrainingSettlement(zone);
 
         if (data == null)
         {
@@ -189,16 +306,18 @@ public class TroopTrainingSlotUI : MonoBehaviour, IPointerEnterHandler, IPointer
         // 3. CHẾ ĐỘ HOÀN THÀNH ✅ (Đã chứa lính)
         if (data.isCompleted)
         {
+            string troopLabel = GetTroopDisplayName(data.troopType);
+
             if (completedStateObj != null)
             {
                 completedStateObj.SetActive(true);
                 TextMeshProUGUI compTMP = completedStateObj.GetComponentInChildren<TextMeshProUGUI>();
                 if (compTMP != null)
                 {
-                    compTMP.text = GetTroopDisplayName(data.troopType);
+                    compTMP.text = troopLabel;
                 }
             }
-            if (troopNameTMP != null) troopNameTMP.text = GetTroopDisplayName(data.troopType);
+            if (troopNameTMP != null) troopNameTMP.text = troopLabel;
             return;
         }
 
@@ -210,6 +329,16 @@ public class TroopTrainingSlotUI : MonoBehaviour, IPointerEnterHandler, IPointer
     private void OnClickSlot()
     {
         if (currentSlotData == null || currentZone == null) return;
+
+        if (TroopTrainingManager.Ins != null && !TroopTrainingManager.Ins.IsCentralTrainingSettlement(currentZone))
+        {
+            string warning = currentSlotData.isCompleted
+                ? $"{currentZone.settlementName} đang đồn trú {currentSlotData.stationedSoldierCount} {GetTroopDisplayName(currentSlotData.troopType)}."
+                : $"{currentZone.settlementName} không có {GetTroopDisplayName(currentSlotData.troopType)} đồn trú.";
+            if (UIManager.Ins != null) UIManager.Ins.ShowWarning(warning);
+            Debug.Log($"[TroopTrainingSlotUI] {warning}");
+            return;
+        }
 
         if (!currentSlotData.isUnlocked)
         {

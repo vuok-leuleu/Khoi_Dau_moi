@@ -252,7 +252,7 @@ MonoBehaviour:
   initialBuildDuration: 1
   slotIndex: -1
   buildingType: 11
-  buildingName: "Tr\u1EA1i L\xEDnh Ki\u1EBFm"
+  buildingName: "Tr\u1EA1i L\xEDnh"
   visualModels:
   - {fileID: 1302770435861314428}
   - {fileID: 6935105313400852636}
