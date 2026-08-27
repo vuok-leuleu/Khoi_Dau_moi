@@ -17,6 +17,10 @@ public class TroopTrainingSlotData
     public BuildingType troopType = BuildingType.BarracksMelee;
     public int remainingWaves = 1;
     public bool isCompleted;
+
+    // Chỉ dùng khi hiển thị quân đồn trú ở các thành không có Trại Lính.
+    // Dữ liệu này được tính lại từ UnitController, không lưu vào hàng đợi huấn luyện.
+    public int stationedSoldierCount;
 }
 
 public class TroopTrainingManager : MonoBehaviour
@@ -28,6 +32,9 @@ public class TroopTrainingManager : MonoBehaviour
 
     // Bộ nhớ đệm lưu danh sách Ô huấn luyện cho từng Vùng đất (Key = settlementName)
     private Dictionary<string, TroopTrainingSlotData[]> zoneSlotsDict = new Dictionary<string, TroopTrainingSlotData[]>();
+    private SettlementZone centralSettlement;
+
+    public SettlementZone CentralSettlement => ResolveCentralSettlement();
 
     private void Awake()
     {
@@ -62,6 +69,7 @@ public class TroopTrainingManager : MonoBehaviour
 
     private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
     {
+        centralSettlement = null;
         SubscribeDayNight();
         SyncFoodToDataManager();
     }
@@ -84,58 +92,91 @@ public class TroopTrainingManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Kiểm tra các loại Trại Lính đặt sẵn ở thành khởi đầu. Các loại này không
+    /// được phép xây thêm trong game.
+    /// </summary>
+    public static bool IsCentralBarracksType(BuildingType type)
+    {
+        return type == BuildingType.BarracksMelee ||
+               type == BuildingType.BarracksArcher ||
+               type == BuildingType.BarracksSpear ||
+               type.ToString().StartsWith("Barracks");
+    }
+
+    /// <summary>
+    /// Tìm thành có Trại Lính trung tâm. Scene cũ không tích cờ sẽ dùng vùng
+    /// Tier 0 để vẫn tương thích với dữ liệu hiện có.
+    /// </summary>
+    private SettlementZone ResolveCentralSettlement()
+    {
+        if (centralSettlement != null) return centralSettlement;
+
+        SettlementZone[] zones = Object.FindObjectsByType<SettlementZone>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (SettlementZone zone in zones)
+        {
+            if (zone != null && zone.isStartingSettlement)
+            {
+                centralSettlement = zone;
+                return centralSettlement;
+            }
+        }
+
+        if (SettlementManager.Ins != null)
+        {
+            centralSettlement = SettlementManager.Ins.GetZoneByTier(0);
+            if (centralSettlement != null) return centralSettlement;
+        }
+
+        foreach (SettlementZone zone in zones)
+        {
+            if (zone != null && zone.zoneTier == 0)
+            {
+                centralSettlement = zone;
+                return centralSettlement;
+            }
+        }
+
+        return null;
+    }
+
+    public bool IsCentralTrainingSettlement(SettlementZone zone)
+    {
+        return zone != null && zone == ResolveCentralSettlement();
+    }
+
+    /// <summary>
     /// Xử lý đếm ngược 1 ngày/wave huấn luyện lính khi trôi qua ngày mới
     /// </summary>
     private void OnWaveStartHandler(int waveIndex)
     {
-        Debug.Log($"[TroopTrainingManager] 🌅 Trôi qua Ngày mới (Wave {waveIndex}) -> Tiến hành đếm ngược Huấn Luyện Lính...");
+        SettlementZone centralZone = ResolveCentralSettlement();
+        if (centralZone == null) return;
 
-        // Nạp tự động toàn bộ Vùng đất hiện có vào bộ nhớ trước khi đếm ngược
-        if (SettlementManager.Ins != null && SettlementManager.Ins.AllSettlements != null)
-        {
-            foreach (var z in SettlementManager.Ins.AllSettlements)
-            {
-                if (z != null) GetSlotsForZone(z);
-            }
-        }
-        else
-        {
-            SettlementZone[] sceneZones = Object.FindObjectsByType<SettlementZone>(FindObjectsSortMode.None);
-            foreach (var z in sceneZones)
-            {
-                if (z != null) GetSlotsForZone(z);
-            }
-        }
+        Debug.Log($"[TroopTrainingManager] 🌅 Trôi qua Ngày mới (Wave {waveIndex}) -> Tiến hành đếm ngược Huấn Luyện Lính tại {centralZone.settlementName}...");
 
-        List<string> zoneKeys = new List<string>(zoneSlotsDict.Keys);
-        foreach (string zoneName in zoneKeys)
-        {
-            TroopTrainingSlotData[] slots = zoneSlotsDict[zoneName];
-            if (slots == null) continue;
+        TroopTrainingSlotData[] slots = GetSlotsForZone(centralZone);
+        if (slots == null) return;
 
-            for (int i = 0; i < slots.Length; i++)
+        for (int i = 0; i < slots.Length; i++)
+        {
+            TroopTrainingSlotData slot = slots[i];
+            if (slot != null && slot.isTraining && !slot.isCompleted)
             {
-                var slot = slots[i];
-                if (slot != null && slot.isTraining && !slot.isCompleted)
+                slot.remainingWaves--;
+                if (slot.remainingWaves <= 0)
                 {
-                    slot.remainingWaves--;
-                    if (slot.remainingWaves <= 0)
-                    {
-                        slot.remainingWaves = 0;
-                        slot.isTraining = false;
-                        slot.isCompleted = true;
+                    slot.remainingWaves = 0;
+                    slot.isTraining = false;
+                    slot.isCompleted = true;
 
-                        Debug.Log($"[TroopTrainingManager] 🎉 Ô {slot.slotIndex + 1} tại vùng {zoneName} đã hoàn tất huấn luyện {slot.troopType}!");
-
-                        // Tự động thu hoạch & Sinh lính thật tại Doanh Trại của Vùng đất
-                        SpawnTrainedSoldierForZone(zoneName, slot);
-                        SettlementZone zoneObj = SettlementManager.Ins != null ? SettlementManager.Ins.GetZoneByName(zoneName) : null;
-                        if (zoneObj != null) zoneObj.UpdateZoneVisualText();
-                    }
+                    Debug.Log($"[TroopTrainingManager] 🎉 Ô {slot.slotIndex + 1} tại {centralZone.settlementName} đã hoàn tất huấn luyện {slot.troopType}!");
+                    SpawnTrainedSoldierForZone(centralZone.settlementName, slot);
                 }
             }
-            SaveZoneTrainingData(zoneName);
         }
+
+        SaveZoneTrainingData(centralZone.settlementName);
+        centralZone.UpdateZoneVisualText();
 
         // 🌾 Đồng bộ lại số lúa khả dụng lên HUD
         SyncFoodToDataManager();
@@ -151,9 +192,10 @@ public class TroopTrainingManager : MonoBehaviour
     /// </summary>
     public void ClearZoneTrainingSlots(string zoneName)
     {
-        if (string.IsNullOrEmpty(zoneName)) return;
+        SettlementZone centralZone = ResolveCentralSettlement();
+        if (centralZone == null || string.IsNullOrEmpty(zoneName) || zoneName != centralZone.settlementName) return;
 
-        TroopTrainingSlotData[] slots = LoadZoneTrainingData(zoneName);
+        TroopTrainingSlotData[] slots = GetSlotsForZone(centralZone);
         for (int i = 0; i < MAX_TRAINING_SLOTS; i++)
         {
             if (slots[i] != null)
@@ -163,8 +205,7 @@ public class TroopTrainingManager : MonoBehaviour
                 slots[i].remainingWaves = 1;
             }
         }
-        zoneSlotsDict[zoneName] = slots;
-        SaveZoneTrainingData(zoneName);
+        SaveZoneTrainingData(centralZone.settlementName);
 
         // 🌾 Giải phóng slot lính -> hoàn trả lại lúa khả dụng
         SyncFoodToDataManager();
@@ -208,32 +249,20 @@ public class TroopTrainingManager : MonoBehaviour
     public int GetTotalUsedFoodCount()
     {
         int usedCount = 0;
-        List<string> zoneKeys = new List<string>(zoneSlotsDict.Keys);
+        SettlementZone centralZone = ResolveCentralSettlement();
+        if (centralZone == null) return usedCount;
 
-        if (SettlementManager.Ins != null && SettlementManager.Ins.AllSettlements != null)
+        TroopTrainingSlotData[] slots = GetSlotsForZone(centralZone);
+        if (slots == null) return usedCount;
+
+        for (int i = 0; i < MAX_TRAINING_SLOTS; i++)
         {
-            foreach (var z in SettlementManager.Ins.AllSettlements)
+            if (slots[i] != null && (slots[i].isTraining || slots[i].isCompleted))
             {
-                if (z != null && !zoneKeys.Contains(z.settlementName))
-                {
-                    zoneKeys.Add(z.settlementName);
-                }
+                usedCount++;
             }
         }
 
-        foreach (string zoneName in zoneKeys)
-        {
-            TroopTrainingSlotData[] slots = zoneSlotsDict.ContainsKey(zoneName) ? zoneSlotsDict[zoneName] : LoadZoneTrainingData(zoneName);
-            if (slots == null) continue;
-
-            for (int i = 0; i < MAX_TRAINING_SLOTS; i++)
-            {
-                if (slots[i] != null && (slots[i].isTraining || slots[i].isCompleted))
-                {
-                    usedCount++;
-                }
-            }
-        }
         return usedCount;
     }
 
@@ -273,7 +302,7 @@ public class TroopTrainingManager : MonoBehaviour
     /// </summary>
     public int GetUnlockedSlotsCountForZone(SettlementZone zone)
     {
-        if (zone == null) return 0;
+        if (zone == null || !zone.isTownHallEstablished || !IsCentralTrainingSettlement(zone)) return 0;
 
         int highestBarracksLevel = 0;
 
@@ -329,10 +358,7 @@ public class TroopTrainingManager : MonoBehaviour
 
     public bool IsBarracksBuilding(BuildingType type)
     {
-        return type == BuildingType.BarracksMelee ||
-               type == BuildingType.BarracksArcher ||
-               type == BuildingType.BarracksSpear ||
-               type.ToString().StartsWith("Barracks");
+        return IsCentralBarracksType(type);
     }
 
     /// <summary>
@@ -340,7 +366,14 @@ public class TroopTrainingManager : MonoBehaviour
     /// </summary>
     public TroopTrainingSlotData[] GetSlotsForZone(SettlementZone zone)
     {
-        if (zone == null) return new TroopTrainingSlotData[MAX_TRAINING_SLOTS];
+        if (zone == null) return CreateDisplaySlots(0);
+
+        // Chỉ thành khởi đầu có dữ liệu huấn luyện thật. Các thành khác dùng
+        // cùng khung UI để hiển thị quân đang đồn trú theo từng loại.
+        if (!IsCentralTrainingSettlement(zone))
+        {
+            return CreateGarrisonDisplaySlots(zone);
+        }
 
         string zoneName = zone.settlementName;
 
@@ -353,22 +386,8 @@ public class TroopTrainingManager : MonoBehaviour
         TroopTrainingSlotData[] currentSlots = zoneSlotsDict[zoneName];
         int unlockedCount = GetUnlockedSlotsCountForZone(zone);
 
-        // Quét số lượng lính thực tế đang sống trên bản đồ tại Vùng đất này
-        SpawnSoldier spawner = zone.GetComponentInChildren<SpawnSoldier>(true);
-        if (spawner == null && zone.builtStructures != null)
-        {
-            foreach (var b in zone.builtStructures)
-            {
-                if (b != null && IsBarracksBuilding(b.buildingType))
-                {
-                    spawner = b.GetComponent<SpawnSoldier>();
-                    if (spawner == null) spawner = b.GetComponentInChildren<SpawnSoldier>();
-                    if (spawner != null) break;
-                }
-            }
-        }
-
-        int activeSoldierCount = spawner != null ? spawner.GetCurrentActiveSoldierCount() : 0;
+        int activeSoldierCount = GetStationedSoldierCount(zone, BuildingType.None);
+        int requiredGarrisonSlots = Mathf.CeilToInt(activeSoldierCount / (float)SOLDIERS_PER_TRAINING_UNIT);
         int completedCount = 0;
 
         for (int i = 0; i < MAX_TRAINING_SLOTS; i++)
@@ -382,7 +401,7 @@ public class TroopTrainingManager : MonoBehaviour
             // Đồng bộ ô hoàn thành chứa lính với số lính thực tế đang có trên bản đồ
             if (currentSlots[i].isUnlocked && currentSlots[i].isCompleted)
             {
-                if (completedCount < activeSoldierCount)
+                if (completedCount < requiredGarrisonSlots)
                 {
                     completedCount++;
                 }
@@ -399,12 +418,100 @@ public class TroopTrainingManager : MonoBehaviour
         return currentSlots;
     }
 
+    private static TroopTrainingSlotData[] CreateGarrisonDisplaySlots(SettlementZone zone)
+    {
+        if (zone == null || !zone.isTownHallEstablished)
+        {
+            return CreateDisplaySlots(0);
+        }
+
+        TroopTrainingSlotData[] slots = CreateDisplaySlots(3);
+        BuildingType[] troopTypes =
+        {
+            BuildingType.BarracksMelee,
+            BuildingType.BarracksArcher,
+            BuildingType.BarracksSpear
+        };
+
+        for (int i = 0; i < troopTypes.Length; i++)
+        {
+            int stationedCount = GetStationedSoldierCount(zone, troopTypes[i]);
+            slots[i].troopType = troopTypes[i];
+            slots[i].stationedSoldierCount = stationedCount;
+            slots[i].isCompleted = stationedCount > 0;
+        }
+
+        return slots;
+    }
+
+    private static int GetStationedSoldierCount(SettlementZone zone, BuildingType troopType)
+    {
+        if (zone == null) return 0;
+
+        int total = 0;
+        UnitController[] allUnits = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
+        foreach (UnitController soldier in allUnits)
+        {
+            if (soldier == null || !soldier.gameObject.activeInHierarchy || soldier.isDead || soldier.isExpeditionMarching)
+            {
+                continue;
+            }
+
+            bool isStationedHere = !string.IsNullOrEmpty(soldier.stationedSettlementZoneName)
+                ? soldier.stationedSettlementZoneName == zone.settlementName
+                : soldier.GetComponentInParent<SettlementZone>() == zone;
+
+            if (isStationedHere && (troopType == BuildingType.None || ToBuildingType(soldier.AttackMode) == troopType))
+            {
+                total++;
+            }
+        }
+
+        return total;
+    }
+
+    private static BuildingType ToBuildingType(AttackMode attackMode)
+    {
+        switch (attackMode)
+        {
+            case AttackMode.Ranged: return BuildingType.BarracksArcher;
+            case AttackMode.Tank: return BuildingType.BarracksSpear;
+            default: return BuildingType.BarracksMelee;
+        }
+    }
+
+    private static TroopTrainingSlotData[] CreateDisplaySlots(int unlockedCount)
+    {
+        TroopTrainingSlotData[] slots = new TroopTrainingSlotData[MAX_TRAINING_SLOTS];
+        for (int i = 0; i < MAX_TRAINING_SLOTS; i++)
+        {
+            slots[i] = new TroopTrainingSlotData
+            {
+                slotIndex = i,
+                isUnlocked = i < unlockedCount,
+                isTraining = false,
+                isCompleted = false,
+                remainingWaves = 1
+            };
+        }
+
+        return slots;
+    }
+
     /// <summary>
     /// Bắt đầu huấn luyện lính tại ô slotIndex của Vùng đất
     /// </summary>
     public bool StartTraining(SettlementZone zone, int slotIndex, BuildingType troopType)
     {
         if (zone == null || slotIndex < 0 || slotIndex >= MAX_TRAINING_SLOTS) return false;
+
+        if (!IsCentralTrainingSettlement(zone))
+        {
+            const string warning = "Chỉ có thể huấn luyện lính tại thành đầu tiên có Trại Lính!";
+            UIManager.Ins?.ShowWarning(warning);
+            Debug.LogWarning($"[TroopTrainingManager] {warning}");
+            return false;
+        }
 
         TroopTrainingSlotData[] slots = GetSlotsForZone(zone);
         TroopTrainingSlotData slot = slots[slotIndex];
