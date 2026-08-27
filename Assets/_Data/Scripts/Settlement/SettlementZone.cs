@@ -31,6 +31,8 @@ public class SettlementZone : MonoBehaviour
     public int settlementLevel = 1;
     public bool isUnlocked = true;                     // Vùng đất đã được mở khóa trên bản đồ chưa
     public bool isTownHallEstablished = true;           // Đã xây Nhà Chính chưa (Vùng đất khởi đầu = true)
+    [Tooltip("Chỉ một vùng được tích: thành đầu tiên có Trại Lính trung tâm và được phép huấn luyện lính.")]
+    public bool isStartingSettlement = false;
 
     [Header("=== PHÂN BẬC VÙNG ĐẤT (ZONE TIER / ẢI) ===")]
     [Tooltip("Bậc 0 = Vùng đất khởi đầu (ZEFFIRA). Bậc 1, 2, 3... = Các ải mở khóa tiếp theo.")]
@@ -72,19 +74,21 @@ public class SettlementZone : MonoBehaviour
 
     /// <summary>
     /// Kiểm tra xem loại công nghệ công trình này đã được mở khóa toàn quốc (cho phép xây ở mọi vùng đất) chưa.
-    /// - Công trình Khởi Đầu (House, WoodCutter, Kitchen, FoodStorage, BarracksMelee): Mặc định mở khóa từ Đầu Game ở mọi nơi.
-    /// - Công trình Nâng Cao (StoneMine/StoneStorage, BarracksArcher, ArcherTower...): Khóa toàn quốc cho tới khi XÂM CHIẾM / GIẢI PHÓNG được Vùng Đất chứa công nghệ đó!
+    /// - Trại Lính là công trình trung tâm đặt sẵn, không được xây trong Shop.
+    /// - Các công trình khác tuân theo tiến độ mở khóa toàn quốc.
     /// </summary>
     public static bool IsBuildingTypeUnlockedGlobally(BuildingType type)
     {
         if (type == BuildingType.None) return true;
 
+        // Trại Lính chỉ tồn tại sẵn ở thành khởi đầu, tuyệt đối không mở khóa để xây thêm.
+        if (TroopTrainingManager.IsCentralBarracksType(type)) return false;
+
         // 1. CÔNG TRÌNH CƠ BẢN KHỞI ĐẦU: Mặc định được mở khóa xây dựng ở tất cả các vùng đất
         if (type == BuildingType.House || 
             type == BuildingType.WoodCutter || 
             type == BuildingType.Kitchen || 
-            type == BuildingType.FoodStorage || 
-            type == BuildingType.BarracksMelee)
+            type == BuildingType.FoodStorage)
         {
             return true;
         }
@@ -162,14 +166,28 @@ public class SettlementZone : MonoBehaviour
     {
         int total = 0;
 
-        // Ownership is stored on the unit, rather than inferred from the barracks
-        // that originally created it.  This lets a moved squad disappear from the
-        // source UI and appear in its destination UI without being counted twice.
-        UnitController[] units = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
-        foreach (UnitController unit in units)
+        // Đếm theo nơi lính đang đóng thực tế thay vì theo SpawnSoldier đã sinh ra nó.
+        // Lính được giữ nguyên parent ở doanh trại gốc khi hành quân, vì vậy đếm theo
+        // hierarchy của SpawnSoldier sẽ khiến thành đích luôn hiển thị 0 lính.
+        UnitController[] allUnits = FindObjectsByType<UnitController>(FindObjectsSortMode.None);
+        foreach (UnitController soldier in allUnits)
         {
-            if (unit != null && unit.gameObject.activeInHierarchy &&
-                unit.IsStationedInZone(settlementName) && !unit.isDead)
+            if (soldier == null || !soldier.gameObject.activeInHierarchy || soldier.isDead) continue;
+
+            // Đoàn đang trên đường không thuộc về thành nào cho đến khi hoàn tất.
+            if (soldier.isExpeditionMarching) continue;
+
+            if (!string.IsNullOrEmpty(soldier.stationedSettlementZoneName))
+            {
+                if (soldier.stationedSettlementZoneName == settlementName)
+                {
+                    total++;
+                }
+                continue;
+            }
+
+            // Lính chưa từng hành quân vẫn thuộc vùng chứa doanh trại đã sinh chúng.
+            if (soldier.GetComponentInParent<SettlementZone>() == this)
             {
                 total++;
             }

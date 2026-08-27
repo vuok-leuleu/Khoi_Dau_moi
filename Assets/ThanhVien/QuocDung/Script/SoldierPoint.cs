@@ -101,10 +101,12 @@ public class SoldierPoint : MonoBehaviour
             return;
         }
 
-        // SoldierPointUI is a route indicator, not a permanent marker.  Keeping it
-        // alive after arrival makes the route look as if the squad is still at its
-        // old settlement because the shaft is intentionally anchored at startPoint.
-        if (unitController != null && !unitController.isExpeditionMarching)
+        // Mũi tên sau khi xác nhận điều quân chỉ là chỉ báo cho đoàn đang hành quân.
+        // Nếu không tắt tại đây, nó vẫn giữ nhãn "Còn 0 Wave" sau khi lính đã tới,
+        // dễ khiến người chơi hiểu nhầm đoàn bị kẹt trên đường.
+        if (unitController != null &&
+            unitController.hasReachedExpeditionDestination &&
+            !unitController.isExpeditionMarching)
         {
             gameObject.SetActive(false);
             return;

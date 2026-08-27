@@ -55,7 +55,10 @@ public class MoveModeController : MonoBehaviour
             return;
         }
 
-        if (Input.GetMouseButtonDown(0) && !IsPointerOverUi())
+        if (Input.GetMouseButtonUp(0) &&
+            !RTSCameraController.IsMouseDragging &&
+            !RTSCameraController.WasMouseDragThisPress &&
+            !IsPointerOverUi())
         {
             TrySelectDestination();
         }
@@ -84,7 +87,7 @@ public class MoveModeController : MonoBehaviour
         }
 
         previewDestination = null;
-        SettlementSidePanelUI.Ins?.SetMoveButtonLabel("MOVE");
+        SettlementSidePanelUI.Ins?.SetMoveButtonLabel("ĐIỀU QUÂN");
 
         // 1. Tìm điểm đến tiếp theo ban đầu và vẽ mũi tên chỉ đến đó
         SettlementZone initialDestination = FindInitialDestination();
@@ -109,7 +112,7 @@ public class MoveModeController : MonoBehaviour
         sourceZone = null;
         previewDestination = null;
         if (routePreview != null) routePreview.gameObject.SetActive(false);
-                SettlementSidePanelUI.Ins?.SetMoveButtonLabel("MOVE");
+                SettlementSidePanelUI.Ins?.SetMoveButtonLabel("ĐIỀU QUÂN");
     }
 
     private void EnsureRoutePreview(SoldierPoint soldierPointUIPrefab)
@@ -149,7 +152,7 @@ public class MoveModeController : MonoBehaviour
         previewDestination = destination;
         routePreview.Setup(GetRouteAnchor(sourceZone), GetRouteAnchor(destination), (Transform)null, routePreviewHeight);
         routePreview.gameObject.SetActive(true);
-        SettlementSidePanelUI.Ins?.SetMoveButtonLabel("APPLY");
+        SettlementSidePanelUI.Ins?.SetMoveButtonLabel("XÁC NHẬN");
     }
 
     public void ApplySelectedDestination()
@@ -195,7 +198,7 @@ public class MoveModeController : MonoBehaviour
             sourceZone = null;
             previewDestination = null;
         });
-        SettlementSidePanelUI.Ins?.SetMoveButtonLabel("MOVE");
+        SettlementSidePanelUI.Ins?.SetMoveButtonLabel("ĐIỀU QUÂN");
     }
 
     private static Transform GetRouteAnchor(SettlementZone zone)

@@ -288,11 +288,7 @@ public class UnitController : MonoBehaviour
 
             if (hasReachedDestination)
             {
-                transform.position = marchDestinationPosition;
-                hasReachedExpeditionDestination = true;
-                stationedSettlementZoneName = marchDestinationZoneName;
-                isExpeditionMarching = false;
-                isRespondingToWarning = false;
+                CompleteExpeditionMarch();
             }
 
             currentState = UnitState.Idle;
@@ -495,6 +491,7 @@ public class UnitController : MonoBehaviour
 
     public void CompleteExpeditionMarch()
     {
+        string sourceZoneName = stationedSettlementZoneName;
         transform.position = marchDestinationPosition;
         hasReachedExpeditionDestination = true;
         stationedSettlementZoneName = marchDestinationZoneName;
@@ -502,6 +499,15 @@ public class UnitController : MonoBehaviour
         isRespondingToWarning = false;
         currentState = UnitState.Idle;
         UpdateAnimation();
+
+        // Làm mới ngay số quân ngoài bản đồ và khung quân đồn trú đang mở.
+        // Không cần chờ nhịp refresh 0.25 giây của SettlementZone.
+        if (SettlementManager.Ins != null)
+        {
+            SettlementManager.Ins.GetZoneByName(sourceZoneName)?.UpdateZoneVisualText();
+            SettlementManager.Ins.GetZoneByName(marchDestinationZoneName)?.UpdateZoneVisualText();
+        }
+        SettlementSidePanelUI.Ins?.RefreshTroopTrainingSlots();
     }
     public void EnableCombat(Vector3 enemyTargetPos)
     {
@@ -875,4 +881,3 @@ public class UnitController : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, GetAttackStopDistance());
     }
 }
-

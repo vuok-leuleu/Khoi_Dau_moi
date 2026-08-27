@@ -232,6 +232,7 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
         bool isTownHall = targetBuilding.buildingType == BuildingType.House || 
                          targetBuilding.buildingName.Contains("Nhà chính") || 
                          targetBuilding.buildingName.Contains("Town Hall");
+        bool isProtectedCentralBarracks = IsProtectedCentralBarracks(targetBuilding);
 
         // Cần Cấp Thủ Đô > Cấp hiện tại của công trình (Trừ chính Nhà Chính)
         bool settlementLevelOk = isTownHall || (targetBuilding.CurrentLevel < settlementLevel);
@@ -325,7 +326,7 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
 
         if (demolishBtn != null)
         {
-            demolishBtn.gameObject.SetActive(!isTownHall);
+            demolishBtn.gameObject.SetActive(!isTownHall && !isProtectedCentralBarracks);
         }
     }
 
@@ -464,6 +465,12 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
             return;
         }
 
+        if (IsProtectedCentralBarracks(targetBuilding))
+        {
+            if (UIManager.Ins != null) UIManager.Ins.ShowWarning("Không thể phá dỡ Trại Lính trung tâm!");
+            return;
+        }
+
         if (ShowManualDemolishConfirmation(targetBuilding))
         {
             return;
@@ -484,7 +491,7 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
 
     private void DemolishBuilding(UpgradeableBuilding building)
     {
-        if (building == null || IsTownHall(building)) return;
+        if (building == null || IsTownHall(building) || IsProtectedCentralBarracks(building)) return;
 
         SettlementZone currentZone = (SettlementManager.Ins != null) ? SettlementManager.Ins.CurrentSettlement : null;
         if (currentZone != null && currentZone.builtStructures != null)
@@ -516,6 +523,17 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
         return building.buildingType == BuildingType.House ||
                buildingName.IndexOf("Nhà chính", StringComparison.OrdinalIgnoreCase) >= 0 ||
                buildingName.IndexOf("Town Hall", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    private static bool IsProtectedCentralBarracks(UpgradeableBuilding building)
+    {
+        if (building == null || !TroopTrainingManager.IsCentralBarracksType(building.buildingType)) return false;
+
+        SettlementZone owningZone = building.GetComponentInParent<SettlementZone>();
+        if (owningZone == null) return false;
+
+        // Cờ gán tay có ưu tiên; Zone Tier 0 là fallback an toàn cho Scene cũ.
+        return owningZone.isStartingSettlement || owningZone.zoneTier == 0;
     }
 
     private void ConfigureManualDemolishConfirmation()

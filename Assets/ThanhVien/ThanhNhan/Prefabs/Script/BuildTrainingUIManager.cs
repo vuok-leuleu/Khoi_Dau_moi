@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -26,6 +27,22 @@ public sealed class BuildTrainingUIManager : MonoBehaviour
     [SerializeField] private TroopSelectionModalUI trainingPanel;
     [SerializeField] private BuildingUpgradeSidePanelUI upgradePanel;
 
+    [Header("=== FOCUS THÀNH ĐANG CHỌN ===")]
+    [Tooltip("Có thể để trống. Script tự lấy Camera có tag MainCamera.")]
+    [SerializeField] private Camera mapCamera;
+    [Tooltip("Có thể để trống. Script tự tìm RTSCameraController trên Main Camera.")]
+    [SerializeField] private RTSCameraController rtsCameraController;
+    [Tooltip("Kéo FX_Manager vào đây nếu Scene có nhiều DemaciaVFXHoverManager.")]
+    [SerializeField] private DemaciaVFXHoverManager settlementVFXManager;
+    [SerializeField] private bool focusCameraWhenOpeningSettlement = true;
+    [SerializeField, Min(0.05f)] private float focusDuration = 0.55f;
+    [SerializeField, Min(1f)] private float focusHorizontalDistance = 18f;
+    [SerializeField, Min(1f)] private float focusHeight = 18f;
+    [SerializeField] private bool lockRTSInputWhileFocusing = true;
+    [SerializeField] private bool enableSettlementVFX = true;
+    [SerializeField] private bool restoreCameraWhenSettlementPanelCloses = true;
+    [SerializeField, Min(0.05f)] private float returnCameraDuration = 0.5f;
+
     [Header("=== HÀNH VI ===")]
     [SerializeField] private bool keepSettlementVisible = true;
     [SerializeField] private bool closeSecondaryWindowsOnStart = true;
@@ -33,8 +50,17 @@ public sealed class BuildTrainingUIManager : MonoBehaviour
     [SerializeField] private bool logMissingReferences = true;
 
     public ManagedWindow CurrentWindow { get; private set; }
+    public bool IsSettlementPanelVisible => IsActive(settlementPanel);
 
     private bool hasLoggedMissingReferences;
+    private Coroutine focusRoutine;
+    private bool rtsInputWasEnabled;
+    private bool isRTSInputLocked;
+    private DemaciaVFXHoverManager activeSettlementVFX;
+    private SettlementZone focusedSettlement;
+    private bool hasSavedOverviewCameraPose;
+    private Vector3 savedOverviewCameraPosition;
+    private Quaternion savedOverviewCameraRotation;
 
     private void Awake()
     {
@@ -46,6 +72,7 @@ public sealed class BuildTrainingUIManager : MonoBehaviour
 
         Ins = this;
         FindUIReferences();
+        FindFocusReferences();
     }
 
     private void Start()
@@ -66,6 +93,7 @@ public sealed class BuildTrainingUIManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        StopCameraFocus();
         if (Ins == this) Ins = null;
     }
 
@@ -82,6 +110,7 @@ public sealed class BuildTrainingUIManager : MonoBehaviour
         CurrentWindow = ManagedWindow.None;
         ClearSelectedButton();
         RefreshSettlement();
+        FocusSelectedSettlement();
     }
 
     public void ShowBuildWindow()
@@ -137,6 +166,8 @@ public sealed class BuildTrainingUIManager : MonoBehaviour
     {
         CloseSecondaryWindows();
         SetActive(settlementPanel, false);
+        ClearSettlementVFX();
+        ReturnCameraToOverview();
     }
 
     private void SwitchTo(ManagedWindow targetWindow)
@@ -234,6 +265,199 @@ public sealed class BuildTrainingUIManager : MonoBehaviour
         {
             upgradePanel = Object.FindFirstObjectByType<BuildingUpgradeSidePanelUI>(FindObjectsInactive.Include);
         }
+    }
+
+    /// <summary>
+    /// Di chuyển camera tới tâm thành đang chọn và bật VFX tương ứng.
+    /// Được gọi lúc mở bảng thành, vì vậy cả click trên map lẫn click toolbar
+    /// đều cho cùng một trải nghiệm focus.
+    /// </summary>
+    public void FocusSelectedSettlement()
+    {
+        SettlementZone selectedZone = SettlementManager.Ins != null
+            ? SettlementManager.Ins.CurrentSettlement
+            : null;
+        if (selectedZone == null) return;
+
+        // Click lặp lại vào chính tòa thành đang mở panel không được reset
+        // camera/VFX; nếu không hiệu ứng sẽ chớp tắt gây khó chịu.
+        if (focusedSettlement == selectedZone && IsSettlementPanelVisible)
+        {
+            return;
+        }
+
+        Transform focusTarget = selectedZone.townHallPoint != null
+            ? selectedZone.townHallPoint
+            : selectedZone.transform;
+
+        if (focusCameraWhenOpeningSettlement)
+        {
+            FocusCamera(focusTarget);
+        }
+
+        if (enableSettlementVFX)
+        {
+            ShowSettlementVFX(selectedZone, focusTarget);
+        }
+
+        focusedSettlement = selectedZone;
+    }
+
+    private void FindFocusReferences()
+    {
+        if (mapCamera == null) mapCamera = Camera.main;
+
+        if (rtsCameraController == null && mapCamera != null)
+        {
+            rtsCameraController = mapCamera.GetComponent<RTSCameraController>();
+        }
+
+        if (settlementVFXManager == null)
+        {
+            settlementVFXManager = Object.FindFirstObjectByType<DemaciaVFXHoverManager>(FindObjectsInactive.Include);
+        }
+    }
+
+    private void FocusCamera(Transform target)
+    {
+        if (target == null) return;
+
+        FindFocusReferences();
+        if (mapCamera == null) return;
+
+        SaveOverviewCameraPoseIfNeeded();
+
+        Vector3 horizontalForward = mapCamera.transform.forward;
+        horizontalForward.y = 0f;
+        if (horizontalForward.sqrMagnitude < 0.001f)
+        {
+            horizontalForward = Vector3.back;
+        }
+        horizontalForward.Normalize();
+
+        Vector3 destination = target.position - horizontalForward * focusHorizontalDistance + Vector3.up * focusHeight;
+        Vector3 lookDirection = target.position - destination;
+        Quaternion destinationRotation = lookDirection.sqrMagnitude > 0.001f
+            ? Quaternion.LookRotation(lookDirection, Vector3.up)
+            : mapCamera.transform.rotation;
+
+        StopCameraFocus();
+        focusRoutine = StartCoroutine(MoveCameraRoutine(destination, destinationRotation, focusDuration, false));
+    }
+
+    private void SaveOverviewCameraPoseIfNeeded()
+    {
+        if (hasSavedOverviewCameraPose || mapCamera == null) return;
+
+        savedOverviewCameraPosition = mapCamera.transform.position;
+        savedOverviewCameraRotation = mapCamera.transform.rotation;
+        hasSavedOverviewCameraPose = true;
+    }
+
+    private void ReturnCameraToOverview()
+    {
+        if (!restoreCameraWhenSettlementPanelCloses || !hasSavedOverviewCameraPose) return;
+
+        FindFocusReferences();
+        if (mapCamera == null)
+        {
+            hasSavedOverviewCameraPose = false;
+            return;
+        }
+
+        StopCameraFocus();
+        focusRoutine = StartCoroutine(MoveCameraRoutine(
+            savedOverviewCameraPosition,
+            savedOverviewCameraRotation,
+            returnCameraDuration,
+            true));
+    }
+
+    private IEnumerator MoveCameraRoutine(Vector3 destination, Quaternion destinationRotation, float duration, bool clearSavedOverviewPoseOnComplete)
+    {
+        if (lockRTSInputWhileFocusing && rtsCameraController != null)
+        {
+            rtsInputWasEnabled = rtsCameraController.enabled;
+            rtsCameraController.enabled = false;
+            isRTSInputLocked = true;
+        }
+
+        Vector3 startPosition = mapCamera.transform.position;
+        Quaternion startRotation = mapCamera.transform.rotation;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float normalizedTime = Mathf.Clamp01(elapsed / duration);
+            float easedTime = normalizedTime * normalizedTime * (3f - 2f * normalizedTime);
+            mapCamera.transform.SetPositionAndRotation(
+                Vector3.Lerp(startPosition, destination, easedTime),
+                Quaternion.Slerp(startRotation, destinationRotation, easedTime));
+            yield return null;
+        }
+
+        mapCamera.transform.SetPositionAndRotation(destination, destinationRotation);
+        focusRoutine = null;
+        RestoreRTSInput();
+
+        if (clearSavedOverviewPoseOnComplete)
+        {
+            hasSavedOverviewCameraPose = false;
+        }
+    }
+
+    private void StopCameraFocus()
+    {
+        if (focusRoutine != null)
+        {
+            StopCoroutine(focusRoutine);
+            focusRoutine = null;
+        }
+
+        RestoreRTSInput();
+    }
+
+    private void RestoreRTSInput()
+    {
+        if (isRTSInputLocked && rtsCameraController != null)
+        {
+            rtsCameraController.enabled = rtsInputWasEnabled;
+        }
+
+        isRTSInputLocked = false;
+    }
+
+    private void ShowSettlementVFX(SettlementZone selectedZone, Transform focusTarget)
+    {
+        // Ưu tiên VFX đặt trực tiếp trong từng thành; nếu không có thì dùng FX_Manager chung.
+        DemaciaVFXHoverManager zoneVFX = selectedZone.GetComponentInChildren<DemaciaVFXHoverManager>(true);
+        DemaciaVFXHoverManager vfxManager = zoneVFX != null ? zoneVFX : settlementVFXManager;
+        if (vfxManager == null) return;
+
+        if (activeSettlementVFX != null && activeSettlementVFX != vfxManager)
+        {
+            activeSettlementVFX.ClearSettlementFocus();
+        }
+
+        if (!vfxManager.gameObject.activeSelf)
+        {
+            vfxManager.gameObject.SetActive(true);
+        }
+
+        vfxManager.ShowSettlementFocus(focusTarget);
+        activeSettlementVFX = vfxManager;
+    }
+
+    private void ClearSettlementVFX()
+    {
+        if (activeSettlementVFX != null)
+        {
+            activeSettlementVFX.ClearSettlementFocus();
+            activeSettlementVFX = null;
+        }
+
+        focusedSettlement = null;
     }
 
     private void ValidateReferences()

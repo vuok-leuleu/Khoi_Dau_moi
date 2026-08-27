@@ -17,9 +17,10 @@ public class SettlementZoneClickHandler : MonoBehaviour
         if (targetZone == null) targetZone = GetComponentInParent<SettlementZone>();
     }
 
-    private void OnMouseDown()
+    private void OnMouseUp()
     {
         if (MoveModeController.IsMoveModeActive) return;
+        if (RTSCameraController.IsMouseDragging || RTSCameraController.WasMouseDragThisPress) return;
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
         if (targetZone != null)
