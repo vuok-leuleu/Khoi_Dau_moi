@@ -147,6 +147,14 @@ public class BuildingShopUI : MonoBehaviour
         {
             if (item != null)
             {
+                // Trại Lính chỉ có một bản đặt sẵn ở thành khởi đầu, không được bán trong Shop.
+                if (TroopTrainingManager.IsCentralBarracksType(item.buildingType))
+                {
+                    if (currentSelectedItem == item) currentSelectedItem = null;
+                    item.gameObject.SetActive(false);
+                    continue;
+                }
+
                 item.gameObject.SetActive(true);
                 item.transform.localScale = Vector3.one;
 
@@ -220,6 +228,11 @@ public class BuildingShopUI : MonoBehaviour
     public void SelectBuildingItem(BuildingShopItemUI item)
     {
         if (item == null) return;
+        if (TroopTrainingManager.IsCentralBarracksType(item.buildingType))
+        {
+            ClearSelectionDetails();
+            return;
+        }
 
         currentSelectedItem = item;
 
@@ -327,6 +340,13 @@ public class BuildingShopUI : MonoBehaviour
     private void OnClickConstructButton()
     {
         if (currentSelectedItem == null || currentSelectedItem.buildingType == BuildingType.None) return;
+
+        if (TroopTrainingManager.IsCentralBarracksType(currentSelectedItem.buildingType))
+        {
+            UIManager.Ins?.ShowWarning("Trại Lính chỉ có sẵn tại thành đầu tiên và không thể xây thêm!");
+            ClearSelectionDetails();
+            return;
+        }
 
         if (BuildingSystem.Ins != null)
         {

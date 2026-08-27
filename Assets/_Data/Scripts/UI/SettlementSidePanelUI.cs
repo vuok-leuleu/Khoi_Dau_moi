@@ -88,6 +88,16 @@ public class SettlementSidePanelUI : MonoBehaviour
         RefreshPanel();
     }
 
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (!Application.isPlaying)
+        {
+            SynchronizeTroopTrainingSlotAppearance();
+        }
+    }
+#endif
+
     private void ConfigureMoveButton()
     {
         if (moveButton == null) moveButton = FindMoveButton();
@@ -121,7 +131,7 @@ public class SettlementSidePanelUI : MonoBehaviour
 
         SetMoveButtonLabel(MoveModeController.IsMoveModeActive &&
             MoveModeController.Ins != null &&
-            MoveModeController.Ins.HasPreviewDestination ? "APPLY" : "MOVE");
+            MoveModeController.Ins.HasPreviewDestination ? "XÁC NHẬN" : "ĐIỀU QUÂN");
     }
 
     public void OnClickMove()
@@ -155,7 +165,7 @@ public class SettlementSidePanelUI : MonoBehaviour
             moveSelectedCameraHeight,
             moveArrowHeightAboveTerrain);
         MoveModeController.Ins.BeginMoveMode(currentZone, soldierPointUIPrefab);
-        SetMoveButtonLabel("MOVE");
+        SetMoveButtonLabel("ĐIỀU QUÂN");
     }
 
     public void SetMoveButtonLabel(string label)
@@ -167,7 +177,7 @@ public class SettlementSidePanelUI : MonoBehaviour
 
         if (moveButtonTextTMP != null)
         {
-            moveButtonTextTMP.text = string.IsNullOrWhiteSpace(label) ? "MOVE" : label;
+            moveButtonTextTMP.text = string.IsNullOrWhiteSpace(label) ? "ĐIỀU QUÂN" : label;
         }
     }
 
@@ -396,11 +406,9 @@ public class SettlementSidePanelUI : MonoBehaviour
     {
         if (troopTrainingContainer == null) return;
 
-        // Giữ cho Container chứa 8 Ô Huấn Luyện luôn luôn hiển thị (ACTIVE) trên UI
-        troopTrainingContainer.gameObject.SetActive(true);
+        SynchronizeTroopTrainingSlotAppearance();
 
         SettlementZone currentZone = (SettlementManager.Ins != null) ? SettlementManager.Ins.CurrentSettlement : null;
-        if (currentZone == null) currentZone = Object.FindFirstObjectByType<SettlementZone>();
 
         // Tự động bảo đảm singleton TroopTrainingManager tồn tại
         if (TroopTrainingManager.Ins == null)
@@ -409,9 +417,36 @@ public class SettlementSidePanelUI : MonoBehaviour
             managerObj.AddComponent<TroopTrainingManager>();
         }
 
-        if (currentZone == null || TroopTrainingManager.Ins == null) return;
+        if (TroopTrainingManager.Ins == null) return;
+
+        if (currentZone == null) currentZone = TroopTrainingManager.Ins.CentralSettlement;
+        if (currentZone == null) return;
+
+        // Thành đầu tiên dùng khung này để huấn luyện; thành khác dùng để xem
+        // quân đồn trú vừa được điều đến.
+        troopTrainingContainer.gameObject.SetActive(true);
+        Transform parent = troopTrainingContainer.parent;
+        if (parent != null)
+        {
+            Transform titleBackground = parent.Find("BottomHeaderGroup");
+            if (titleBackground != null) titleBackground.gameObject.SetActive(true);
+
+            Transform titleText = parent.Find("SectionTitle_TMP");
+            if (titleText != null)
+            {
+                titleText.gameObject.SetActive(true);
+                TextMeshProUGUI titleTMP = titleText.GetComponent<TextMeshProUGUI>();
+                if (titleTMP != null && currentZone != null && TroopTrainingManager.Ins != null)
+                {
+                    titleTMP.text = TroopTrainingManager.Ins.IsCentralTrainingSettlement(currentZone)
+                        ? "HUẤN LUYỆN LÍNH"
+                        : "QUÂN ĐỒN TRÚ";
+                }
+            }
+        }
 
         TroopTrainingSlotData[] slots = TroopTrainingManager.Ins.GetSlotsForZone(currentZone);
+        if (slots == null) return;
 
         for (int i = 0; i < TroopTrainingManager.MAX_TRAINING_SLOTS; i++)
         {
@@ -428,6 +463,28 @@ public class SettlementSidePanelUI : MonoBehaviour
             {
                 activeTrainingSlotUIItems[i].gameObject.SetActive(false);
             }
+        }
+    }
+
+    [ContextMenu("Đồng bộ giao diện ô huấn luyện từ ô đầu tiên")]
+    private void SynchronizeTroopTrainingSlotAppearance()
+    {
+        if (troopTrainingContainer == null || troopTrainingContainer.childCount < 2) return;
+
+        TroopTrainingSlotUI template = troopTrainingContainer.GetChild(0).GetComponent<TroopTrainingSlotUI>();
+        if (template == null)
+        {
+            template = troopTrainingContainer.GetChild(0).gameObject.AddComponent<TroopTrainingSlotUI>();
+        }
+
+        int slotCount = Mathf.Min(TroopTrainingManager.MAX_TRAINING_SLOTS, troopTrainingContainer.childCount);
+        for (int i = 1; i < slotCount; i++)
+        {
+            Transform child = troopTrainingContainer.GetChild(i);
+            TroopTrainingSlotUI slot = child.GetComponent<TroopTrainingSlotUI>();
+            if (slot == null) slot = child.gameObject.AddComponent<TroopTrainingSlotUI>();
+
+            slot.CopyVisualStyleFrom(template);
         }
     }
 

@@ -74,8 +74,10 @@ public class BuildingSystem : Singleton<BuildingSystem>
         }
 
         // Click chuột trái vào bản đồ 3D
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonUp(0))
         {
+            if (RTSCameraController.IsMouseDragging || RTSCameraController.WasMouseDragThisPress) return;
+
             // Bỏ qua nếu bấm vào các phần tử UI Canvas
             if (UnityEngine.EventSystems.EventSystem.current != null &&
                 UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
@@ -95,6 +97,21 @@ public class BuildingSystem : Singleton<BuildingSystem>
                 {
                     // Click vào công trình hoặc vùng đất 3D: Chọn vùng đất đó & Mở Bảng Thủ Đô (SettlementSidePanelUI)
                     SettlementZone targetZone = (zone != null) ? zone : building.GetComponentInParent<SettlementZone>();
+
+                    // Khi đã mở bảng của thành này, click lại tòa thành chỉ giữ
+                    // lựa chọn hiện tại. Không gọi SelectSettlement/OpenSettlementPanel
+                    // lần nữa để camera và VFX không bị reset/chớp.
+                    bool isCurrentSettlement = SettlementManager.Ins != null &&
+                                               SettlementManager.Ins.CurrentSettlement == targetZone;
+                    bool isSettlementPanelOpen = BuildTrainingUIManager.Ins != null &&
+                                                 BuildTrainingUIManager.Ins.IsSettlementPanelVisible;
+                    bool clickedTownObject = building != null ||
+                                             hit.collider.GetComponentInParent<SettlementZoneClickHandler>() != null;
+                    if (isCurrentSettlement && isSettlementPanelOpen && clickedTownObject)
+                    {
+                        return;
+                    }
+
                     if (targetZone != null && SettlementManager.Ins != null)
                     {
                         SettlementManager.Ins.SelectSettlement(targetZone);
@@ -140,6 +157,11 @@ public class BuildingSystem : Singleton<BuildingSystem>
     public void StartPlacing(BuildingType type)
     {
         if (type == BuildingType.None) return;
+        if (TroopTrainingManager.IsCentralBarracksType(type))
+        {
+            UIManager.Ins?.ShowWarning("Trại Lính chỉ có sẵn tại thành đầu tiên và không thể xây thêm!");
+            return;
+        }
 
         // 🔥 DEMACIA RISING STYLE: NẾU ĐÃ CHỌN Ô ĐẤT, XÂY TRỰC TIẾP TẠI Ô ĐẤT ĐÓ
         if (hasSelectedSlot)
@@ -156,6 +178,12 @@ public class BuildingSystem : Singleton<BuildingSystem>
 
     public void StartPlacingGhost(BuildingType type)
     {
+        if (TroopTrainingManager.IsCentralBarracksType(type))
+        {
+            UIManager.Ins?.ShowWarning("Trại Lính chỉ có sẵn tại thành đầu tiên và không thể xây thêm!");
+            return;
+        }
+
         if (_isMovingMode) CancelMoving();
         else CancelPlacing();
 

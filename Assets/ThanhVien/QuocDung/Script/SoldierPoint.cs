@@ -101,6 +101,17 @@ public class SoldierPoint : MonoBehaviour
             return;
         }
 
+        // Mũi tên sau khi xác nhận điều quân chỉ là chỉ báo cho đoàn đang hành quân.
+        // Nếu không tắt tại đây, nó vẫn giữ nhãn "Còn 0 Wave" sau khi lính đã tới,
+        // dễ khiến người chơi hiểu nhầm đoàn bị kẹt trên đường.
+        if (unitController != null &&
+            unitController.hasReachedExpeditionDestination &&
+            !unitController.isExpeditionMarching)
+        {
+            gameObject.SetActive(false);
+            return;
+        }
+
         UpdateRoute();
     }
 
