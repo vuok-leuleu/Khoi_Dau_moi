@@ -161,6 +161,14 @@ public class EnemyInvasionManager : MonoBehaviour
         // 1. Tiêu diệt toàn bộ lính thuộc về Doanh trại của Vùng đất này
         if (zone != null)
         {
+            foreach (UnitController unit in Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None))
+            {
+                if (unit != null && unit.gameObject.activeInHierarchy && unit.IsStationedInZone(zone.settlementName))
+                {
+                    Destroy(unit.gameObject);
+                }
+            }
+
             SpawnSoldier[] zoneSpawners = zone.GetComponentsInChildren<SpawnSoldier>(true);
             foreach (var spawner in zoneSpawners)
             {

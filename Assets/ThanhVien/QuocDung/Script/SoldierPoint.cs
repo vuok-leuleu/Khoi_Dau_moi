@@ -101,6 +101,15 @@ public class SoldierPoint : MonoBehaviour
             return;
         }
 
+        // SoldierPointUI is a route indicator, not a permanent marker.  Keeping it
+        // alive after arrival makes the route look as if the squad is still at its
+        // old settlement because the shaft is intentionally anchored at startPoint.
+        if (unitController != null && !unitController.isExpeditionMarching)
+        {
+            gameObject.SetActive(false);
+            return;
+        }
+
         UpdateRoute();
     }
 

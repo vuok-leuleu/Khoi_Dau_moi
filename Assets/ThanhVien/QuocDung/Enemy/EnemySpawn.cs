@@ -3,10 +3,26 @@ using System.Collections.Generic;
 
 public class EnemySpawn : MonoBehaviour
 {
+    [System.Serializable]
+    public class EnemyType
+    {
+        [Tooltip("Prefab của loại Enemy có thể xuất hiện từ căn cứ này.")]
+        public GameObject prefab;
+
+        [Tooltip("Tỷ lệ xuất hiện tương đối. Ví dụ: 3 và 1 nghĩa là khoảng 75% / 25%.")]
+        [Min(1)] public int spawnWeight = 1;
+    }
+
     [Header("Căn Cứ Địch - Số Lượng Enemy")]
     [Tooltip("Số lượng Enemy tại căn cứ này khi vào SceneBattle (Có thể chỉnh tùy ý cho từng vị trí trong Inspector).")]
     public int enemyCountInBase = 5;
+    [Tooltip("Enemy mặc định. Vẫn hoạt động như cũ khi danh sách Enemy Types bên dưới để trống.")]
     [SerializeField] private GameObject enemyPrefab;
+    [SerializeField, Min(1)] private int defaultEnemySpawnWeight = 1;
+
+    [Header("Multiple Enemy Types")]
+    [Tooltip("Kéo thêm các prefab Enemy vào đây. Mỗi vị trí spawn sẽ chọn ngẫu nhiên theo Spawn Weight. Để trống thì chỉ spawn Enemy Prefab mặc định.")]
+    [SerializeField] private List<EnemyType> additionalEnemyTypes = new List<EnemyType>();
     [SerializeField] private bool spawnOnStart = true;
     [SerializeField] private Transform[] spawnPoints;
     [Tooltip("Khoảng cách đẩy vị trí spawn ra phía trước căn cứ (mét) để tránh bị vướng vào nhà/căn cứ.")]
@@ -289,9 +305,9 @@ public class EnemySpawn : MonoBehaviour
 
     public void SpawnEnemy()
     {
-        if (enemyPrefab == null)
+        if (!HasSpawnableEnemyPrefab())
         {
-            Debug.LogWarning("EnemySpawn: Enemy Prefab is not assigned!", this);
+            Debug.LogWarning("EnemySpawn: Hãy gán Enemy Prefab hoặc thêm ít nhất một prefab trong Multiple Enemy Types.", this);
             return;
         }
 
@@ -491,6 +507,13 @@ public class EnemySpawn : MonoBehaviour
 
     private GameObject SpawnAtPosition(Vector3 position, Quaternion rotation, List<EnemyAI> squadList, List<GameObject> spawnedWaveEnemies = null)
     {
+        GameObject prefabToSpawn = SelectEnemyPrefab();
+        if (prefabToSpawn == null)
+        {
+            Debug.LogWarning("EnemySpawn: Không tìm được Enemy prefab hợp lệ để spawn.", this);
+            return null;
+        }
+
         Transform target = GetOrFindAttackTarget();
 
         // 1. Tính hướng từ vị trí spawn hướng tới mục tiêu (Nhà chính)
@@ -510,7 +533,7 @@ public class EnemySpawn : MonoBehaviour
         }
 
         Debug.Log($"[EnemySpawn] Spawning enemy at position: {finalSpawnPos}");
-        GameObject enemy = Instantiate(enemyPrefab, finalSpawnPos, finalSpawnRot);
+        GameObject enemy = Instantiate(prefabToSpawn, finalSpawnPos, finalSpawnRot);
         if (spawnedWaveEnemies != null) spawnedWaveEnemies.Add(enemy);
 
         // 4. Bỏ qua va chạm vật lý giữa Quái và Căn cứ/Spawner để không bao giờ bị kẹt
@@ -558,6 +581,69 @@ public class EnemySpawn : MonoBehaviour
         }
 
         return enemy;
+    }
+
+    private bool HasSpawnableEnemyPrefab()
+    {
+        if (enemyPrefab != null) return true;
+
+        if (additionalEnemyTypes == null) return false;
+
+        foreach (EnemyType enemyType in additionalEnemyTypes)
+        {
+            if (enemyType != null && enemyType.prefab != null) return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Chọn một prefab từ Enemy mặc định và các loại thêm vào theo Spawn Weight.
+    /// </summary>
+    private GameObject SelectEnemyPrefab()
+    {
+        int totalWeight = 0;
+
+        if (enemyPrefab != null)
+        {
+            totalWeight += Mathf.Max(1, defaultEnemySpawnWeight);
+        }
+
+        if (additionalEnemyTypes != null)
+        {
+            foreach (EnemyType enemyType in additionalEnemyTypes)
+            {
+                if (enemyType != null && enemyType.prefab != null)
+                {
+                    totalWeight += Mathf.Max(1, enemyType.spawnWeight);
+                }
+            }
+        }
+
+        if (totalWeight <= 0) return null;
+
+        int randomWeight = Random.Range(0, totalWeight);
+        if (enemyPrefab != null)
+        {
+            int defaultWeight = Mathf.Max(1, defaultEnemySpawnWeight);
+            if (randomWeight < defaultWeight) return enemyPrefab;
+            randomWeight -= defaultWeight;
+        }
+
+        if (additionalEnemyTypes != null)
+        {
+            foreach (EnemyType enemyType in additionalEnemyTypes)
+            {
+                if (enemyType == null || enemyType.prefab == null) continue;
+
+                int enemyWeight = Mathf.Max(1, enemyType.spawnWeight);
+                if (randomWeight < enemyWeight) return enemyType.prefab;
+                randomWeight -= enemyWeight;
+            }
+        }
+
+        // Defensive fallback for a malformed Inspector list.
+        return enemyPrefab;
     }
 }
 

@@ -186,6 +186,28 @@ public class EnemyHealth : MonoBehaviour, IDamageable
         }
 
         OnEnemyDied?.Invoke(this);
+
+        // Some enemies, such as Dragon, need to remain in the scene long
+        // enough for a death animation to be visible. The health system stays
+        // generic by asking for an optional handler instead of knowing enemy types.
+        IDeathAnimationHandler deathAnimationHandler = GetComponent<IDeathAnimationHandler>();
+        float destroyDelay = deathAnimationHandler != null
+            ? deathAnimationHandler.PlayDeathAnimation()
+            : 0f;
+
+        if (destroyDelay > 0f)
+        {
+            StartCoroutine(DestroyAfterDeathAnimation(destroyDelay));
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    private System.Collections.IEnumerator DestroyAfterDeathAnimation(float delay)
+    {
+        yield return new WaitForSeconds(delay);
         Destroy(gameObject);
     }
     private void LateUpdate()

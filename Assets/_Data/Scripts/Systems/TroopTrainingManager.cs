@@ -5,7 +5,8 @@ using UnityEngine;
 /*
  * TroopTrainingManager.cs
  * Hệ thống Quản Lý Ô Huấn Luyện Lính (Troop Training System)
- * Mở khóa từ 0 -> 3 -> 5 -> 8 ô theo Cấp độ Trại Lính trong SettlementZone.
+ * Mỗi vùng đã có Nhà Chính luôn có 3 ô huấn luyện cơ bản. Trại Lính chỉ mở
+ * thêm các ô nâng cao (5 / 8), không còn là điều kiện để hiện ô cơ bản.
  */
 
 [System.Serializable]
@@ -163,15 +164,14 @@ public class TroopTrainingManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Tính số lượng ô huấn luyện mở khóa dựa theo Cấp độ Trại Lính cao nhất trong Vùng đất
-    /// - Chưa có trại (Lv 0): 0 ô mở (tất cả 8 ô bị khóa)
-    /// - Trại Cấp 1: 3 ô mở
-    /// - Trại Cấp 2: 5 ô mở
-    /// - Trại Cấp 3: 8 ô mở
+    /// Tính số lượng ô huấn luyện mở khóa trong Vùng đất.
+    /// - Vùng chưa có Nhà Chính: 0 ô mở.
+    /// - Vùng đã có Nhà Chính: luôn có 3 ô cơ bản, giống vùng đất khởi đầu.
+    /// - Trại Lính cấp 2 / 3 chỉ mở rộng tương ứng lên 5 / 8 ô.
     /// </summary>
     public int GetUnlockedSlotsCountForZone(SettlementZone zone)
     {
-        if (zone == null) return 0;
+        if (zone == null || !zone.isTownHallEstablished) return 0;
 
         int highestBarracksLevel = 0;
 
@@ -215,14 +215,21 @@ public class TroopTrainingManager : MonoBehaviour
             }
         }
 
+        int unlockedSlotsFromBarracks;
         switch (highestBarracksLevel)
         {
-            case 1: return 3;
-            case 2: return 5;
-            case 3: return 8;
+            case 2:
+                unlockedSlotsFromBarracks = 5;
+                break;
+            case 3:
+                unlockedSlotsFromBarracks = 8;
+                break;
             default:
-                return highestBarracksLevel > 3 ? 8 : 0;
+                unlockedSlotsFromBarracks = highestBarracksLevel > 3 ? 8 : 3;
+                break;
         }
+
+        return Mathf.Clamp(Mathf.Max(3, unlockedSlotsFromBarracks), 0, MAX_TRAINING_SLOTS);
     }
 
     public bool IsBarracksBuilding(BuildingType type)
@@ -251,22 +258,12 @@ public class TroopTrainingManager : MonoBehaviour
         TroopTrainingSlotData[] currentSlots = zoneSlotsDict[zoneName];
         int unlockedCount = GetUnlockedSlotsCountForZone(zone);
 
-        // Quét số lượng lính thực tế đang sống trên bản đồ tại Vùng đất này
-        SpawnSoldier spawner = zone.GetComponentInChildren<SpawnSoldier>(true);
-        if (spawner == null && zone.builtStructures != null)
-        {
-            foreach (var b in zone.builtStructures)
-            {
-                if (b != null && IsBarracksBuilding(b.buildingType))
-                {
-                    spawner = b.GetComponent<SpawnSoldier>();
-                    if (spawner == null) spawner = b.GetComponentInChildren<SpawnSoldier>();
-                    if (spawner != null) break;
-                }
-            }
-        }
-
-        int activeSoldierCount = spawner != null ? spawner.GetCurrentActiveSoldierCount() : 0;
+        // Count the garrison of this settlement, not the historical list of a
+        // local SpawnSoldier.  A squad can arrive here from a different region and
+        // must immediately occupy this settlement's training/garrison slots.
+        List<AttackMode> stationedSoldierModes = GetStationedSoldierModes(zone);
+        int activeSoldierCount = stationedSoldierModes.Count;
+        int requiredGarrisonSlots = Mathf.CeilToInt(activeSoldierCount / (float)SOLDIERS_PER_TRAINING_UNIT);
         int completedCount = 0;
 
         for (int i = 0; i < MAX_TRAINING_SLOTS; i++)
@@ -277,16 +274,15 @@ public class TroopTrainingManager : MonoBehaviour
             }
             currentSlots[i].isUnlocked = (i < unlockedCount);
 
-            // Đồng bộ ô hoàn thành chứa lính với số lính thực tế đang có trên bản đồ
             if (currentSlots[i].isUnlocked && currentSlots[i].isCompleted)
             {
-                if (completedCount < activeSoldierCount)
+                if (completedCount < requiredGarrisonSlots)
                 {
                     completedCount++;
                 }
                 else
                 {
-                    // Nếu số lính thực tế ít hơn (VD: 0 lính), reset ô về Ô Trống
+                    // No soldier remains in this settlement for this occupied slot.
                     currentSlots[i].isCompleted = false;
                     currentSlots[i].isTraining = false;
                     currentSlots[i].remainingWaves = 1;
@@ -294,7 +290,51 @@ public class TroopTrainingManager : MonoBehaviour
             }
         }
 
+        // New arrivals do not have an existing PlayerPrefs training slot in their
+        // destination. Fill free unlocked slots so the settlement visibly accepts
+        // the transferred garrison immediately.
+        for (int i = 0; i < MAX_TRAINING_SLOTS && completedCount < requiredGarrisonSlots; i++)
+        {
+            TroopTrainingSlotData slot = currentSlots[i];
+            if (!slot.isUnlocked || slot.isTraining || slot.isCompleted) continue;
+
+            slot.isCompleted = true;
+            slot.isTraining = false;
+            slot.remainingWaves = 0;
+            int representativeSoldierIndex = Mathf.Min(
+                completedCount * SOLDIERS_PER_TRAINING_UNIT,
+                stationedSoldierModes.Count - 1);
+            slot.troopType = GetBuildingTypeForAttackMode(stationedSoldierModes[representativeSoldierIndex]);
+            completedCount++;
+        }
+
         return currentSlots;
+    }
+
+    private static List<AttackMode> GetStationedSoldierModes(SettlementZone zone)
+    {
+        List<AttackMode> modes = new List<AttackMode>();
+        if (zone == null) return modes;
+
+        foreach (UnitController unit in Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None))
+        {
+            if (unit != null && unit.gameObject.activeInHierarchy && !unit.isDead &&
+                unit.IsStationedInZone(zone.settlementName))
+            {
+                modes.Add(unit.AttackMode);
+            }
+        }
+        return modes;
+    }
+
+    private static BuildingType GetBuildingTypeForAttackMode(AttackMode attackMode)
+    {
+        switch (attackMode)
+        {
+            case AttackMode.Ranged: return BuildingType.BarracksArcher;
+            case AttackMode.Tank: return BuildingType.BarracksSpear;
+            default: return BuildingType.BarracksMelee;
+        }
     }
 
     /// <summary>

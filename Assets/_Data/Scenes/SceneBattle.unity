@@ -2376,7 +2376,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -199951850, guid: 6d3fc13c6062ad04fa7555389cc5de6a, type: 3}
+  m_Sprite: {fileID: -28777085, guid: df554cd719d726a43a69da44c6d12615, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -6772,6 +6772,37 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4028459722524686, guid: 1a51fe95cc8cc3a4ca8f62728430ca9f, type: 3}
   m_PrefabInstance: {fileID: 1127715979}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &726180011
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 726180012}
+  m_Layer: 0
+  m_Name: DragonHighSpawnPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &726180012
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 726180011}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: -0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: -15, y: 6, z: 19}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1037018101}
+  m_LocalEulerAnglesHint: {x: 0, y: -90, z: 0}
 --- !u!1001 &728716901
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9340,7 +9371,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -199951850, guid: 6d3fc13c6062ad04fa7555389cc5de6a, type: 3}
+  m_Sprite: {fileID: -28777085, guid: df554cd719d726a43a69da44c6d12615, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -10144,11 +10175,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BattleManager
   leftSpawnPoint: {fileID: 459538297}
   rightSpawnPoint: {fileID: 1578121377}
+  dragonHighSpawnPoint: {fileID: 726180012}
+  dragonSpawnHeight: 10
+  dragonLandingHeightOffset: 2
   buildingSpacing: 4
   unitSpacing: 2
   unitsPerRow: 4
   enemyPrefab: {fileID: 370480945864454416, guid: 2d56dfb52da6a654ab4fca2a3d449e2d, type: 3}
   enemyRangedPrefab: {fileID: 3322312632539215873, guid: 01a8ddab520123647b95a3ddf60d1b92, type: 3}
+  spawnDragonAtBattleStart: 1
+  dragonPrefab: {fileID: 4118137334638840365, guid: 2e6e2341390240e46b5904a0c63be547, type: 3}
   soldierPrefab: {fileID: 5529766660109328545, guid: 6faae46d02eec1b458eaa4f73464be71, type: 3}
   archerSoldierPrefab: {fileID: 1999277456456185836, guid: 6f6383d8f0b521f449a9ee5eb68d04cf, type: 3}
   tankSoldierPrefab: {fileID: 4430688088267481095, guid: 65837077c6ee41e48b9fe12f3faae8a4, type: 3}
@@ -10192,6 +10228,7 @@ Transform:
   m_Children:
   - {fileID: 459538297}
   - {fileID: 1578121377}
+  - {fileID: 726180012}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1037766200
