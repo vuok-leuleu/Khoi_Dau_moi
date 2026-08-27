@@ -110,9 +110,28 @@ public class HUDController : MonoBehaviour
         SetTextInstant(goldText, _currentGold);
         SetTextInstant(woodText, _currentWood);
         SetTextInstant(stoneText, _currentStone);
-        SetTextInstant(foodText, _currentFood);
+        RefreshFoodDisplay();
 
         Debug.Log("[HUDController] ✅ Khởi tạo HUD thành công với thông số ban đầu.");
+    }
+
+    /// <summary>
+    /// 🌾 Hiển thị Lúa mì trên HUD theo định dạng {Đang Dùng}/{Tổng Số} (VD: 0/1, 1/1, 1/2...)
+    /// </summary>
+    public void RefreshFoodDisplay()
+    {
+        if (foodText == null) return;
+
+        if (TroopTrainingManager.Ins != null)
+        {
+            int used = TroopTrainingManager.Ins.GetTotalUsedFoodCount();
+            int max = TroopTrainingManager.Ins.GetTotalFoodCapacity();
+            foodText.text = $"{used}/{max}";
+        }
+        else
+        {
+            foodText.text = "0/1";
+        }
     }
 
     /// <summary>
@@ -325,20 +344,8 @@ public class HUDController : MonoBehaviour
     {
         if (!TryCompleteInitialResourceSync(ResourceType.Food, value)) return;
 
-        int delta = value - _currentFood;
         _currentFood = value;
-        if (delta == 0) return;
-        if (_foodPopupBusy) { _queuedFoodDelta += delta; return; }
-
-        _foodPopupBusy = true;
-        ShowFloatingTextOptimized(delta, GetIconAnchor(ResourceType.Food), () =>
-        {
-            AnimateNumber(foodText, _displayedFood, _displayedFood + delta, () =>
-            {
-                _displayedFood += delta;
-                ProcessQueuedFood();
-            });
-        });
+        RefreshFoodDisplay();
     }
 
     // JsonDataManager.LoadGame -> BroadcastAllResources gọi lần lượt 4 Update này.
@@ -366,7 +373,7 @@ public class HUDController : MonoBehaviour
                 break;
             case ResourceType.Food:
                 _currentFood = _displayedFood = value;
-                SetTextInstant(foodText, value);
+                RefreshFoodDisplay();
                 _receivedInitialFood = true;
                 break;
         }
@@ -417,14 +424,9 @@ public class HUDController : MonoBehaviour
 
     private void ProcessQueuedFood()
     {
-        int delta = _queuedFoodDelta;
+        _foodPopupBusy = false;
         _queuedFoodDelta = 0;
-        if (delta == 0) { _foodPopupBusy = false; return; }
-        AnimateNumber(foodText, _displayedFood, _displayedFood + delta, () =>
-        {
-            _displayedFood += delta;
-            ProcessQueuedFood();
-        });
+        RefreshFoodDisplay();
     }
     // ──────────────────────────────────────────────────────────────
     // PRIVATE – ANIMATION & FORMAT SỐ
