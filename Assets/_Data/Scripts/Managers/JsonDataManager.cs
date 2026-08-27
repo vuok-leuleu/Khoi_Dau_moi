@@ -487,7 +487,21 @@ public class JsonDataManager : Singleton<JsonDataManager>
         SaveEndGameStats(stats);
     }
 
-    [Serializable] public class GameSaveData { public string sceneName; public long savedAtUnix; public List<BuildingState> buildings; public List<ResourceData> resources; public List<WorkerState> workers; public List<ResourceEntityState> resourceEntities; }
+    [Serializable] public class GameSaveData
+    {
+        public string sceneName;
+        public long savedAtUnix;
+        public List<BuildingState> buildings;
+        public List<ResourceData> resources;
+        public List<WorkerState> workers;
+        public List<ResourceEntityState> resourceEntities;
+
+        // Lưu tiến trình ngày/wave để Continue không quay lại Ngày 0.
+        public int currentWave;
+        public int waveState;
+        public bool isWaveActive;
+        public float waveTimer;
+    }
     [Serializable] public class ResourceData { public string resourceType; public int amount; }
     [Serializable] public class BuildingConfigRoot { public List<BuildingConfig> buildingConfigs; }
     [Serializable] public class BuildingConfig { public string buildingType; public List<WarehouseLevelData> levelConfigs; }

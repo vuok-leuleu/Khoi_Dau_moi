@@ -17,7 +17,7 @@ public enum SettlementSlotState
     Locked      // BỊ KHÓA 🔒
 }
 
-public class SettlementSlotItemUI : MonoBehaviour, IPointerClickHandler
+public class SettlementSlotItemUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
 {
     [Header("=== CẤU HÌNH TRẠNG THÁI ===")]
     public SettlementSlotState state = SettlementSlotState.Empty;
@@ -40,6 +40,7 @@ public class SettlementSlotItemUI : MonoBehaviour, IPointerClickHandler
     private Vector3 plotWorldPos;
     private UpgradeableBuilding buildingOnSlot;
     private Button slotButton;
+    private SlotHoverFrame hoverFrame;
 
 
     public void SetTroopInfo(Sprite troopSprite, int unitCount)
@@ -56,11 +57,31 @@ public class SettlementSlotItemUI : MonoBehaviour, IPointerClickHandler
     private void Awake()
     {
         SetupButtonListeners();
+        SetupHoverFrame();
     }
 
     private void OnEnable()
     {
         SetupButtonListeners();
+        SetupHoverFrame();
+    }
+
+    private void OnDisable()
+    {
+        hoverFrame?.Hide();
+    }
+
+    private void SetupHoverFrame()
+    {
+        if (hoverFrame != null) return;
+
+        SlotHoverFrameSettings settings = GetComponentInParent<SlotHoverFrameSettings>();
+        if (settings == null || settings.HoverFrameSprite == null) return;
+
+        RectTransform slotTransform = transform as RectTransform;
+        if (slotTransform == null) return;
+
+        hoverFrame = new SlotHoverFrame(slotTransform, settings);
     }
 
     private void SetupButtonListeners()
@@ -102,6 +123,16 @@ public class SettlementSlotItemUI : MonoBehaviour, IPointerClickHandler
 
         Debug.Log($"[SettlementSlotItemUI] OnPointerClick trigger trên {gameObject.name}");
         OnClickSlot();
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        hoverFrame?.Show();
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        hoverFrame?.Hide();
     }
 
     /// <summary>

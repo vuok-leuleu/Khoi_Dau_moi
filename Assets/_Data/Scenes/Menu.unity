@@ -1048,13 +1048,13 @@ PrefabInstance:
       propertyPath: settingsPanel
       value: 
       objectReference: {fileID: 2001257062}
-    - target: {fileID: 308421476867315350, guid: bcce0f85d5caab548a82cb2709c716fb, type: 3}
-      propertyPath: m_Sprite
-      value: 
-      objectReference: {fileID: -688792187, guid: 7394dd9edda53c145a4c0cfb19fe522e, type: 3}
-    - target: {fileID: 4017179153934721964, guid: bcce0f85d5caab548a82cb2709c716fb, type: 3}
-      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_StringArgument
-      value: Open
+    - target: {fileID: 1049401968535899737, guid: bcce0f85d5caab548a82cb2709c716fb, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1049401968535899737, guid: bcce0f85d5caab548a82cb2709c716fb, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4044936584490770645, guid: bcce0f85d5caab548a82cb2709c716fb, type: 3}
       propertyPath: m_AnchorMax.x
@@ -1064,21 +1064,13 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 5317117517303264155, guid: bcce0f85d5caab548a82cb2709c716fb, type: 3}
-      propertyPath: m_Sprite
-      value: 
-      objectReference: {fileID: -357526633, guid: f855edfc77e49c84aa650bf7d122fc82, type: 3}
-    - target: {fileID: 5947102919999010793, guid: bcce0f85d5caab548a82cb2709c716fb, type: 3}
-      propertyPath: m_Sprite
-      value: 
-      objectReference: {fileID: 1855045685, guid: ac1b7318b000d654091283b0b3f4dc4a, type: 3}
+    - target: {fileID: 4044936584490770645, guid: bcce0f85d5caab548a82cb2709c716fb, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6038542755158954844, guid: bcce0f85d5caab548a82cb2709c716fb, type: 3}
       propertyPath: m_Name
       value: CanvasMenuMain
-      objectReference: {fileID: 0}
-    - target: {fileID: 6038542755158954844, guid: bcce0f85d5caab548a82cb2709c716fb, type: 3}
-      propertyPath: m_IsActive
-      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6440917584845367097, guid: bcce0f85d5caab548a82cb2709c716fb, type: 3}
       propertyPath: m_Pivot.x
@@ -1205,6 +1197,22 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7793807851913879788, guid: bcce0f85d5caab548a82cb2709c716fb, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8976351156586529790, guid: bcce0f85d5caab548a82cb2709c716fb, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8976351156586529790, guid: bcce0f85d5caab548a82cb2709c716fb, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8976351156586529790, guid: bcce0f85d5caab548a82cb2709c716fb, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8976351156586529790, guid: bcce0f85d5caab548a82cb2709c716fb, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}

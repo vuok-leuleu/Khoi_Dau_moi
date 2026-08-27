@@ -13,91 +13,216 @@ public class SkipButtonAnimator : MonoBehaviour
     [Tooltip("Tên State Animation trong cửa sổ Animator Controller")]
     public string stateName = "Button_DayNight_Anim";
 
+    [Tooltip("State nghỉ được phát sau khi animation chuyển ngày kết thúc")]
+    public string idleStateName = "Idle";
+
     [Header("--- CHẾ ĐỘ 2: SPRITE ARRAY ---")]
     [Tooltip("Kéo 15 tấm ảnh Sprite (từ Frame 0 -> 7 -> 0) vào đây")]
     public Sprite[] frames;
 
     private Animator animator;
     private Image buttonImage;
-    private Button button;
     private Coroutine animCoroutine;
+    private Coroutine resetCoroutine;
+    private DayNightManager subscribedManager;
+    private float defaultAnimatorSpeed = 1f;
     private bool isAnimating = false;
 
     private void Awake()
     {
         animator = GetComponent<Animator>();
         buttonImage = GetComponent<Image>();
-        button = GetComponent<Button>();
-    }
-
-    private void Start()
-    {
-        // Đăng ký sự kiện Click trực tiếp trên nút UI
-        if (button != null)
+        if (animator != null)
         {
-            button.onClick.AddListener(PlayAnimation);
+            defaultAnimatorSpeed = animator.speed;
         }
     }
 
     private void OnEnable()
     {
-        if (DayNightManager.Ins != null)
+        SubscribeToDayNightManager();
+    }
+
+    private void Start()
+    {
+        // Bảo đảm Singleton đã khởi tạo xong trước khi đăng ký sự kiện.
+        SubscribeToDayNightManager();
+    }
+
+    private void Update()
+    {
+        // Hỗ trợ DayNightManager được spawn sau UI.
+        if (subscribedManager == null)
         {
-            // CHỈ LẮNG NGHE SỰ KIỆN KHI BẤM NÚT SÁNG/TỐI (Bỏ OnNightStart để tránh chạy 2 lần)
-            DayNightManager.Ins.OnWaveSkipped += OnWaveSkippedHandler;
+            SubscribeToDayNightManager();
         }
     }
 
     private void OnDisable()
     {
-        if (DayNightManager.Ins != null)
+        if (subscribedManager != null)
         {
-            DayNightManager.Ins.OnWaveSkipped -= OnWaveSkippedHandler;
+            subscribedManager.OnTransitionStarted -= OnTransitionStartedHandler;
+            subscribedManager = null;
         }
+
+        StopCurrentAnimation();
     }
 
-    private void OnWaveSkippedHandler(int wave, float timeSaved)
+    private void SubscribeToDayNightManager()
     {
-        PlayAnimation();
+        DayNightManager manager = DayNightManager.Ins;
+        if (manager == null || subscribedManager == manager) return;
+
+        if (subscribedManager != null)
+        {
+            subscribedManager.OnTransitionStarted -= OnTransitionStartedHandler;
+        }
+
+        subscribedManager = manager;
+        subscribedManager.OnTransitionStarted += OnTransitionStartedHandler;
     }
 
+    private void OnTransitionStartedHandler(float transitionDuration)
+    {
+        PlayAnimation(transitionDuration);
+    }
+
+    // Giữ hàm public để các Button/Event cũ trong scene không bị mất liên kết.
     public void PlayAnimation()
     {
-        // 🛑 BẢO VỆ CHỐNG CHẠY 2 LẦN TRONG 1 CHU KỲ 3.0 GIÂY
-        if (isAnimating) return;
+        float duration = DayNightManager.Ins != null
+            ? DayNightManager.Ins.lightTransitionDuration
+            : 3.0f;
+
+        PlayAnimation(duration);
+    }
+
+    private void PlayAnimation(float transitionDuration)
+    {
+        float duration = Mathf.Max(0.01f, transitionDuration);
+        StopCurrentAnimation();
 
         if (mode == AnimMode.UnityAnimator)
         {
-            if (animator != null)
-            {
-                isAnimating = true;
-                animator.Play(stateName, -1, 0f);
-                float totalTime = (DayNightManager.Ins != null) ? DayNightManager.Ins.lightTransitionDuration : 3.0f;
-                StartCoroutine(ResetAnimatingFlagRoutine(totalTime));
-            }
-            else
-            {
-                Debug.LogWarning("[SkipButtonAnimator] ⚠️ Không tìm thấy Animator Component trên GameObject này!");
-            }
+            PlayAnimatorAnimation(duration);
         }
         else
         {
             if (frames == null || frames.Length == 0 || buttonImage == null) return;
-            if (animCoroutine != null) StopCoroutine(animCoroutine);
-            animCoroutine = StartCoroutine(PlayAnimationRoutine());
+
+            isAnimating = true;
+            animCoroutine = StartCoroutine(PlayAnimationRoutine(duration));
         }
     }
 
-    private IEnumerator ResetAnimatingFlagRoutine(float delay)
+    private void PlayAnimatorAnimation(float duration)
     {
-        yield return new WaitForSeconds(delay);
+        if (animator == null)
+        {
+            Debug.LogWarning("[SkipButtonAnimator] ⚠️ Không tìm thấy Animator Component trên GameObject này!");
+            return;
+        }
+
+        if (!TryGetState(stateName, out int layerIndex, out int stateHash))
+        {
+            Debug.LogWarning($"[SkipButtonAnimator] ⚠️ Không tìm thấy Animator State '{stateName}'.");
+            return;
+        }
+
+        isAnimating = true;
+        animator.speed = 1f;
+        animator.Play(stateHash, layerIndex, 0f);
+        animator.Update(0f);
+
+        // Tự điều chỉnh tốc độ để dù clip là 1s, 3s hay được đổi sau này,
+        // nó vẫn kết thúc đồng thời với lightTransitionDuration.
+        float stateLength = animator.GetCurrentAnimatorStateInfo(layerIndex).length;
+        if (stateLength > 0.0001f)
+        {
+            animator.speed = stateLength / duration;
+        }
+
+        resetCoroutine = StartCoroutine(FinishAnimatorRoutine(duration, layerIndex));
+    }
+
+    private bool TryGetState(string state, out int layerIndex, out int stateHash)
+    {
+        layerIndex = -1;
+        stateHash = 0;
+
+        if (animator == null || string.IsNullOrWhiteSpace(state)) return false;
+
+        for (int layer = 0; layer < animator.layerCount; layer++)
+        {
+            int shortNameHash = Animator.StringToHash(state);
+            if (animator.HasState(layer, shortNameHash))
+            {
+                layerIndex = layer;
+                stateHash = shortNameHash;
+                return true;
+            }
+
+            string fullName = $"{animator.GetLayerName(layer)}.{state}";
+            int fullNameHash = Animator.StringToHash(fullName);
+            if (animator.HasState(layer, fullNameHash))
+            {
+                layerIndex = layer;
+                stateHash = fullNameHash;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private IEnumerator FinishAnimatorRoutine(float duration, int layerIndex)
+    {
+        yield return new WaitForSeconds(duration);
+
+        if (animator != null)
+        {
+            animator.speed = defaultAnimatorSpeed;
+            if (TryGetState(idleStateName, out int idleLayerIndex, out int idleStateHash))
+            {
+                animator.Play(idleStateHash, idleLayerIndex, 0f);
+                animator.Update(0f);
+            }
+            else
+            {
+                animator.Rebind();
+                animator.Update(0f);
+            }
+        }
+
+        resetCoroutine = null;
         isAnimating = false;
     }
 
-    private IEnumerator PlayAnimationRoutine()
+    private void StopCurrentAnimation()
     {
-        isAnimating = true;
-        float totalTime = (DayNightManager.Ins != null) ? DayNightManager.Ins.lightTransitionDuration : 3.0f;
+        if (animCoroutine != null)
+        {
+            StopCoroutine(animCoroutine);
+            animCoroutine = null;
+        }
+
+        if (resetCoroutine != null)
+        {
+            StopCoroutine(resetCoroutine);
+            resetCoroutine = null;
+        }
+
+        if (animator != null)
+        {
+            animator.speed = defaultAnimatorSpeed;
+        }
+
+        isAnimating = false;
+    }
+
+    private IEnumerator PlayAnimationRoutine(float totalTime)
+    {
         float timePerFrame = totalTime / frames.Length; // 3.0s / 15 = 0.2s mỗi hình
 
         for (int i = 0; i < frames.Length; i++)
@@ -116,5 +241,6 @@ public class SkipButtonAnimator : MonoBehaviour
         }
 
         isAnimating = false;
+        animCoroutine = null;
     }
 }

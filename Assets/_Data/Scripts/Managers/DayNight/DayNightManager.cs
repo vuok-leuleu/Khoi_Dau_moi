@@ -98,6 +98,7 @@ public class DayNightManager : Singleton<DayNightManager>
     public event Action<int> OnWaveCompleted;      // Wave [waveIndex] đã tiêu diệt xong
     public event Action<int> OnPreparationStart;   // Bắt đầu thời gian chuẩn bị cho Wave [waveIndex]
     public event Action<int, float> OnWaveSkipped; // Ngưỡng Skip (waveIndex, số giây tiết kiệm được)
+    public event Action<float> OnTransitionStarted; // Bắt đầu hiệu ứng chuyển ngày (thời lượng tính bằng giây)
 
     // --- THUỘC TÍNH TƯƠNG THÍCH VỚI CÁC SCRIPT CŨ TRONG DỰ ÁN ---
     public enum Mode { Day, Night }
@@ -283,6 +284,11 @@ public class DayNightManager : Singleton<DayNightManager>
 
         isLightAnimating = true;
 
+        // Một nguồn thời gian duy nhất cho toàn bộ chuyển cảnh: ánh sáng, mây,
+        // UI Animator và thời điểm tăng ngày. Nhờ đó animation trên nút không
+        // còn bị chạy lệch với hiệu ứng chuyển ngày.
+        float transitionDuration = Mathf.Max(0.01f, lightTransitionDuration);
+
         if (directionalLight == null)
         {
             directionalLight = UnityEngine.Object.FindFirstObjectByType<Light>();
@@ -294,10 +300,11 @@ public class DayNightManager : Singleton<DayNightManager>
             lightTransitionCoroutine = null;
         }
 
-        lightTransitionCoroutine = StartCoroutine(AnimateLightRotationRoutine());
+        OnTransitionStarted?.Invoke(transitionDuration);
+        lightTransitionCoroutine = StartCoroutine(AnimateLightRotationRoutine(transitionDuration));
     }
 
-    private System.Collections.IEnumerator AnimateLightRotationRoutine()
+    private System.Collections.IEnumerator AnimateLightRotationRoutine(float transitionDuration)
     {
         // Đã được khóa ngay trong TriggerLightTransitionEffect().
         isLightAnimating = true;
@@ -309,12 +316,11 @@ public class DayNightManager : Singleton<DayNightManager>
         float elapsedTime = 0f;
         Vector3 startRot = directionalLight != null ? directionalLight.transform.localEulerAngles : Vector3.zero;
         float originalIntensity = defaultLightIntensity > 0 ? defaultLightIntensity : (directionalLight != null ? directionalLight.intensity : 1.0f);
-        bool hasIncrementedDay = false;
 
-        while (elapsedTime < lightTransitionDuration)
+        while (elapsedTime < transitionDuration)
         {
             elapsedTime += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsedTime / lightTransitionDuration);
+            float t = Mathf.Clamp01(elapsedTime / transitionDuration);
 
             // 1. Ánh sáng xoay & đổi cường độ
             if (directionalLight != null)
@@ -329,25 +335,16 @@ public class DayNightManager : Singleton<DayNightManager>
             // 2. Di chuyển các đám mây (Pha 1: Trái/Phải kéo vào giữa | Pha 2: Từ giữa mở ra 2 bên)
             if (enableCloudTransition)
             {
-                UpdateCloudTransition(elapsedTime, lightTransitionDuration);
-            }
-
-            // 3. Khi mây che kín màn hình ở giữa chu kỳ (t >= 0.5f), chính thức tăng ngày ngay lập tức đằng sau đám mây
-            if (t >= 0.5f && !hasIncrementedDay)
-            {
-                hasIncrementedDay = true;
-                ExecuteDayIncrementLogic();
+                UpdateCloudTransition(elapsedTime, transitionDuration);
             }
 
             yield return null;
         }
 
-        // Đảm bảo đã tăng ngày nếu chu kỳ hoàn tất
-        if (!hasIncrementedDay)
-        {
-            hasIncrementedDay = true;
-            ExecuteDayIncrementLogic();
-        }
+        // Chỉ đổi Ngày/Wave khi toàn bộ animation chuyển ngày đã chạy xong.
+        // Trước đây logic này chạy ở 50% chu kỳ (ví dụ 1.5s trong chu kỳ 3s),
+        // nên UI ngày bị lệch so với animation của nút.
+        ExecuteDayIncrementLogic();
 
         // Trả lại góc xoay và cường độ ánh sáng ban đầu
         if (directionalLight != null)
@@ -646,6 +643,16 @@ public class DayNightManager : Singleton<DayNightManager>
         OnDayStart?.Invoke();
         OnPreparationStart?.Invoke(currentWave + 1);
         UpdateSkipButtonUI();
+
+        // Lưu lại ngay sau khi Wave kết thúc để Continue trở về đúng trạng thái
+        // chuẩn bị Wave kế tiếp, thay vì bản auto-save cũ vẫn là Combat.
+        BuildingSystem buildingSystem = UnityEngine.Object.FindFirstObjectByType<BuildingSystem>();
+        if (buildingSystem != null)
+        {
+            buildingSystem.SaveBuildingsToSlot(1);
+        }
+
+        PlayerPrefs.Save();
     }
 
     /// <summary>
@@ -687,11 +694,13 @@ public class DayNightManager : Singleton<DayNightManager>
     /// <summary>
     /// Khôi phục trạng thái Wave (dùng khi quay lại từ SceneBattle)
     /// </summary>
-    public void RestoreWaveState(int wave, WaveState state, bool active)
+    public void RestoreWaveState(int wave, WaveState state, bool active, float restoredTimer = 0f)
     {
         currentWave = wave;
         currentWaveState = state;
         isWaveActive = active;
+        timer = restoredTimer;
+        UpdateDayTextUI();
         UpdateSkipButtonUI();
     }
 
@@ -705,6 +714,3 @@ public class DayNightManager : Singleton<DayNightManager>
         }
     }
 }
-
-
-

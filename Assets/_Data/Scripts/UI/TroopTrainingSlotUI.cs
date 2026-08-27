@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.EventSystems;
 
 /*
  * TroopTrainingSlotUI.cs
@@ -8,7 +9,7 @@ using TMPro;
  * Quản lý hiển thị cho 1 Ô Huấn Luyện Lính (Troop Training Slot UI)
  */
 
-public class TroopTrainingSlotUI : MonoBehaviour
+public class TroopTrainingSlotUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     [Header("=== CÁC TRẠNG THÁI HIỂN THỊ (STATE OBJECTS) ===")]
     [SerializeField] private GameObject lockedStateObj;    // Giao diện khi bị Khóa
@@ -26,25 +27,53 @@ public class TroopTrainingSlotUI : MonoBehaviour
 
     private TroopTrainingSlotData currentSlotData;
     private SettlementZone currentZone;
+    private SlotHoverFrame hoverFrame;
 
     private void Awake()
     {
         AutoBindReferences();
         ConfigureButton();
+        SetupHoverFrame();
     }
 
     private void OnEnable()
     {
         AutoBindReferences();
         ConfigureButton();
+        SetupHoverFrame();
     }
 
     private void OnDisable()
     {
+        hoverFrame?.Hide();
+
         if (slotButton != null && !HasPersistentClickListener(slotButton))
         {
             slotButton.onClick.RemoveListener(OnClickSlot);
         }
+    }
+
+    private void SetupHoverFrame()
+    {
+        if (hoverFrame != null) return;
+
+        SlotHoverFrameSettings settings = GetComponentInParent<SlotHoverFrameSettings>();
+        if (settings == null || settings.HoverFrameSprite == null) return;
+
+        RectTransform slotTransform = transform as RectTransform;
+        if (slotTransform == null) return;
+
+        hoverFrame = new SlotHoverFrame(slotTransform, settings);
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        hoverFrame?.Show();
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        hoverFrame?.Hide();
     }
 
     private void ConfigureButton()

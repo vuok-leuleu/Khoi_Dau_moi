@@ -327,14 +327,18 @@ public class BuildingSystem : Singleton<BuildingSystem>
         if (BuildingManager.Ins == null) return;
         var states = BuildingManager.Ins.GetAllStates();
 
-        if (states.Count == 0) return;
+        DayNightManager dayNightManager = UnityEngine.Object.FindFirstObjectByType<DayNightManager>();
 
         var saveData = new JsonDataManager.GameSaveData
         {
             sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
             savedAtUnix = System.DateTimeOffset.Now.ToUnixTimeSeconds(),
             buildings = states,
-            resources = new System.Collections.Generic.List<JsonDataManager.ResourceData>()
+            resources = new System.Collections.Generic.List<JsonDataManager.ResourceData>(),
+            currentWave = dayNightManager != null ? dayNightManager.CurrentWave : 0,
+            waveState = dayNightManager != null ? (int)dayNightManager.CurrentWaveState : (int)DayNightManager.WaveState.Preparation,
+            isWaveActive = dayNightManager != null && dayNightManager.IsWaveActive,
+            waveTimer = dayNightManager != null ? dayNightManager.CurrentTimer : 0f
         };
 
         JsonDataManager.Ins.SaveGame(slotIndex, saveData);
@@ -345,7 +349,23 @@ public class BuildingSystem : Singleton<BuildingSystem>
         if (JsonDataManager.Ins == null || BuildingManager.Ins == null) return;
         var saveData = JsonDataManager.Ins.LoadGame(slotIndex);
 
-        if (saveData == null || saveData.buildings == null || saveData.buildings.Count == 0) return;
+        if (saveData == null) return;
+
+        DayNightManager dayNightManager = UnityEngine.Object.FindFirstObjectByType<DayNightManager>();
+        if (dayNightManager != null)
+        {
+            DayNightManager.WaveState waveState = saveData.waveState == (int)DayNightManager.WaveState.Combat
+                ? DayNightManager.WaveState.Combat
+                : DayNightManager.WaveState.Preparation;
+
+            dayNightManager.RestoreWaveState(
+                Mathf.Max(0, saveData.currentWave),
+                waveState,
+                saveData.isWaveActive,
+                Mathf.Max(0f, saveData.waveTimer));
+        }
+
+        if (saveData.buildings == null || saveData.buildings.Count == 0) return;
 
         BuildingManager.Ins.LoadStates(saveData.buildings);
     }
