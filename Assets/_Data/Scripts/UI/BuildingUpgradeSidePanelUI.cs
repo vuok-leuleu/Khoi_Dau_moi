@@ -61,11 +61,19 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
     {
         if (Ins == null) Ins = this;
         else Destroy(gameObject);
+
+        HideFoodCostDisplay();
     }
 
     private void OnDestroy()
     {
         if (Ins == this) Ins = null;
+    }
+
+    private void HideFoodCostDisplay()
+    {
+        // Food không còn là chi phí nâng cấp/lập vùng; ẩn cả text lẫn icon con.
+        if (foodCostTMP != null) foodCostTMP.gameObject.SetActive(false);
     }
 
     private void OnDisable()
@@ -342,7 +350,7 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
 
         int woodCost = targetEstablishZone.establishWoodCost;
         int stoneCost = targetEstablishZone.establishStoneCost;
-        int foodCost = targetEstablishZone.establishFoodCost;
+        int foodCost = 0;
 
         bool hasEnoughWood = true, hasEnoughStone = true, hasEnoughFood = true;
         bool canAfford = true;

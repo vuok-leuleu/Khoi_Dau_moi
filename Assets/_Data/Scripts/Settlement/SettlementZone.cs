@@ -819,7 +819,8 @@ public class SettlementZone : MonoBehaviour
         // Trừ tài nguyên
         if (JsonDataManager.Ins != null)
         {
-            if (!JsonDataManager.Ins.HasEnoughResources(establishWoodCost, establishStoneCost, establishFoodCost))
+            const int foodCost = 0;
+            if (!JsonDataManager.Ins.HasEnoughResources(establishWoodCost, establishStoneCost, foodCost))
             {
                 if (UIManager.Ins != null) UIManager.Ins.ShowWarning("Không đủ tài nguyên xây Nhà Chính!");
                 return false;
@@ -827,7 +828,6 @@ public class SettlementZone : MonoBehaviour
 
             JsonDataManager.Ins.AddWood(-establishWoodCost);
             JsonDataManager.Ins.AddStone(-establishStoneCost);
-            JsonDataManager.Ins.AddFood(-establishFoodCost);
         }
 
         isTownHallEstablished = true;

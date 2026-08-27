@@ -48,11 +48,19 @@ public class BuildingShopUI : MonoBehaviour
     {
         if (Ins == null) Ins = this;
         else Destroy(gameObject);
+
+        HideFoodCostDisplay();
     }
 
     private void OnDestroy()
     {
         if (Ins == this) Ins = null;
+    }
+
+    private void HideFoodCostDisplay()
+    {
+        // Food không còn là chi phí xây dựng; ẩn cả text lẫn icon con của mục này.
+        if (foodCostTMP != null) foodCostTMP.gameObject.SetActive(false);
     }
 
     private void Start()

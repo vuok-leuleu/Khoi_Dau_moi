@@ -338,7 +338,12 @@ public class UpgradeableBuilding : MonoBehaviour
     public UpgradeCost GetNextUpgradeCost()
     {
         if (upgradeCosts != null && CurrentLevel < upgradeCosts.Length)
-            return upgradeCosts[CurrentLevel];
+        {
+            UpgradeCost cost = upgradeCosts[CurrentLevel];
+            // Lương thực chỉ dùng để giới hạn huấn luyện lính, không phải chi phí nâng cấp.
+            cost.foodCost = 0;
+            return cost;
+        }
         return new UpgradeCost { woodCost = 0, stoneCost = 0, foodCost = 0, upgradeDuration = 1 };
     }
 

@@ -99,8 +99,10 @@ public class ConstructionManager : Singleton<ConstructionManager>
             float multiplier = 1f + (rate * count);
             baseCost.woodCost = Mathf.RoundToInt(baseCost.woodCost * multiplier);
             baseCost.stoneCost = Mathf.RoundToInt(baseCost.stoneCost * multiplier);
-            baseCost.foodCost = Mathf.RoundToInt(baseCost.foodCost * multiplier);
         }
+
+        // Lương thực chỉ dùng để giới hạn huấn luyện lính, không phải chi phí xây dựng.
+        baseCost.foodCost = 0;
         return baseCost;
     }
 
@@ -118,8 +120,8 @@ public class ConstructionManager : Singleton<ConstructionManager>
                 if (constructionCosts[i].uiStoneText != null) 
                     constructionCosts[i].uiStoneText.text = realCost.stoneCost.ToString();
 
-                if (constructionCosts[i].uiFoodText != null) 
-                    constructionCosts[i].uiFoodText.text = realCost.foodCost.ToString();
+                if (constructionCosts[i].uiFoodText != null)
+                    constructionCosts[i].uiFoodText.gameObject.SetActive(false);
                 
                 break;
             }
@@ -155,7 +157,6 @@ public class ConstructionManager : Singleton<ConstructionManager>
 
             JsonDataManager.Ins.AddWood(-cost.woodCost);
             JsonDataManager.Ins.AddStone(-cost.stoneCost);
-            JsonDataManager.Ins.AddFood(-cost.foodCost);
             JsonDataManager.Ins.BroadcastAllResources();
         }
 
