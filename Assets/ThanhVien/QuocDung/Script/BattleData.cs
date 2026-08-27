@@ -144,6 +144,14 @@ public static class BattleData
 
         // 3. Lưu tiến trình hành quân của Lính (UnitController) đang xuất trận
         SavedSoldierMarches.Clear();
+        string defenseZoneName = TargetedSettlementZoneName;
+        if (!IsAttackingExpedition && string.IsNullOrEmpty(defenseZoneName) &&
+            EnemyInvasionManager.Ins != null && EnemyInvasionManager.Ins.currentTargetedZone != null)
+        {
+            defenseZoneName = EnemyInvasionManager.Ins.currentTargetedZone.settlementName;
+            TargetedSettlementZoneName = defenseZoneName;
+        }
+
         UnitController[] activeUnits = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
         int battleSoldierCount = 0;
         foreach (var u in activeUnits)
@@ -178,8 +186,12 @@ public static class BattleData
                 }
                 else
                 {
-                    // Phòng thủ dùng toàn bộ lính trên bản đồ, kể cả lính đang đóng ở vùng đất khác.
-                    battleSoldierCount++;
+                    // Chỉ lính đang đóng tại vùng bị địch đánh mới được phòng thủ.
+                    // Quân ở vùng khác và quân đang hành quân không được kéo vào trận.
+                    if (u.IsStationedInZone(defenseZoneName))
+                    {
+                        battleSoldierCount++;
+                    }
                 }
             }
         }
@@ -194,6 +206,11 @@ public static class BattleData
         foreach (var building in buildings)
         {
             if (building == null || !building.gameObject.activeInHierarchy) continue;
+
+            if (!IsAttackingExpedition && !IsBuildingInSettlement(building, defenseZoneName))
+            {
+                continue;
+            }
 
             BuildingInfo info = new BuildingInfo
             {
@@ -210,16 +227,7 @@ public static class BattleData
 
             if (!IsAttackingExpedition && spawner != null)
             {
-                int atBaseCount = 0;
-                var soldiersInBuilding = spawner.GetComponentsInChildren<UnitController>();
-                foreach (var s in soldiersInBuilding)
-                {
-                    if (s != null && s.gameObject.activeInHierarchy && !s.isExpeditionMarching)
-                    {
-                        atBaseCount++;
-                    }
-                }
-                info.soldierCount = atBaseCount;
+                info.soldierCount = spawner.GetCurrentActiveSoldierCount();
             }
 
             PlayerBuildings.Add(info);
@@ -257,34 +265,17 @@ public static class BattleData
             }
         }
 
-        // 3. Phục hồi đoàn Lính đang hành quân xuất trận
+        // 3. Phục hồi đoàn Lính đang hành quân/xong hành quân.  Các lính này không
+        // được lưu vào quân số của doanh trại nguồn, nên phải tạo lại riêng thay vì
+        // ghi đè ngẫu nhiên lên lính mà BuildingSystem vừa spawn.
         if (SavedSoldierMarches.Count > 0)
         {
-            UnitController[] sceneUnits = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
-            int marchIdx = 0;
             List<UnitController> marchingList = new List<UnitController>();
 
-            foreach (var u in sceneUnits)
+            foreach (SoldierMarchInfo info in SavedSoldierMarches)
             {
-                if (u != null && marchIdx < SavedSoldierMarches.Count)
-                {
-                    var info = SavedSoldierMarches[marchIdx];
-                    u.transform.position = info.position;
-                    u.marchStartPosition = info.marchStartPosition;
-                    u.marchDestinationPosition = info.marchDestinationPosition;
-                    u.marchStartWave = info.marchStartWave;
-                    u.marchWavesToReach = info.marchWavesToReach;
-                    u.marchTargetWave = info.marchTargetWave;
-                    u.marchDestinationZoneName = info.marchDestinationZoneName;
-                    u.stationedSettlementZoneName = info.stationedSettlementZoneName;
-                    u.hasReachedExpeditionDestination = info.hasReachedExpeditionDestination;
-                    u.AttackMode = info.attackMode;
-                    u.isExpeditionMarching = !info.hasReachedExpeditionDestination;
-                    u.currentState = u.isExpeditionMarching ? UnitState.Moving : UnitState.Idle;
-
-                    marchingList.Add(u);
-                    marchIdx++;
-                }
+                UnitController unit = SpawnRestoredSoldier(info);
+                if (unit != null && unit.isExpeditionMarching) marchingList.Add(unit);
             }
 
             if (marchingList.Count > 0)
@@ -300,6 +291,73 @@ public static class BattleData
                 }
             }
         }
+    }
+
+    private static bool IsBuildingInSettlement(UpgradeableBuilding building, string settlementZoneName)
+    {
+        if (building == null || string.IsNullOrEmpty(settlementZoneName)) return false;
+        SettlementZone zone = building.GetComponentInParent<SettlementZone>();
+        return zone != null && zone.settlementName == settlementZoneName;
+    }
+
+    private static UnitController SpawnRestoredSoldier(SoldierMarchInfo info)
+    {
+        if (info == null) return null;
+
+        UnitController prefabUnit = null;
+        foreach (UnitController candidate in Resources.FindObjectsOfTypeAll<UnitController>())
+        {
+            if (candidate != null && candidate.AttackMode == info.attackMode && !candidate.gameObject.scene.IsValid())
+            {
+                prefabUnit = candidate;
+                break;
+            }
+        }
+        if (prefabUnit == null)
+        {
+            Debug.LogWarning($"[BattleData] Không tìm thấy prefab lính {info.attackMode} để khôi phục đoàn hành quân.");
+            return null;
+        }
+
+        GameObject unitObject = Object.Instantiate(prefabUnit.gameObject, info.position, Quaternion.identity);
+        UnitController unit = unitObject.GetComponent<UnitController>();
+        if (unit == null) unit = unitObject.GetComponentInChildren<UnitController>();
+        if (unit == null)
+        {
+            Object.Destroy(unitObject);
+            return null;
+        }
+
+        SettlementZone destinationZone = FindSettlementZone(info.marchDestinationZoneName);
+        if (destinationZone != null) unit.transform.SetParent(destinationZone.transform, true);
+
+        unit.marchStartPosition = info.marchStartPosition;
+        unit.marchDestinationPosition = info.marchDestinationPosition;
+        unit.marchStartWave = info.marchStartWave;
+        unit.marchWavesToReach = info.marchWavesToReach;
+        unit.marchTargetWave = info.marchTargetWave;
+        unit.marchDestinationZoneName = info.marchDestinationZoneName;
+        unit.stationedSettlementZoneName = info.stationedSettlementZoneName;
+        unit.hasReachedExpeditionDestination = info.hasReachedExpeditionDestination;
+        unit.AttackMode = info.attackMode;
+        unit.isExpeditionMarching = !info.hasReachedExpeditionDestination;
+        unit.currentState = unit.isExpeditionMarching ? UnitState.Moving : UnitState.Idle;
+        return unit;
+    }
+
+    private static SettlementZone FindSettlementZone(string settlementZoneName)
+    {
+        if (string.IsNullOrEmpty(settlementZoneName)) return null;
+        if (SettlementManager.Ins != null)
+        {
+            SettlementZone zone = SettlementManager.Ins.GetZoneByName(settlementZoneName);
+            if (zone != null) return zone;
+        }
+        foreach (SettlementZone zone in Object.FindObjectsByType<SettlementZone>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (zone != null && zone.settlementName == settlementZoneName) return zone;
+        }
+        return null;
     }
 
     /// <summary>
@@ -448,6 +506,14 @@ public static class BattleData
 
         if (targetZone != null)
         {
+            foreach (UnitController unit in Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None))
+            {
+                if (unit != null && unit.gameObject.activeInHierarchy && unit.IsStationedInZone(targetZone.settlementName))
+                {
+                    Object.Destroy(unit.gameObject);
+                }
+            }
+
             SpawnSoldier[] zoneSpawners = targetZone.GetComponentsInChildren<SpawnSoldier>(true);
             foreach (var spawner in zoneSpawners)
             {

@@ -94,6 +94,18 @@ public class UnitController : MonoBehaviour
     public bool hasReachedExpeditionDestination = false;
     public string stationedSettlementZoneName = "";
 
+    /// <summary>
+    /// True only for a unit that is physically stationed and available in this
+    /// settlement.  Marching squads belong to neither side for UI/counting/battle
+    /// purposes until they arrive.
+    /// </summary>
+    public bool IsStationedInZone(string settlementZoneName)
+    {
+        return !isExpeditionMarching &&
+               !string.IsNullOrEmpty(settlementZoneName) &&
+               stationedSettlementZoneName == settlementZoneName;
+    }
+
 
     public bool isMarchingToEnemyBase => isExpeditionMarching || isRespondingToWarning || isReturning;
     public bool isDead => hpSoldier != null && hpSoldier.IsDead;

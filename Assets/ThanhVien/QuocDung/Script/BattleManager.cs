@@ -10,6 +10,11 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private Transform leftSpawnPoint;
     [Tooltip("Vị trí sinh phe Enemy (BÊN PHẢI)")]
     [SerializeField] private Transform rightSpawnPoint;
+    [Tooltip("Điểm spawn trên cao dành riêng cho Rồng. Nếu bỏ trống, BattleManager sẽ tự tạo phía trên Right Spawn Point.")]
+    [SerializeField] private Transform dragonHighSpawnPoint;
+    [SerializeField, Min(0f)] private float dragonSpawnHeight = 10f;
+    [Tooltip("Độ cao cộng thêm khi đáp. Idle Landing đã căn theo bàn chân nên mặc định là 0.")]
+    [SerializeField, Min(0f)] private float dragonLandingHeightOffset = 0f;
 
     [Header("Distance & Grid Spacing Settings")]
     [SerializeField] private float buildingSpacing = 4.0f;
@@ -19,6 +24,10 @@ public class BattleManager : MonoBehaviour
     [Header("Enemy Prefab Settings")]
     [SerializeField] private GameObject enemyPrefab;
     [SerializeField] private GameObject enemyRangedPrefab;
+
+    [Header("Dragon Spawn Settings")]
+    [SerializeField] private bool spawnDragonAtBattleStart = true;
+    [SerializeField] private GameObject dragonPrefab;
 
     [Header("Player Soldier Prefabs")]
     [SerializeField] private GameObject soldierPrefab;
@@ -638,6 +647,27 @@ public class BattleManager : MonoBehaviour
                 rightSpawnPoint = rightObj.transform;
             }
         }
+
+        EnsureDragonHighSpawnPoint();
+    }
+
+    /// <summary>
+    /// Dùng một điểm spawn riêng để rồng xuất hiện trên cao, không chồng lên đội Enemy dưới đất.
+    /// Có thể gán DragonHighSpawnPoint trong Inspector để tự chọn vị trí này.
+    /// </summary>
+    private void EnsureDragonHighSpawnPoint()
+    {
+        if (dragonHighSpawnPoint != null || rightSpawnPoint == null) return;
+
+        GameObject pointObject = GameObject.Find("DragonHighSpawnPoint");
+        if (pointObject == null)
+        {
+            pointObject = new GameObject("DragonHighSpawnPoint");
+            pointObject.transform.SetParent(transform);
+            pointObject.transform.position = rightSpawnPoint.position + Vector3.up * dragonSpawnHeight;
+        }
+
+        dragonHighSpawnPoint = pointObject.transform;
     }
 
     /// <summary>
@@ -873,34 +903,64 @@ public class BattleManager : MonoBehaviour
     /// </summary>
     private void SpawnEnemySide()
     {
-        if (rightSpawnPoint == null || enemyPrefab == null)
+        if (rightSpawnPoint == null)
         {
-            Debug.LogWarning("[BattleManager] Chưa cài đặt rightSpawnPoint hoặc enemyPrefab!");
+            Debug.LogWarning("[BattleManager] Chưa cài đặt rightSpawnPoint!");
             return;
         }
 
-        int count = Mathf.Max(1, BattleData.EnemyWaveCount);
-        Vector3 originRight = rightSpawnPoint.position;
-
-        for (int i = 0; i < count; i++)
+        if (enemyPrefab != null)
         {
-            int row = i / unitsPerRow;
-            int col = i % unitsPerRow;
+            int count = Mathf.Max(1, BattleData.EnemyWaveCount);
+            Vector3 originRight = rightSpawnPoint.position;
 
-            Vector3 enemyPos = originRight + Vector3.right * (row * unitSpacing) + Vector3.forward * (col * unitSpacing - 1.5f);
-            Quaternion enemyRot = Quaternion.Euler(0, -90, 0); // Quay mặt về phía bên Trái (Player)
-
-            GameObject spawnedEnemy = Instantiate(enemyPrefab, enemyPos, enemyRot);
-            spawnedEnemy.name = $"Enemy_WaveUnit_{i + 1}";
-            spawnedEnemyObjects.Add(spawnedEnemy);
-
-            // Kích hoạt AI giao tranh cho Enemy nếu có
-            EnemyAI enemyAI = spawnedEnemy.GetComponent<EnemyAI>();
-            if (enemyAI != null)
+            for (int i = 0; i < count; i++)
             {
-                enemyAI.EnableCombat();
+                int row = i / unitsPerRow;
+                int col = i % unitsPerRow;
+
+                Vector3 enemyPos = originRight + Vector3.right * (row * unitSpacing) + Vector3.forward * (col * unitSpacing - 1.5f);
+                Quaternion enemyRot = Quaternion.Euler(0, -90, 0); // Quay mặt về phía bên Trái (Player)
+
+                GameObject spawnedEnemy = Instantiate(enemyPrefab, enemyPos, enemyRot);
+                spawnedEnemy.name = $"Enemy_WaveUnit_{i + 1}";
+                spawnedEnemyObjects.Add(spawnedEnemy);
+
+                // Kích hoạt AI giao tranh cho Enemy nếu có
+                EnemyAI enemyAI = spawnedEnemy.GetComponent<EnemyAI>();
+                if (enemyAI != null)
+                {
+                    enemyAI.EnableCombat();
+                }
             }
         }
+
+        SpawnDragon();
+    }
+
+    /// <summary>
+    /// Spawn đúng một rồng tại điểm riêng trên cao. Rồng không dùng vị trí của wave Enemy dưới đất.
+    /// </summary>
+    private void SpawnDragon()
+    {
+        if (!spawnDragonAtBattleStart || dragonPrefab == null || dragonHighSpawnPoint == null) return;
+
+        Quaternion dragonRotation = Quaternion.Euler(0f, -90f, 0f);
+        GameObject spawnedDragon = Instantiate(dragonPrefab, dragonHighSpawnPoint.position, dragonRotation);
+
+        // Bảo đảm vẫn nhìn thấy được nếu prefab được lưu ở trạng thái inactive.
+        spawnedDragon.SetActive(true);
+        spawnedDragon.name = "Enemy_Dragon";
+
+        Dragon dragon = spawnedDragon.GetComponent<Dragon>();
+        if (dragon != null)
+        {
+            // Pivot của model Rồng thấp hơn chân; bù Y để Idle Landing không xuyên mặt đất.
+            Vector3 dragonLandingPosition = rightSpawnPoint.position + Vector3.up * dragonLandingHeightOffset;
+            dragon.SetLandingGroundPosition(dragonLandingPosition);
+        }
+
+        spawnedEnemyObjects.Add(spawnedDragon);
     }
 
     private GameObject FindBuildingPrefabByType(BuildingType type)

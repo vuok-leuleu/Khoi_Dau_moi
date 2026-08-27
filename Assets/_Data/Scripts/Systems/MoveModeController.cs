@@ -249,6 +249,10 @@ public class MoveModeController : MonoBehaviour
         {
             if (soldier == null || !soldier.gameObject.activeInHierarchy) continue;
 
+            // A marching squad has already left its origin.  It cannot be selected
+            // again until it reaches a settlement.
+            if (soldier.isExpeditionMarching) continue;
+
             if (soldier.hasReachedExpeditionDestination)
             {
                 if (soldier.marchDestinationZoneName == zone.settlementName)

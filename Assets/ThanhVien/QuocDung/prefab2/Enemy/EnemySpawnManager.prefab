@@ -79,6 +79,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemySpawn
   enemyCountInBase: 1
   enemyPrefab: {fileID: 370480945864454416, guid: 2d56dfb52da6a654ab4fca2a3d449e2d, type: 3}
+  defaultEnemySpawnWeight: 1
+  additionalEnemyTypes:
+  - prefab: {fileID: 3322312632539215873, guid: 01a8ddab520123647b95a3ddf60d1b92, type: 3}
+    spawnWeight: 3
+  - prefab: {fileID: 370480945864454416, guid: 2d56dfb52da6a654ab4fca2a3d449e2d, type: 3}
+    spawnWeight: 3
+  - prefab: {fileID: 4118137334638840365, guid: 2e6e2341390240e46b5904a0c63be547, type: 3}
+    spawnWeight: 1
   spawnOnStart: 0
   spawnPoints:
   - {fileID: 267864803989536797}
