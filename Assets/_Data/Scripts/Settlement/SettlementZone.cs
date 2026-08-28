@@ -12,6 +12,10 @@ using TMPro;
 
 public class SettlementZone : MonoBehaviour
 {
+    // Mỗi thành dùng cùng một quy tắc mở ô: Lv.1 = 4, Lv.2 = 5, Lv.3+ = 6.
+    // Các slotPoint thiếu trong Inspector sẽ dùng vị trí lưới dự phòng.
+    public const int MaxBuildingSlotCount = 6;
+
     [Header("=== HIỂN THỊ TEXT UI VÙNG ĐẤT / ẢI ===")]
     [Tooltip("Text hiển thị Cấp độ công trình / Vùng đất (VD: Lv. 1)")]
     public TMP_Text levelTextTMP;
@@ -594,22 +598,25 @@ public class SettlementZone : MonoBehaviour
 
     /// <summary>
     /// Số lượng ô Slot được mở khóa theo Cấp độ Vùng Đất (settlementLevel):
-    /// - Cấp 1: 2 ô slot
-    /// - Cấp 2: 3 ô slot (mở thêm 1 ô)
-    /// - Cấp 3+: Mở toàn bộ số slot còn lại!
+    /// - Cấp 1: 4 ô slot
+    /// - Cấp 2: 5 ô slot
+    /// - Cấp 3+: 6 ô slot
     /// </summary>
+    public int GetTotalBuildingSlotCount()
+    {
+        return MaxBuildingSlotCount;
+    }
+
     public int GetUnlockedSlotCount()
     {
         if (!isTownHallEstablished) return 0;
 
-        int totalSlotCount = (slotPoints.Count > 0) ? slotPoints.Count : 12;
         int level = SettlementLevel;
 
-        if (level <= 1) return Mathf.Min(2, totalSlotCount);
-        if (level == 2) return Mathf.Min(3, totalSlotCount);
-        
-        // Cấp 3 trở lên: Mở toàn bộ số ô slot!
-        return totalSlotCount;
+        if (level <= 1) return 4;
+        if (level == 2) return 5;
+
+        return MaxBuildingSlotCount;
     }
 
     private void OnEnable()
@@ -649,7 +656,7 @@ public class SettlementZone : MonoBehaviour
         for (int i = 0; i < prebuiltSlotPrefabs.Count; i++)
         {
             if (prebuiltSlotPrefabs[i] == null) continue;
-            if (i >= slotPoints.Count) break;
+            if (i >= GetTotalBuildingSlotCount()) break;
 
             Vector3 targetPos = GetSlotWorldPosition(i);
             bool alreadyExists = false;
@@ -967,10 +974,9 @@ public class SettlementZone : MonoBehaviour
         float minDistance = float.MaxValue;
         int closestSlotIndex = -1;
 
-        for (int i = 0; i < slotPoints.Count; i++)
+        for (int i = 0; i < GetTotalBuildingSlotCount(); i++)
         {
-            if (slotPoints[i] == null) continue;
-            float dist = Vector3.Distance(pos, slotPoints[i].position);
+            float dist = Vector3.Distance(pos, GetSlotWorldPosition(i));
             if (dist < minDistance)
             {
                 minDistance = dist;

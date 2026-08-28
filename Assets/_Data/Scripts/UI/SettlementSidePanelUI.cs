@@ -35,7 +35,7 @@ public class SettlementSidePanelUI : MonoBehaviour
     [Header("=== CONTAINER CHỨA LƯỚI CÁC Ô CÔNG TRÌNH ===")]
     [SerializeField] private Transform slotsContainer;
     [SerializeField] private GameObject slotItemPrefab;
-    [SerializeField] private int totalSlotsCount = 12; // Tổng số ô hiển thị trong Panel
+    [SerializeField] private int totalSlotsCount = SettlementZone.MaxBuildingSlotCount; // Tổng số ô hiển thị trong Panel
 
     [Header("=== CONTAINER CHỨA 8 Ô HUẤN LUYỆN LÍNH ===")]
     [SerializeField] private Transform troopTrainingContainer;
@@ -333,9 +333,9 @@ public class SettlementSidePanelUI : MonoBehaviour
 
         if (currentZone != null) currentZone.AlignBuildingsToSlotPositions();
 
-        // 3. Hiển thị danh sách các ô Slot trong Panel (ĐÚNG BẰNG SỐ SLOT ĐĂNG KÝ TRONG INSPECTOR)
+        // 3. Mỗi thành luôn có tối đa 6 ô: Lv.1 mở 4, Lv.2 mở 5, Lv.3 mở 6.
         int occupiedCount = builtStructures.Count;
-        int registeredSlotCount = (currentZone != null && currentZone.slotPoints.Count > 0) ? currentZone.slotPoints.Count : totalSlotsCount;
+        int registeredSlotCount = (currentZone != null) ? currentZone.GetTotalBuildingSlotCount() : totalSlotsCount;
         int unlockedCount = (currentZone != null) ? currentZone.GetUnlockedSlotCount() : registeredSlotCount;
         int totalCount = registeredSlotCount;
 
