@@ -145,6 +145,13 @@ public class ConstructionManager : Singleton<ConstructionManager>
             return;
         }
 
+        if (!SettlementZone.IsBuildingTypeUnlockedGlobally(type))
+        {
+            Debug.LogWarning($"[ConstructionManager] Công trình {type} chưa được mở khóa.");
+            UIManager.Ins?.ShowWarning("Công trình này chưa được mở khóa. Hãy chinh phục vùng đất tương ứng trước!");
+            return;
+        }
+
         BuildingCost cost = GetBuildingCost(type);
 
         if (JsonDataManager.Ins != null)

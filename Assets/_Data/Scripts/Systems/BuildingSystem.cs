@@ -163,6 +163,12 @@ public class BuildingSystem : Singleton<BuildingSystem>
             return;
         }
 
+        if (!SettlementZone.IsBuildingTypeUnlockedGlobally(type))
+        {
+            UIManager.Ins?.ShowWarning("Công trình này chưa được mở khóa. Hãy chinh phục vùng đất tương ứng trước!");
+            return;
+        }
+
         // 🔥 DEMACIA RISING STYLE: NẾU ĐÃ CHỌN Ô ĐẤT, XÂY TRỰC TIẾP TẠI Ô ĐẤT ĐÓ
         if (hasSelectedSlot)
         {
@@ -181,6 +187,12 @@ public class BuildingSystem : Singleton<BuildingSystem>
         if (TroopTrainingManager.IsCentralBarracksType(type))
         {
             UIManager.Ins?.ShowWarning("Trại Lính chỉ có sẵn tại thành đầu tiên và không thể xây thêm!");
+            return;
+        }
+
+        if (!SettlementZone.IsBuildingTypeUnlockedGlobally(type))
+        {
+            UIManager.Ins?.ShowWarning("Công trình này chưa được mở khóa. Hãy chinh phục vùng đất tương ứng trước!");
             return;
         }
 

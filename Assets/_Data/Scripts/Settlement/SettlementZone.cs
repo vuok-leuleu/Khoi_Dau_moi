@@ -60,7 +60,7 @@ public class SettlementZone : MonoBehaviour
 
     [Header("=== CÔNG TRÌNH MỞ KHÓA TẠI VÙNG ĐẤT NÀY ===")]
     [Tooltip("Tích chọn nếu vùng đất này cho phép xây tất cả các loại công trình.")]
-    public bool unlockAllBuildings = true;
+    public bool unlockAllBuildings = false;
     [Tooltip("Danh sách các loại công trình mở khóa riêng tại vùng đất này (ví dụ: Trại Lính Cung, Tháp Phòng Thủ...)")]
     public List<BuildingType> unlockedBuildingTypes = new List<BuildingType>();
 
