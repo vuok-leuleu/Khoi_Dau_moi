@@ -45,7 +45,7 @@ public class TroopTrainingSlotUI : MonoBehaviour, IPointerEnterHandler, IPointer
 
     private void OnDisable()
     {
-        hoverFrame?.Hide();
+        hoverFrame?.SetSelected(false);
 
         if (slotButton != null && !HasPersistentClickListener(slotButton))
         {
@@ -74,6 +74,17 @@ public class TroopTrainingSlotUI : MonoBehaviour, IPointerEnterHandler, IPointer
     public void OnPointerExit(PointerEventData eventData)
     {
         hoverFrame?.Hide();
+    }
+
+    public int MoveSlotIndex => currentSlotData != null ? currentSlotData.slotIndex : -1;
+    public BuildingType MoveTroopType => currentSlotData != null ? currentSlotData.troopType : BuildingType.None;
+    public int MoveUnitCount => currentSlotData != null ? currentSlotData.stationedSoldierCount : 0;
+    public bool IsMoveSlotCompleted => currentSlotData != null && currentSlotData.isCompleted;
+    public SettlementZone MoveZone => currentZone;
+
+    public void SetMoveSelected(bool selected)
+    {
+        hoverFrame?.SetSelected(selected);
     }
 
     private void ConfigureButton()
@@ -307,6 +318,9 @@ public class TroopTrainingSlotUI : MonoBehaviour, IPointerEnterHandler, IPointer
         if (data.isCompleted)
         {
             string troopLabel = GetTroopDisplayName(data.troopType);
+            string displayLabel = data.isGarrisonSlot && data.stationedSoldierCount > 0
+                ? $"{troopLabel} x{data.stationedSoldierCount}"
+                : troopLabel;
 
             if (completedStateObj != null)
             {
@@ -314,21 +328,29 @@ public class TroopTrainingSlotUI : MonoBehaviour, IPointerEnterHandler, IPointer
                 TextMeshProUGUI compTMP = completedStateObj.GetComponentInChildren<TextMeshProUGUI>();
                 if (compTMP != null)
                 {
-                    compTMP.text = troopLabel;
+                    compTMP.text = displayLabel;
                 }
             }
-            if (troopNameTMP != null) troopNameTMP.text = troopLabel;
+            if (troopNameTMP != null) troopNameTMP.text = displayLabel;
             return;
         }
 
         // 4. CHẾ ĐỘ Ô TRỐNG ➕
         if (emptyStateObj != null) emptyStateObj.SetActive(true);
-        if (emptyTextTMP != null) emptyTextTMP.text = "+ Huấn Luyện";
+        if (emptyTextTMP != null) emptyTextTMP.text = data.isGarrisonSlot ? "Ô trống" : "+ Huấn Luyện";
     }
 
     private void OnClickSlot()
     {
         if (currentSlotData == null || currentZone == null) return;
+
+        // Khi đang ở chế độ điều quân, một lần bấm vào slot chỉ chọn/bỏ chọn
+        // đúng ô đó; không mở lại modal huấn luyện hay điều toàn bộ quân.
+        if (MoveModeController.IsMoveModeActive && MoveModeController.Ins != null)
+        {
+            MoveModeController.Ins.ToggleTroopSlotSelection(this);
+            return;
+        }
 
         if (TroopTrainingManager.Ins != null && !TroopTrainingManager.Ins.IsCentralTrainingSettlement(currentZone))
         {

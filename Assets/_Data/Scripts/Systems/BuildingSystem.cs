@@ -65,6 +65,11 @@ public class BuildingSystem : Singleton<BuildingSystem>
 
     private void HandleSlotSelectionInput()
     {
+        // MoveModeController là hệ thống duy nhất xử lý click vùng đích khi
+        // đang điều quân. Nếu tiếp tục xử lý ở đây, click vùng đích sẽ mở nhầm
+        // Settlement UI của vùng đó.
+        if (MoveModeController.IsMoveModeActive) return;
+
         // Phím chuột phải hoặc ESC để bỏ chọn ô đất và đóng toàn bộ giao diện
         if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape))
         {
@@ -97,6 +102,15 @@ public class BuildingSystem : Singleton<BuildingSystem>
                 {
                     // Click vào công trình hoặc vùng đất 3D: Chọn vùng đất đó & Mở Bảng Thủ Đô (SettlementSidePanelUI)
                     SettlementZone targetZone = (zone != null) ? zone : building.GetComponentInParent<SettlementZone>();
+
+                    if (targetZone != null && !targetZone.IsConquered)
+                    {
+                        // Không cho click vùng chưa chinh phục mở nhầm panel của
+                        // settlement trước đó hoặc hiện nút Điều quân.
+                        SettlementSidePanelUI.Ins?.SetMoveButtonVisible(false);
+                        UIManager.Ins?.CloseSettlementPanel();
+                        return;
+                    }
 
                     // Khi đã mở bảng của thành này, click lại tòa thành chỉ giữ
                     // lựa chọn hiện tại. Không gọi SelectSettlement/OpenSettlementPanel

@@ -21,6 +21,7 @@ public class TroopTrainingSlotData
     // Chỉ dùng khi hiển thị quân đồn trú ở các thành không có Trại Lính.
     // Dữ liệu này được tính lại từ UnitController, không lưu vào hàng đợi huấn luyện.
     public int stationedSoldierCount;
+    public bool isGarrisonSlot;
 }
 
 public class TroopTrainingManager : MonoBehaviour
@@ -386,6 +387,23 @@ public class TroopTrainingManager : MonoBehaviour
         TroopTrainingSlotData[] currentSlots = zoneSlotsDict[zoneName];
         int unlockedCount = GetUnlockedSlotsCountForZone(zone);
 
+        // Đồng bộ các nhóm lính đã đồn trú (bao gồm nhóm vừa điều tới) vào
+        // đúng ô của vùng trung tâm.  Chỉ các lính có cùng slot index mới được
+        // xem là cùng một nhóm.
+        for (int i = 0; i < MAX_TRAINING_SLOTS; i++)
+        {
+            if (currentSlots[i] == null) currentSlots[i] = new TroopTrainingSlotData { slotIndex = i };
+            List<UnitController> stationedInSlot = GetStationedUnitsForSlot(zone, i);
+            if (stationedInSlot.Count > 0)
+            {
+                currentSlots[i].troopType = ToBuildingType(stationedInSlot[0].AttackMode);
+                currentSlots[i].isTraining = false;
+                currentSlots[i].isCompleted = true;
+                currentSlots[i].remainingWaves = 0;
+                currentSlots[i].stationedSoldierCount = stationedInSlot.Count;
+            }
+        }
+
         int activeSoldierCount = GetStationedSoldierCount(zone, BuildingType.None);
         int requiredGarrisonSlots = Mathf.CeilToInt(activeSoldierCount / (float)SOLDIERS_PER_TRAINING_UNIT);
         int completedCount = 0;
@@ -418,6 +436,107 @@ public class TroopTrainingManager : MonoBehaviour
         return currentSlots;
     }
 
+    /// <summary>
+    /// Lấy các slot còn trống ở vùng đích. Mỗi nhóm nguồn cần đúng một slot;
+    /// nếu không đủ thì trả về false để MoveModeController hủy toàn bộ lệnh.
+    /// </summary>
+    public bool TryGetAvailableGarrisonSlotIndices(
+        SettlementZone zone,
+        int requiredGroupCount,
+        out List<int> availableSlotIndices)
+    {
+        availableSlotIndices = new List<int>();
+        if (zone == null || requiredGroupCount <= 0) return false;
+        if (!zone.isTownHallEstablished) return false;
+
+        HashSet<int> occupied = new HashSet<int>();
+
+        if (IsCentralTrainingSettlement(zone))
+        {
+            TroopTrainingSlotData[] slots = GetSlotsForZone(zone);
+            if (slots != null)
+            {
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    if (slots[i] == null || !slots[i].isUnlocked || slots[i].isTraining || slots[i].isCompleted)
+                    {
+                        occupied.Add(i);
+                    }
+                }
+            }
+        }
+        else
+        {
+            // Chuẩn hóa các lính cũ chưa có slot index trước khi tính sức chứa.
+            GetGarrisonGroups(zone);
+        }
+
+        bool hasUnknownMarchingReservation = false;
+        UnitController[] allUnits = Object.FindObjectsByType<UnitController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (UnitController unit in allUnits)
+        {
+            if (unit == null || unit.isDead) continue;
+
+            if (unit.isExpeditionMarching)
+            {
+                if (unit.marchDestinationZoneName == zone.settlementName)
+                {
+                    if (unit.marchDestinationTroopSlotIndex >= 0)
+                    {
+                        occupied.Add(unit.marchDestinationTroopSlotIndex);
+                    }
+                    else
+                    {
+                        // Đoàn cũ chưa có slot đích: không thể biết nó thuộc
+                        // nhóm nào, nên chặn điều quân mới để tránh ghi đè.
+                        hasUnknownMarchingReservation = true;
+                    }
+                }
+                continue;
+            }
+
+            if (IsStationedInZone(unit, zone) && unit.stationedTroopSlotIndex >= 0)
+            {
+                occupied.Add(unit.stationedTroopSlotIndex);
+            }
+        }
+
+        if (hasUnknownMarchingReservation)
+        {
+            for (int i = 0; i < MAX_TRAINING_SLOTS; i++) occupied.Add(i);
+        }
+
+        for (int i = 0; i < MAX_TRAINING_SLOTS && availableSlotIndices.Count < requiredGroupCount; i++)
+        {
+            if (!occupied.Contains(i)) availableSlotIndices.Add(i);
+        }
+
+        return availableSlotIndices.Count == requiredGroupCount;
+    }
+
+    /// <summary>
+    /// Đánh dấu các ô huấn luyện trung tâm đã được điều đi. Quân thực tế đã
+    /// rời vùng, vì vậy các ô này phải trở về trạng thái trống và giải phóng
+    /// suất lúa tương ứng.
+    /// </summary>
+    public void MarkSlotsDispatched(SettlementZone zone, List<int> slotIndices)
+    {
+        if (zone == null || slotIndices == null || slotIndices.Count == 0 || !IsCentralTrainingSettlement(zone)) return;
+
+        TroopTrainingSlotData[] slots = GetSlotsForZone(zone);
+        foreach (int index in slotIndices)
+        {
+            if (index < 0 || index >= slots.Length || slots[index] == null) continue;
+            slots[index].isTraining = false;
+            slots[index].isCompleted = false;
+            slots[index].remainingWaves = 1;
+            slots[index].stationedSoldierCount = 0;
+        }
+
+        SaveZoneTrainingData(zone.settlementName);
+        SyncFoodToDataManager();
+    }
+
     private static TroopTrainingSlotData[] CreateGarrisonDisplaySlots(SettlementZone zone)
     {
         if (zone == null || !zone.isTownHallEstablished)
@@ -425,23 +544,95 @@ public class TroopTrainingManager : MonoBehaviour
             return CreateDisplaySlots(0);
         }
 
-        TroopTrainingSlotData[] slots = CreateDisplaySlots(3);
-        BuildingType[] troopTypes =
-        {
-            BuildingType.BarracksMelee,
-            BuildingType.BarracksArcher,
-            BuildingType.BarracksSpear
-        };
+        TroopTrainingSlotData[] slots = CreateDisplaySlots(MAX_TRAINING_SLOTS);
+        Dictionary<int, List<UnitController>> groups = GetGarrisonGroups(zone);
 
-        for (int i = 0; i < troopTypes.Length; i++)
+        foreach (KeyValuePair<int, List<UnitController>> group in groups)
         {
-            int stationedCount = GetStationedSoldierCount(zone, troopTypes[i]);
-            slots[i].troopType = troopTypes[i];
-            slots[i].stationedSoldierCount = stationedCount;
-            slots[i].isCompleted = stationedCount > 0;
+            int slotIndex = group.Key;
+            if (slotIndex < 0 || slotIndex >= slots.Length || group.Value == null || group.Value.Count == 0) continue;
+
+            slots[slotIndex].isGarrisonSlot = true;
+            slots[slotIndex].troopType = ToBuildingType(group.Value[0].AttackMode);
+            slots[slotIndex].stationedSoldierCount = group.Value.Count;
+            slots[slotIndex].isCompleted = true;
         }
 
+        for (int i = 0; i < slots.Length; i++) slots[i].isGarrisonSlot = true;
+
         return slots;
+    }
+
+    private static Dictionary<int, List<UnitController>> GetGarrisonGroups(SettlementZone zone)
+    {
+        Dictionary<int, List<UnitController>> groups = new Dictionary<int, List<UnitController>>();
+        if (zone == null) return groups;
+
+        Dictionary<BuildingType, List<UnitController>> legacyByType = new Dictionary<BuildingType, List<UnitController>>();
+        UnitController[] allUnits = Object.FindObjectsByType<UnitController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (UnitController unit in allUnits)
+        {
+            if (unit == null || unit.isDead || unit.isExpeditionMarching || !IsStationedInZone(unit, zone)) continue;
+
+            if (unit.stationedTroopSlotIndex >= 0 && unit.stationedTroopSlotIndex < MAX_TRAINING_SLOTS)
+            {
+                if (!groups.ContainsKey(unit.stationedTroopSlotIndex)) groups[unit.stationedTroopSlotIndex] = new List<UnitController>();
+                groups[unit.stationedTroopSlotIndex].Add(unit);
+            }
+            else
+            {
+                BuildingType type = ToBuildingType(unit.AttackMode);
+                if (!legacyByType.ContainsKey(type)) legacyByType[type] = new List<UnitController>();
+                legacyByType[type].Add(unit);
+            }
+        }
+
+        // Dữ liệu cũ không có slot index: gom theo loại vào một nhóm tạm rồi
+        // gán một slot trống cố định để các lần refresh sau giữ nguyên nhóm.
+        foreach (KeyValuePair<BuildingType, List<UnitController>> legacyGroup in legacyByType)
+        {
+            int freeIndex = FindFirstFreeGroupIndex(groups);
+            if (freeIndex < 0) break;
+            groups[freeIndex] = legacyGroup.Value;
+            foreach (UnitController unit in legacyGroup.Value) unit.stationedTroopSlotIndex = freeIndex;
+        }
+
+        return groups;
+    }
+
+    private static int FindFirstFreeGroupIndex(Dictionary<int, List<UnitController>> groups)
+    {
+        for (int i = 0; i < MAX_TRAINING_SLOTS; i++)
+        {
+            if (!groups.ContainsKey(i)) return i;
+        }
+        return -1;
+    }
+
+    private static bool IsStationedInZone(UnitController unit, SettlementZone zone)
+    {
+        if (unit == null || zone == null || unit.isExpeditionMarching) return false;
+        if (!string.IsNullOrEmpty(unit.stationedSettlementZoneName))
+        {
+            return unit.stationedSettlementZoneName == zone.settlementName;
+        }
+        return unit.GetComponentInParent<SettlementZone>() == zone;
+    }
+
+    private static List<UnitController> GetStationedUnitsForSlot(SettlementZone zone, int slotIndex)
+    {
+        List<UnitController> result = new List<UnitController>();
+        if (zone == null || slotIndex < 0) return result;
+
+        UnitController[] allUnits = Object.FindObjectsByType<UnitController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (UnitController unit in allUnits)
+        {
+            if (unit != null && unit.stationedTroopSlotIndex == slotIndex && IsStationedInZone(unit, zone))
+            {
+                result.Add(unit);
+            }
+        }
+        return result;
     }
 
     private static int GetStationedSoldierCount(SettlementZone zone, BuildingType troopType)
@@ -616,7 +807,10 @@ public class TroopTrainingManager : MonoBehaviour
         }
         else
         {
-            int spawnedCount = targetSpawner.SpawnTrainedSoldiers(slot.troopType, SOLDIERS_PER_TRAINING_UNIT);
+            int spawnedCount = targetSpawner.SpawnTrainedSoldiers(
+                slot.troopType,
+                SOLDIERS_PER_TRAINING_UNIT,
+                slot.slotIndex);
             if (spawnedCount != SOLDIERS_PER_TRAINING_UNIT)
             {
                 Debug.LogWarning($"[TroopTrainingManager] {slot.troopType} chỉ spawn được {spawnedCount}/{SOLDIERS_PER_TRAINING_UNIT} lính tại vùng {zoneName}.");

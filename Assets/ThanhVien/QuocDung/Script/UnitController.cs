@@ -94,6 +94,11 @@ public class UnitController : MonoBehaviour
     public bool hasReachedExpeditionDestination = false;
     public string stationedSettlementZoneName = "";
 
+    // Chỉ số nhóm/ô đồn trú trong vùng hiện tại.  Mỗi nhóm quân được điều đi
+    // giữ nguyên chỉ số này để khi đến vùng đích không bị gộp vào nhóm khác.
+    public int stationedTroopSlotIndex = -1;
+    public int marchDestinationTroopSlotIndex = -1;
+
     /// <summary>
     /// True only for a unit that is physically stationed and available in this
     /// settlement.  Marching squads belong to neither side for UI/counting/battle
@@ -458,7 +463,8 @@ public class UnitController : MonoBehaviour
         int wavesToReach = -1,
         Transform targetBuilding = null,
         string destinationZoneName = "",
-        string sourceZoneName = "")
+        string sourceZoneName = "",
+        int destinationTroopSlotIndex = -1)
     {
         if (!isExpeditionMarching)
         {
@@ -470,6 +476,10 @@ public class UnitController : MonoBehaviour
         }
         marchDestinationPosition = destinationPos;
         marchDestinationZoneName = destinationZoneName;
+        if (!string.IsNullOrEmpty(destinationZoneName))
+        {
+            marchDestinationTroopSlotIndex = destinationTroopSlotIndex;
+        }
         hasReachedExpeditionDestination = false;
         marchStartWave = (DayNightManager.HasInstance && DayNightManager.Ins != null) ? DayNightManager.Ins.CurrentWave : 1;
 
@@ -495,6 +505,11 @@ public class UnitController : MonoBehaviour
         transform.position = marchDestinationPosition;
         hasReachedExpeditionDestination = true;
         stationedSettlementZoneName = marchDestinationZoneName;
+        if (marchDestinationTroopSlotIndex >= 0)
+        {
+            stationedTroopSlotIndex = marchDestinationTroopSlotIndex;
+        }
+        marchDestinationTroopSlotIndex = -1;
         isExpeditionMarching = false;
         isRespondingToWarning = false;
         currentState = UnitState.Idle;

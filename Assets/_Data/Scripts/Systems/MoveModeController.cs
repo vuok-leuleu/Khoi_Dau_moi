@@ -19,13 +19,21 @@ public class MoveModeController : MonoBehaviour
 
     private SettlementZone sourceZone;
     private SettlementZone previewDestination;
+    private readonly List<TroopTrainingSlotUI> selectedTroopSlots = new List<TroopTrainingSlotUI>();
     private SoldierPoint routePreview;
     private SoldierPoint routePreviewPrefab;
     private RTSCameraController rtsCameraController;
     private bool isSelectingDestination;
     private Coroutine cameraRoutine;
 
+    private sealed class TroopDispatchGroup
+    {
+        public TroopTrainingSlotUI sourceSlot;
+        public List<UnitController> soldiers;
+    }
+
     public bool HasPreviewDestination => isSelectingDestination && previewDestination != null;
+    public bool HasSelectedTroopSlot => isSelectingDestination && selectedTroopSlots.Count > 0;
 
     private void Awake()
     {
@@ -74,11 +82,15 @@ public class MoveModeController : MonoBehaviour
 
     public void BeginMoveMode(SettlementZone zone, SoldierPoint soldierPointUIPrefab)
     {
-        if (zone == null) return;
+        if (zone == null || !zone.IsConquered) return;
 
         CacheCameraComponents();
         sourceZone = zone;
         isSelectingDestination = true;
+        ClearTroopSlotSelection();
+        // Nếu chế độ điều quân được mở lại sau một lần chọn trước đó, bảo đảm
+        // panel nguồn đang hiển thị để người chơi còn chọn/đổi ô lính.
+        SettlementSidePanelUI.Ins?.SetMoveDestinationSelectionView(false);
         EnsureRoutePreview(soldierPointUIPrefab);
         if (routePreview == null)
         {
@@ -87,19 +99,10 @@ public class MoveModeController : MonoBehaviour
         }
 
         previewDestination = null;
-        SettlementSidePanelUI.Ins?.SetMoveButtonLabel("ĐIỀU QUÂN");
+        SettlementSidePanelUI.Ins?.SetMoveButtonLabel("CHỌN Ô LÍNH");
 
-        // 1. Tìm điểm đến tiếp theo ban đầu và vẽ mũi tên chỉ đến đó
-        SettlementZone initialDestination = FindInitialDestination();
-        if (initialDestination != null)
-        {
-            routePreview.Setup(GetRouteAnchor(sourceZone), GetRouteAnchor(initialDestination), (Transform)null, routePreviewHeight);
-            routePreview.gameObject.SetActive(true);
-        }
-        else
-        {
-            routePreview.gameObject.SetActive(false);
-        }
+        // Chưa chọn slot thì chưa cho xem/đặt điểm đến, tránh điều nhầm toàn bộ quân.
+        routePreview.gameObject.SetActive(false);
 
         // 2. Camera chuyển góc nhìn bao quát toàn cảnh (overview)
         GetMapOverview(out Vector3 overviewCenter, out float overviewHeight);
@@ -111,8 +114,10 @@ public class MoveModeController : MonoBehaviour
         isSelectingDestination = false;
         sourceZone = null;
         previewDestination = null;
+        ClearTroopSlotSelection();
         if (routePreview != null) routePreview.gameObject.SetActive(false);
-                SettlementSidePanelUI.Ins?.SetMoveButtonLabel("ĐIỀU QUÂN");
+        SettlementSidePanelUI.Ins?.SetMoveDestinationSelectionView(false);
+        SettlementSidePanelUI.Ins?.SetMoveButtonLabel("ĐIỀU QUÂN");
     }
 
     private void EnsureRoutePreview(SoldierPoint soldierPointUIPrefab)
@@ -134,6 +139,12 @@ public class MoveModeController : MonoBehaviour
 
     private void TrySelectDestination()
     {
+        if (!HasSelectedTroopSlot)
+        {
+            SettlementSidePanelUI.Ins?.SetMoveButtonLabel("CHỌN Ô LÍNH");
+            return;
+        }
+
         if (!TryGetSettlementUnderPointer(out SettlementZone destination) || destination == sourceZone)
         {
             CancelMoveMode();
@@ -152,30 +163,136 @@ public class MoveModeController : MonoBehaviour
         previewDestination = destination;
         routePreview.Setup(GetRouteAnchor(sourceZone), GetRouteAnchor(destination), (Transform)null, routePreviewHeight);
         routePreview.gameObject.SetActive(true);
+        // Tắt đúng SettlementSidePanel trong lúc chốt vùng đích, sau đó bật lại
+        // panel nguồn để người chơi có thể bấm XÁC NHẬN.
+        SettlementSidePanelUI.Ins?.SetMoveDestinationSelectionView(true);
+        SettlementSidePanelUI.Ins?.ShowMoveConfirmationPanel();
         SettlementSidePanelUI.Ins?.SetMoveButtonLabel("XÁC NHẬN");
+    }
+
+    public void ToggleTroopSlotSelection(TroopTrainingSlotUI slot)
+    {
+        if (!isSelectingDestination || slot == null || slot.MoveZone != sourceZone) return;
+
+        if (!slot.IsMoveSlotCompleted)
+        {
+            UIManager.Ins?.ShowWarning("Ô lính này chưa có quân sẵn sàng để điều đi.");
+            return;
+        }
+
+        if (selectedTroopSlots.Contains(slot))
+        {
+            selectedTroopSlots.Remove(slot);
+            slot.SetMoveSelected(false);
+            previewDestination = null;
+            routePreview?.gameObject.SetActive(false);
+            SettlementSidePanelUI.Ins?.SetMoveButtonLabel(
+                selectedTroopSlots.Count > 0 ? "CHỌN ĐIỂM ĐẾN" : "CHỌN Ô LÍNH");
+            return;
+        }
+
+        selectedTroopSlots.Add(slot);
+        slot.SetMoveSelected(true);
+        previewDestination = null;
+        routePreview?.gameObject.SetActive(false);
+        // Vẫn giữ panel nguồn khi mới chọn ô lính để người chơi có thể chọn
+        // thêm hoặc bỏ bớt nhiều nhóm trước khi chọn điểm đến.
+        SettlementSidePanelUI.Ins?.SetMoveButtonLabel("CHỌN ĐIỂM ĐẾN");
+    }
+
+    public void RestoreSelectedTroopSlotVisual()
+    {
+        if (isSelectingDestination)
+        {
+            foreach (TroopTrainingSlotUI slot in selectedTroopSlots)
+            {
+                slot?.SetMoveSelected(true);
+            }
+        }
+    }
+
+    private void ClearTroopSlotSelection()
+    {
+        foreach (TroopTrainingSlotUI slot in selectedTroopSlots)
+        {
+            slot?.SetMoveSelected(false);
+        }
+        selectedTroopSlots.Clear();
     }
 
     public void ApplySelectedDestination()
     {
         if (!HasPreviewDestination || sourceZone == null) return;
 
-        List<UnitController> availableSoldiers = GetSoldiersStationedInZone(sourceZone);
-        if (availableSoldiers.Count == 0)
+        if (selectedTroopSlots.Count == 0)
         {
-            Debug.LogWarning($"[MoveModeController] {sourceZone.settlementName} không có lính sẵn sàng để điều quân.");
+            UIManager.Ins?.ShowWarning("Hãy chọn ít nhất một ô lính trước khi xác nhận điều quân.");
+            SettlementSidePanelUI.Ins?.SetMoveButtonLabel("CHỌN Ô LÍNH");
             return;
         }
 
-        ConfirmDestination(previewDestination, availableSoldiers);
+        List<TroopDispatchGroup> dispatchGroups = new List<TroopDispatchGroup>();
+        HashSet<UnitController> alreadySelected = new HashSet<UnitController>();
+        foreach (TroopTrainingSlotUI slot in selectedTroopSlots)
+        {
+            List<UnitController> soldiers = GetSoldiersForTroopSlot(sourceZone, slot, alreadySelected);
+            if (soldiers.Count == 0)
+            {
+                UIManager.Ins?.ShowWarning($"Ô lính {slot.MoveSlotIndex + 1} không còn quân sẵn sàng để điều đi.");
+                return;
+            }
+
+            dispatchGroups.Add(new TroopDispatchGroup
+            {
+                sourceSlot = slot,
+                soldiers = soldiers
+            });
+            foreach (UnitController soldier in soldiers) alreadySelected.Add(soldier);
+        }
+
+        if (TroopTrainingManager.Ins == null ||
+            !TroopTrainingManager.Ins.TryGetAvailableGarrisonSlotIndices(
+                previewDestination,
+                dispatchGroups.Count,
+                out List<int> destinationSlotIndices))
+        {
+            UIManager.Ins?.ShowWarning("Không đủ chỗ ở vùng đích để điều quân.");
+            Debug.LogWarning($"[MoveModeController] Vùng đích không đủ {dispatchGroups.Count} ô trống cho các nhóm quân đã chọn.");
+            return;
+        }
+
+        ConfirmDestination(previewDestination, dispatchGroups, destinationSlotIndices);
     }
 
-    private void ConfirmDestination(SettlementZone destination, List<UnitController> selectedSoldiers)
+    private void ConfirmDestination(
+        SettlementZone destination,
+        List<TroopDispatchGroup> dispatchGroups,
+        List<int> destinationSlotIndices)
     {
-        if (destination == null || selectedSoldiers == null || selectedSoldiers.Count == 0) return;
+        if (destination == null || dispatchGroups == null || dispatchGroups.Count == 0 ||
+            destinationSlotIndices == null || destinationSlotIndices.Count != dispatchGroups.Count) return;
 
         isSelectingDestination = false;
         SettlementZone selectedZone = destination;
-        UnitController routeLeader = SendSoldiersToDestination(sourceZone, selectedZone, selectedSoldiers);
+        UnitController routeLeader = null;
+        for (int i = 0; i < dispatchGroups.Count; i++)
+        {
+            TroopDispatchGroup group = dispatchGroups[i];
+            UnitController groupLeader = SendSoldiersToDestination(
+                sourceZone,
+                selectedZone,
+                group.soldiers,
+                destinationSlotIndices[i]);
+            if (routeLeader == null) routeLeader = groupLeader;
+        }
+
+        List<int> sourceSlotIndices = new List<int>();
+        foreach (TroopDispatchGroup group in dispatchGroups)
+        {
+            if (group.sourceSlot != null) sourceSlotIndices.Add(group.sourceSlot.MoveSlotIndex);
+        }
+        TroopTrainingManager.Ins?.MarkSlotsDispatched(sourceZone, sourceSlotIndices);
+        ClearTroopSlotSelection();
         if (routePreview != null)
         {
             if (routeLeader != null)
@@ -188,10 +305,9 @@ public class MoveModeController : MonoBehaviour
             }
         }
 
-        if (SettlementManager.Ins != null)
-        {
-            SettlementManager.Ins.SelectSettlement(selectedZone);
-        }
+        // Không chọn settlement đích ở đây. Nếu gọi SelectSettlement, panel của
+        // vùng đích sẽ bật lên ngay sau khi người chơi vừa xác nhận điều quân.
+        SettlementSidePanelUI.Ins?.HideSettlementPanelAfterMove();
 
         MoveCameraTo(selectedZone.transform.position, selectedCameraHeight, () =>
         {
@@ -208,7 +324,8 @@ public class MoveModeController : MonoBehaviour
     private static UnitController SendSoldiersToDestination(
         SettlementZone source,
         SettlementZone destination,
-        List<UnitController> selectedSoldiers)
+        List<UnitController> selectedSoldiers,
+        int destinationSlotIndex)
     {
         if (source == null || destination == null || selectedSoldiers == null) return null;
 
@@ -230,7 +347,8 @@ public class MoveModeController : MonoBehaviour
                 wavesToReach,
                 null,
                 destination.settlementName,
-                source.settlementName);
+                source.settlementName,
+                destinationSlotIndex);
             if (routeLeader == null) routeLeader = soldier;
             dispatchedCount++;
         }
@@ -279,6 +397,60 @@ public class MoveModeController : MonoBehaviour
         }
 
         return soldiers;
+    }
+
+    private static List<UnitController> GetSoldiersForTroopSlot(
+        SettlementZone zone,
+        TroopTrainingSlotUI slot,
+        HashSet<UnitController> alreadySelected)
+    {
+        List<UnitController> selected = new List<UnitController>();
+        if (zone == null || slot == null) return selected;
+
+        List<UnitController> available = GetSoldiersStationedInZone(zone);
+        int targetCount = slot.MoveUnitCount;
+        bool centralTraining = TroopTrainingManager.Ins != null &&
+                               TroopTrainingManager.Ins.IsCentralTrainingSettlement(zone);
+        if (centralTraining) targetCount = 3;
+        if (targetCount <= 0) targetCount = 3;
+
+        // Ưu tiên các lính đã có đúng slot index. Đây là đường chính cho các
+        // nhóm mới và bảo đảm hai ô cùng loại không bị trộn vào nhau.
+        foreach (UnitController soldier in available)
+        {
+            if (soldier == null || alreadySelected.Contains(soldier) ||
+                soldier.stationedTroopSlotIndex != slot.MoveSlotIndex ||
+                ToBuildingType(soldier.AttackMode) != slot.MoveTroopType) continue;
+            selected.Add(soldier);
+            if (selected.Count >= targetCount) break;
+        }
+
+        // Tương thích với lính được tạo trước khi hệ thống slot được bổ sung:
+        // chỉ dùng lính chưa có index, rồi gán chúng vào slot đang chọn.
+        if (selected.Count < targetCount)
+        {
+            foreach (UnitController soldier in available)
+            {
+                if (soldier == null || alreadySelected.Contains(soldier) ||
+                    soldier.stationedTroopSlotIndex >= 0 ||
+                    ToBuildingType(soldier.AttackMode) != slot.MoveTroopType) continue;
+                soldier.stationedTroopSlotIndex = slot.MoveSlotIndex;
+                selected.Add(soldier);
+                if (selected.Count >= targetCount) break;
+            }
+        }
+
+        return selected;
+    }
+
+    private static BuildingType ToBuildingType(AttackMode attackMode)
+    {
+        switch (attackMode)
+        {
+            case AttackMode.Ranged: return BuildingType.BarracksArcher;
+            case AttackMode.Tank: return BuildingType.BarracksSpear;
+            default: return BuildingType.BarracksMelee;
+        }
     }
     private SettlementZone FindInitialDestination()
     {

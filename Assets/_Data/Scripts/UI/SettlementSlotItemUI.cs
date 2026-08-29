@@ -68,7 +68,7 @@ public class SettlementSlotItemUI : MonoBehaviour, IPointerClickHandler, IPointe
 
     private void OnDisable()
     {
-        hoverFrame?.Hide();
+        hoverFrame?.SetSelected(false);
     }
 
     private void SetupHoverFrame()

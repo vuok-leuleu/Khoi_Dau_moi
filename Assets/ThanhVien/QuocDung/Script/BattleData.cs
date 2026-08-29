@@ -34,6 +34,8 @@ public static class BattleData
         public int marchTargetWave;
         public string marchDestinationZoneName;
         public string stationedSettlementZoneName;
+        public int stationedTroopSlotIndex = -1;
+        public int marchDestinationTroopSlotIndex = -1;
         public bool hasReachedExpeditionDestination;
         public AttackMode attackMode = AttackMode.Melee;
     }
@@ -170,6 +172,8 @@ public static class BattleData
                         marchTargetWave = u.marchTargetWave,
                         marchDestinationZoneName = u.marchDestinationZoneName,
                         stationedSettlementZoneName = u.stationedSettlementZoneName,
+                        stationedTroopSlotIndex = u.stationedTroopSlotIndex,
+                        marchDestinationTroopSlotIndex = u.marchDestinationTroopSlotIndex,
                         hasReachedExpeditionDestination = u.hasReachedExpeditionDestination,
                         attackMode = u.AttackMode
                     });
@@ -338,6 +342,8 @@ public static class BattleData
         unit.marchTargetWave = info.marchTargetWave;
         unit.marchDestinationZoneName = info.marchDestinationZoneName;
         unit.stationedSettlementZoneName = info.stationedSettlementZoneName;
+        unit.stationedTroopSlotIndex = info.stationedTroopSlotIndex;
+        unit.marchDestinationTroopSlotIndex = info.marchDestinationTroopSlotIndex;
         unit.hasReachedExpeditionDestination = info.hasReachedExpeditionDestination;
         unit.AttackMode = info.attackMode;
         unit.isExpeditionMarching = !info.hasReachedExpeditionDestination;
@@ -599,6 +605,12 @@ internal sealed class BattleReturnRestoreRunner : MonoBehaviour
         {
             BattleData.ApplyBattleResultToScene();
         }
+
+        // Cờ này chỉ cần tồn tại trong lúc bản đồ mới đang khởi tạo để các
+        // hệ thống tải dữ liệu nhận biết đây là lần quay về từ SceneBattle.
+        // Sau khi đã áp dụng kết quả, phải xóa nó để lần tải scene sau không bị
+        // hiểu nhầm là vẫn đang quay về từ trận cũ.
+        BattleData.LastBattleWasVictory = false;
 
         restoreQueued = false;
     }

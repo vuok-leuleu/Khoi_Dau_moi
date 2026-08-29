@@ -50,6 +50,7 @@ public class SettlementSidePanelUI : MonoBehaviour
 
     private List<SettlementSlotItemUI> activeSlotUIItems = new List<SettlementSlotItemUI>();
     private List<TroopTrainingSlotUI> activeTrainingSlotUIItems = new List<TroopTrainingSlotUI>();
+    private bool movePanelHidden;
 
     private void OnDestroy()
     {
@@ -79,6 +80,8 @@ public class SettlementSidePanelUI : MonoBehaviour
 
     private void OnEnable()
     {
+        RestoreSettlementInfoAfterMove();
+
         if (upgradeSettlementBtn != null)
         {
             upgradeSettlementBtn.interactable = true;
@@ -129,9 +132,16 @@ public class SettlementSidePanelUI : MonoBehaviour
             moveButtonTextTMP.alignment = TextAlignmentOptions.Center;
         }
 
-        SetMoveButtonLabel(MoveModeController.IsMoveModeActive &&
-            MoveModeController.Ins != null &&
-            MoveModeController.Ins.HasPreviewDestination ? "XÁC NHẬN" : "ĐIỀU QUÂN");
+        if (MoveModeController.IsMoveModeActive && MoveModeController.Ins != null)
+        {
+            SetMoveButtonLabel(MoveModeController.Ins.HasPreviewDestination
+                ? "XÁC NHẬN"
+                : MoveModeController.Ins.HasSelectedTroopSlot ? "CHỌN ĐIỂM ĐẾN" : "CHỌN Ô LÍNH");
+        }
+        else
+        {
+            SetMoveButtonLabel("ĐIỀU QUÂN");
+        }
     }
 
     public void OnClickMove()
@@ -153,6 +163,12 @@ public class SettlementSidePanelUI : MonoBehaviour
         if (currentZone == null) currentZone = Object.FindFirstObjectByType<SettlementZone>();
         if (currentZone == null) return;
 
+        if (!currentZone.IsConquered)
+        {
+            if (moveButton != null) moveButton.gameObject.SetActive(false);
+            return;
+        }
+
         if (MoveModeController.Ins == null)
         {
             GameObject managerObject = new GameObject("MoveModeController");
@@ -165,7 +181,78 @@ public class SettlementSidePanelUI : MonoBehaviour
             moveSelectedCameraHeight,
             moveArrowHeightAboveTerrain);
         MoveModeController.Ins.BeginMoveMode(currentZone, soldierPointUIPrefab);
-        SetMoveButtonLabel("ĐIỀU QUÂN");
+        SetMoveButtonLabel("CHỌN Ô LÍNH");
+    }
+
+    /// <summary>
+    /// Ẩn toàn bộ SettlementSidePanel khi đang chốt điểm đến. Sau đó panel
+    /// được bật lại bằng ShowMoveConfirmationPanel() để bấm XÁC NHẬN.
+    /// </summary>
+    public void SetMoveDestinationSelectionView(bool hideSettlementInfo)
+    {
+        if (!hideSettlementInfo)
+        {
+            RestoreSettlementInfoAfterMove();
+            UIManager.Ins?.SetSettlementSidePanelVisible(true);
+            return;
+        }
+
+        // Ẩn chính object SettlementSidePanel thay vì chỉ ẩn vài child của nó.
+        // Nút XÁC NHẬN sẽ được bật lại bởi ShowMoveConfirmationPanel().
+        movePanelHidden = true;
+        UIManager.Ins?.SetSettlementSidePanelVisible(false);
+        if (UIManager.Ins == null && gameObject.activeSelf) gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// Hiện lại SettlementSidePanel nguồn sau khi đã chọn điểm đến để người
+    /// chơi bấm nút XÁC NHẬN. SettlementManager.CurrentSettlement vẫn là vùng
+    /// nguồn nên panel không bị đổi sang vùng đích.
+    /// </summary>
+    public void ShowMoveConfirmationPanel()
+    {
+        RestoreSettlementInfoAfterMove();
+        UIManager.Ins?.SetSettlementSidePanelVisible(true);
+
+        if (UIManager.Ins == null && !gameObject.activeSelf) gameObject.SetActive(true);
+
+        ConfigureMoveButton();
+        UpdateHeaderVisual();
+        RefreshPanel();
+        MoveModeController.Ins?.RestoreSelectedTroopSlotVisual();
+        SetMoveButtonLabel("XÁC NHẬN");
+    }
+
+    /// <summary>
+    /// Khôi phục settlement info sau khi hủy/hoàn tất chế độ điều quân.
+    /// </summary>
+    public void RestoreSettlementInfoAfterMove()
+    {
+        if (movePanelHidden)
+        {
+            movePanelHidden = false;
+            if (!gameObject.activeSelf) gameObject.SetActive(true);
+        }
+    }
+
+    /// <summary>
+    /// Đóng panel nguồn sau khi đoàn quân đã được điều đi. Khi mở lại,
+    /// panel sẽ được RefreshPanel theo settlement hiện tại.
+    /// </summary>
+    public void HideSettlementPanelAfterMove()
+    {
+        RestoreSettlementInfoAfterMove();
+        SetMoveButtonVisible(false);
+        if (UIManager.Ins != null) UIManager.Ins.SetSettlementSidePanelVisible(false);
+        else gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// Điều khiển riêng nút Điều quân khi panel bị đóng hoàn toàn.
+    /// </summary>
+    public void SetMoveButtonVisible(bool visible)
+    {
+        if (moveButton != null) moveButton.gameObject.SetActive(visible);
     }
 
     public void SetMoveButtonLabel(string label)
@@ -202,6 +289,12 @@ public class SettlementSidePanelUI : MonoBehaviour
         int currentLevel = (currentZone != null) ? currentZone.SettlementLevel : defaultSettlementLevel;
         bool hasEnemy = (currentZone != null) && currentZone.hasEnemyOutpost;
         bool isTownHallBuilt = (currentZone == null) || currentZone.isTownHallEstablished;
+
+        // Chỉ settlement đã chinh phục mới được phép điều quân.
+        if (moveButton != null)
+        {
+            SetMoveButtonVisible(currentZone == null || currentZone.IsConquered);
+        }
 
         if (settlementNameTMP != null) settlementNameTMP.text = currentName;
 
