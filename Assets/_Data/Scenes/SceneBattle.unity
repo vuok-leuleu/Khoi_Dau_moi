@@ -10183,8 +10183,8 @@ MonoBehaviour:
   unitsPerRow: 4
   enemyPrefab: {fileID: 370480945864454416, guid: 2d56dfb52da6a654ab4fca2a3d449e2d, type: 3}
   enemyRangedPrefab: {fileID: 3322312632539215873, guid: 01a8ddab520123647b95a3ddf60d1b92, type: 3}
-  spawnDragonAtBattleStart: 1
-  dragonPrefab: {fileID: 4118137334638840365, guid: 2e6e2341390240e46b5904a0c63be547, type: 3}
+  spawnDragonAtBattleStart: 0
+  dragonPrefab: {fileID: 0}
   soldierPrefab: {fileID: 5529766660109328545, guid: 6faae46d02eec1b458eaa4f73464be71, type: 3}
   archerSoldierPrefab: {fileID: 1999277456456185836, guid: 6f6383d8f0b521f449a9ee5eb68d04cf, type: 3}
   tankSoldierPrefab: {fileID: 4430688088267481095, guid: 65837077c6ee41e48b9fe12f3faae8a4, type: 3}
