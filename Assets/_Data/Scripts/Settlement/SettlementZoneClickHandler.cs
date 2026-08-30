@@ -25,8 +25,20 @@ public class SettlementZoneClickHandler : MonoBehaviour
 
         if (targetZone != null)
         {
+            if (!targetZone.isUnlocked)
+            {
+                // Vùng còn bị khóa không được mở settlement UI.
+                SettlementSidePanelUI.Ins?.SetMoveButtonVisible(false);
+                UIManager.Ins?.CloseSettlementPanel();
+                return;
+            }
+
             if (targetZone.hasEnemyOutpost)
             {
+                // Vùng còn địch chỉ hiện luồng tấn công (nếu đủ điều kiện),
+                // tuyệt đối không hiện bảng settlement.
+                SettlementSidePanelUI.Ins?.SetMoveButtonVisible(false);
+                UIManager.Ins?.CloseSettlementPanel();
                 EnemySpawn spawner = targetZone.GetComponentInChildren<EnemySpawn>();
                 if (spawner != null)
                 {

@@ -22,6 +22,7 @@ public sealed class SlotHoverFrame
 {
     private readonly RectTransform frameTransform;
     private readonly CanvasGroup canvasGroup;
+    private bool isSelected;
 
     public SlotHoverFrame(RectTransform slotTransform, SlotHoverFrameSettings settings)
     {
@@ -53,6 +54,13 @@ public sealed class SlotHoverFrame
 
     public void Hide()
     {
-        canvasGroup.alpha = 0f;
+        if (!isSelected) canvasGroup.alpha = 0f;
+    }
+
+    public void SetSelected(bool selected)
+    {
+        isSelected = selected;
+        if (selected) Show();
+        else Hide();
     }
 }

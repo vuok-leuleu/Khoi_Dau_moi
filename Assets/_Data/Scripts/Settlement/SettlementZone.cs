@@ -77,6 +77,13 @@ public class SettlementZone : MonoBehaviour
     public EnemySpawn enemySpawn;
 
     /// <summary>
+    /// Vùng đất đã được người chơi chinh phục và có thể mở Settlement UI.
+    /// Vùng chưa mở khóa hoặc còn căn cứ địch chỉ được xử lý như mục tiêu bản đồ,
+    /// không được mở bảng settlement.
+    /// </summary>
+    public bool IsConquered => isUnlocked && !hasEnemyOutpost;
+
+    /// <summary>
     /// Kiểm tra xem loại công nghệ công trình này đã được mở khóa toàn quốc (cho phép xây ở mọi vùng đất) chưa.
     /// - Trại Lính là công trình trung tâm đặt sẵn, không được xây trong Shop.
     /// - Các công trình khác tuân theo tiến độ mở khóa toàn quốc.

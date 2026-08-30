@@ -106,6 +106,18 @@ public class SettlementManager : Singleton<SettlementManager>
     {
         if (zone == null) return;
 
+        // Trong lúc điều quân, click bản đồ chỉ có nhiệm vụ chọn điểm đến;
+        // không được đổi settlement hiện tại hoặc mở panel mới.
+        if (MoveModeController.IsMoveModeActive) return;
+
+        // Không mở bảng settlement cho vùng chưa chinh phục.  Việc này cũng là
+        // lớp bảo vệ cuối cùng nếu một hệ thống click khác vẫn gọi SelectSettlement.
+        if (!zone.IsConquered)
+        {
+            Debug.LogWarning($"[SettlementManager] Bỏ qua mở settlement UI của vùng chưa chinh phục: {zone.settlementName}");
+            return;
+        }
+
         currentSettlement = zone;
         Debug.Log($"[SettlementManager] Đã chọn vùng đất: {currentSettlement.settlementName} (Đã có nhà chính: {currentSettlement.isTownHallEstablished})");
 

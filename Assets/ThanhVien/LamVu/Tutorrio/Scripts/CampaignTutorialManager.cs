@@ -117,11 +117,12 @@ public class CampaignTutorialManager : MonoBehaviour
         AutoDetectZones();
 
         // 3. Xử lý khi trở về từ SceneBattle
-        if (BattleData.HasResult || BattleData.LastBattleWasVictory)
+        // Chỉ tutorial mới được xử lý ở đây. Trước đây mọi trận thắng (ví dụ
+        // Brookhollow) đều bị nhánh này bắt vào, sau đó xóa BattleData.HasResult
+        // trước khi BattleReturnRestoreRunner kịp áp dụng kết quả chinh phục.
+        if (IsTutorialBattleReturn())
         {
             int lastStage = PlayerPrefs.GetInt("SavedTutorialStage", 4);
-            BattleData.HasResult = false;
-            BattleData.LastBattleWasVictory = false;
 
             EnsureAllBuiltBuildingsCompleted();
 
@@ -136,6 +137,20 @@ public class CampaignTutorialManager : MonoBehaviour
         HidePointer();
 
         RestoreTutorialCheckpoint();
+    }
+
+    private bool IsTutorialBattleReturn()
+    {
+        if (!(BattleData.HasResult || BattleData.LastBattleWasVictory)) return false;
+        if (enemyZone == null) return false;
+        if (BattleData.HasResult && !BattleData.IsPlayerVictory) return false;
+
+        // TargetedSettlementZoneName vẫn còn giữ tên mục tiêu ở thời điểm
+        // Start() chạy. BattleReturnRestoreRunner sẽ xóa tên này sau khi đã
+        // gọi ApplyBattleResultToScene(). Vì vậy chỉ nhận đúng trận đánh vào
+        // vùng tutorial, không nuốt kết quả của các vùng khác.
+        return !string.IsNullOrEmpty(BattleData.TargetedSettlementZoneName) &&
+               BattleData.TargetedSettlementZoneName == enemyZone.settlementName;
     }
 
     private void RestoreTutorialCheckpoint()

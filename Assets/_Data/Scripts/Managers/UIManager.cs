@@ -51,7 +51,21 @@ public class UIManager : Singleton<UIManager>
 
     public void OpenSettlementPanel()
     {
+        if (MoveModeController.IsMoveModeActive) return;
+
         CloseAllPopups();
+
+        SettlementZone currentZone = SettlementManager.Ins != null
+            ? SettlementManager.Ins.CurrentSettlement
+            : null;
+        if (currentZone != null && !currentZone.IsConquered)
+        {
+            // Toolbar không được mở settlement UI khi vùng hiện tại chưa chinh
+            // phục (ví dụ vẫn còn căn cứ địch hoặc chưa được mở khóa).
+            SettlementSidePanelUI.Ins?.SetMoveButtonVisible(false);
+            CloseSettlementPanel();
+            return;
+        }
 
         if (BuildTrainingUIManager.Ins != null)
         {
@@ -73,6 +87,14 @@ public class UIManager : Singleton<UIManager>
 
     public void CloseSettlementPanel()
     {
+        // Nút Move có thể nằm cùng SettlementSidePanel trong prefab nên cần
+        // ẩn theo panel khi đóng hoàn toàn. Trong lúc chờ xác nhận, luồng
+        // điều quân sẽ bật lại chính panel nguồn.
+        if (!MoveModeController.IsMoveModeActive)
+        {
+            SettlementSidePanelUI.Ins?.SetMoveButtonVisible(false);
+        }
+
         if (BuildTrainingUIManager.Ins != null)
         {
             BuildTrainingUIManager.Ins.CloseAllWindows();
@@ -81,6 +103,26 @@ public class UIManager : Singleton<UIManager>
 
         if (settlementSidePanel != null) settlementSidePanel.SetActive(false);
         if (SettlementSidePanelUI.Ins != null) SettlementSidePanelUI.Ins.gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// Bật/tắt đúng object SettlementSidePanel. Phương thức này được dùng trong
+    /// chế độ điều quân để ẩn panel khi bắt điểm đến rồi hiện lại panel nguồn
+    /// cho bước xác nhận, không đi qua OpenSettlementPanel (vốn bị chặn khi
+    /// MoveMode đang hoạt động).
+    /// </summary>
+    public void SetSettlementSidePanelVisible(bool visible)
+    {
+        if (settlementSidePanel != null)
+        {
+            settlementSidePanel.SetActive(visible);
+            return;
+        }
+
+        if (SettlementSidePanelUI.Ins != null)
+        {
+            SettlementSidePanelUI.Ins.gameObject.SetActive(visible);
+        }
     }
 
     // ====================================================================

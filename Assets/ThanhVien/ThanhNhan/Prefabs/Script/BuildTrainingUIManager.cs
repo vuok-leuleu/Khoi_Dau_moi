@@ -102,6 +102,8 @@ public sealed class BuildTrainingUIManager : MonoBehaviour
     /// </summary>
     public void ShowSettlementPanel()
     {
+        if (MoveModeController.IsMoveModeActive) return;
+
         FindUIReferences();
         SetActive(buildPanel, false);
         SetActive(trainingPanel, false);
@@ -215,6 +217,17 @@ public sealed class BuildTrainingUIManager : MonoBehaviour
 
     private void RefreshSettlement()
     {
+        SettlementZone currentZone = SettlementManager.Ins != null
+            ? SettlementManager.Ins.CurrentSettlement
+            : null;
+        if (currentZone != null && !currentZone.IsConquered)
+        {
+            // Không để các cửa sổ phụ vô tình kéo Settlement UI của vùng chưa
+            // chinh phục lên lại.
+            SetActive(settlementPanel, false);
+            return;
+        }
+
         if (settlementPanel != null && settlementPanel.gameObject.activeInHierarchy)
         {
             settlementPanel.UpdateHeaderVisual();

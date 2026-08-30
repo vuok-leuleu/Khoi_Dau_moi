@@ -324,7 +324,7 @@ public class SpawnSoldier : MonoBehaviour
     /// <summary>
     /// Sinh một đơn vị huấn luyện với các lính cùng loại tương ứng với doanh trại.
     /// </summary>
-    public int SpawnTrainedSoldiers(BuildingType troopType, int count)
+    public int SpawnTrainedSoldiers(BuildingType troopType, int count, int troopSlotIndex = -1)
     {
         GameObject prefabToUse = GetTrainedSoldierPrefab(troopType);
         if (prefabToUse == null)
@@ -336,8 +336,12 @@ public class SpawnSoldier : MonoBehaviour
         int spawnedCount = 0;
         for (int i = 0; i < count; i++)
         {
-            if (SpawnOneTrainedSoldier(prefabToUse) != null)
+            GameObject spawned = SpawnOneTrainedSoldier(prefabToUse);
+            if (spawned != null)
             {
+                UnitController unit = spawned.GetComponent<UnitController>();
+                if (unit == null) unit = spawned.GetComponentInChildren<UnitController>();
+                if (unit != null) unit.stationedTroopSlotIndex = troopSlotIndex;
                 spawnedCount++;
             }
         }
