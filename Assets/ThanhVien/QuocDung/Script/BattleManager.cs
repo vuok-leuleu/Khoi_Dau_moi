@@ -675,6 +675,8 @@ public class BattleManager : MonoBehaviour
     /// </summary>
     private void SetupFallbackTestData()
     {
+        BattleData.ClearConquestEnemyComposition();
+        BattleData.SpawnDragonInCurrentBattle = false;
         BattleData.EnemyWaveCount = Mathf.Max(1, testEnemyWaveCount);
         BattleData.PlayerBuildings.Clear();
 
@@ -909,20 +911,31 @@ public class BattleManager : MonoBehaviour
             return;
         }
 
-        if (enemyPrefab != null)
+        bool useConquestComposition = BattleData.HasExplicitConquestEnemyComposition &&
+                                      BattleData.ConquestEnemyPrefabs != null &&
+                                      BattleData.ConquestEnemyPrefabs.Count > 0;
+        int count = useConquestComposition
+            ? BattleData.ConquestEnemyPrefabs.Count
+            : Mathf.Max(1, BattleData.EnemyWaveCount);
+
+        if (useConquestComposition || enemyPrefab != null)
         {
-            int count = Mathf.Max(1, BattleData.EnemyWaveCount);
             Vector3 originRight = rightSpawnPoint.position;
 
             for (int i = 0; i < count; i++)
             {
+                GameObject prefabToSpawn = useConquestComposition
+                    ? BattleData.ConquestEnemyPrefabs[i]
+                    : enemyPrefab;
+                if (prefabToSpawn == null) continue;
+
                 int row = i / unitsPerRow;
                 int col = i % unitsPerRow;
 
                 Vector3 enemyPos = originRight + Vector3.right * (row * unitSpacing) + Vector3.forward * (col * unitSpacing - 1.5f);
                 Quaternion enemyRot = Quaternion.Euler(0, -90, 0); // Quay mặt về phía bên Trái (Player)
 
-                GameObject spawnedEnemy = Instantiate(enemyPrefab, enemyPos, enemyRot);
+                GameObject spawnedEnemy = Instantiate(prefabToSpawn, enemyPos, enemyRot);
                 spawnedEnemy.name = $"Enemy_WaveUnit_{i + 1}";
                 spawnedEnemyObjects.Add(spawnedEnemy);
 
@@ -935,7 +948,8 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        SpawnDragon();
+        // Rồng chỉ xuất hiện ở trận phòng thủ lớn được kịch bản đánh dấu.
+        if (!useConquestComposition && BattleData.SpawnDragonInCurrentBattle) SpawnDragon();
     }
 
     /// <summary>

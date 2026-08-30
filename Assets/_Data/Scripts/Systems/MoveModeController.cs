@@ -145,9 +145,23 @@ public class MoveModeController : MonoBehaviour
             return;
         }
 
-        if (!TryGetSettlementUnderPointer(out SettlementZone destination) || destination == sourceZone)
+        if (!TryGetSettlementUnderPointer(out SettlementZone destination))
         {
-            CancelMoveMode();
+            return;
+        }
+
+        TrySelectDestination(destination);
+    }
+
+    /// <summary>
+    /// SettlementZoneClickHandler gọi trực tiếp hàm này. Cách này vẫn chọn được
+    /// vùng đích khi collider của mô hình/công trình nằm trên bề mặt vùng đất.
+    /// </summary>
+    public void TrySelectDestination(SettlementZone destination)
+    {
+        if (!isSelectingDestination || !HasSelectedTroopSlot ||
+            destination == null || destination == sourceZone)
+        {
             return;
         }
 

@@ -517,10 +517,31 @@ public class UnitController : MonoBehaviour
 
         // Làm mới ngay số quân ngoài bản đồ và khung quân đồn trú đang mở.
         // Không cần chờ nhịp refresh 0.25 giây của SettlementZone.
+        SettlementZone destinationZone = null;
         if (SettlementManager.Ins != null)
         {
             SettlementManager.Ins.GetZoneByName(sourceZoneName)?.UpdateZoneVisualText();
-            SettlementManager.Ins.GetZoneByName(marchDestinationZoneName)?.UpdateZoneVisualText();
+            destinationZone = SettlementManager.Ins.GetZoneByName(marchDestinationZoneName);
+            destinationZone?.UpdateZoneVisualText();
+        }
+
+        if (destinationZone == null && !string.IsNullOrEmpty(marchDestinationZoneName))
+        {
+            foreach (SettlementZone zone in Object.FindObjectsByType<SettlementZone>(FindObjectsSortMode.None))
+            {
+                if (zone != null && zone.settlementName == marchDestinationZoneName)
+                {
+                    destinationZone = zone;
+                    break;
+                }
+            }
+        }
+
+        // Vừa đến vùng đang bị địch chiếm đóng: hiện nút Tấn công trên EnemyTower
+        // ngay lập tức, không cần click vào EnemySpawn như luồng cũ.
+        if (destinationZone != null && destinationZone.hasEnemyOutpost)
+        {
+            destinationZone.TryShowConquestAttackButton();
         }
         SettlementSidePanelUI.Ins?.RefreshTroopTrainingSlots();
     }

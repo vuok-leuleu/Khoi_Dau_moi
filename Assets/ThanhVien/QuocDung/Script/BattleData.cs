@@ -38,10 +38,19 @@ public static class BattleData
         public int marchDestinationTroopSlotIndex = -1;
         public bool hasReachedExpeditionDestination;
         public AttackMode attackMode = AttackMode.Melee;
+        // Tên prefab gốc để Cung/Khiên quay về đúng visual sau SceneBattle,
+        // thay vì lấy ngẫu nhiên một UnitController cùng AttackMode.
+        public string prefabName;
     }
 
     public static bool HasData = false;
     public static int EnemyWaveCount = 1;
+    // Danh sách prefab chỉ dùng cho trận chinh phục đang mở. Đây là bản sao dữ liệu
+    // từ SettlementZone nên không phụ thuộc EnemySpawn hay EnemySpawnManager.prefab.
+    public static List<GameObject> ConquestEnemyPrefabs = new List<GameObject>();
+    public static bool HasExplicitConquestEnemyComposition = false;
+    // Rồng chỉ được bật cho trận phòng thủ lớn do EnemyInvasionManager đánh dấu.
+    public static bool SpawnDragonInCurrentBattle = false;
     public static List<BuildingInfo> PlayerBuildings = new List<BuildingInfo>();
     public static int TotalSoldiersInBase = 0;
     public static string MainSceneName = "MainScene";
@@ -65,6 +74,27 @@ public static class BattleData
     /// Dùng cho UILinh.ResetGame() để reset về trạng thái gốc của Scene.
     /// </summary>
     public static bool SkipAutoLoadOnNextSceneLoad = false;
+
+    public static void SetConquestEnemyComposition(SettlementZone zone)
+    {
+        ConquestEnemyPrefabs.Clear();
+        HasExplicitConquestEnemyComposition = false;
+
+        if (zone == null) return;
+
+        List<GameObject> prefabs = zone.GetConquestEnemyPrefabs();
+        if (prefabs == null || prefabs.Count == 0) return;
+
+        ConquestEnemyPrefabs.AddRange(prefabs);
+        HasExplicitConquestEnemyComposition = true;
+        EnemyWaveCount = ConquestEnemyPrefabs.Count;
+    }
+
+    public static void ClearConquestEnemyComposition()
+    {
+        ConquestEnemyPrefabs.Clear();
+        HasExplicitConquestEnemyComposition = false;
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void InitSceneLoadedCallback()
@@ -126,6 +156,17 @@ public static class BattleData
             SavedIsWaveActive = DayNightManager.Ins.IsWaveActive;
         }
 
+        // Khi đang đi chinh phục một căn cứ địch, cuộc tập kích đang nhắm vào
+        // ta vẫn phải tiếp tục tồn tại khi quay về Main Map.
+        if (IsAttackingExpedition)
+        {
+            EnemyInvasionManager.CaptureActiveRaidForBattleTransition();
+        }
+        else
+        {
+            EnemyInvasionManager.ClearPendingRaidRestore();
+        }
+
         // 2. Lưu tiến trình di chuyển của các đợt EnemyAI
         SavedEnemyMarches.Clear();
         EnemyAI[] activeEnemies = Object.FindObjectsByType<EnemyAI>(FindObjectsSortMode.None);
@@ -175,7 +216,8 @@ public static class BattleData
                         stationedTroopSlotIndex = u.stationedTroopSlotIndex,
                         marchDestinationTroopSlotIndex = u.marchDestinationTroopSlotIndex,
                         hasReachedExpeditionDestination = u.hasReachedExpeditionDestination,
-                        attackMode = u.AttackMode
+                        attackMode = u.AttackMode,
+                        prefabName = NormalizePrefabName(u.gameObject.name)
                     });
                 }
 
@@ -284,14 +326,48 @@ public static class BattleData
 
             if (marchingList.Count > 0)
             {
-                EnemySpawn enemySpawn = Object.FindFirstObjectByType<EnemySpawn>();
-                Transform targetTr = enemySpawn != null ? enemySpawn.transform : null;
+                SettlementZone targetZone = null;
+                List<UnitController> expeditionMarchers = new List<UnitController>();
+                foreach (UnitController unit in marchingList)
+                {
+                    if (unit == null || string.IsNullOrEmpty(unit.marchDestinationZoneName)) continue;
 
-                if (targetTr != null)
+                    SettlementZone zone = SettlementManager.Ins != null
+                        ? SettlementManager.Ins.GetZoneByName(unit.marchDestinationZoneName)
+                        : null;
+                    if (zone == null)
+                    {
+                        foreach (SettlementZone candidate in Object.FindObjectsByType<SettlementZone>(FindObjectsSortMode.None))
+                        {
+                            if (candidate != null && candidate.settlementName == unit.marchDestinationZoneName)
+                            {
+                                zone = candidate;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (zone != null && zone.hasEnemyOutpost)
+                    {
+                        if (targetZone == null)
+                        {
+                            targetZone = zone;
+                        }
+
+                        if (zone == targetZone)
+                        {
+                            expeditionMarchers.Add(unit);
+                        }
+                    }
+                }
+
+                Transform targetTr = targetZone != null ? targetZone.GetConquestTargetTransform() : null;
+
+                if (targetTr != null && expeditionMarchers.Count > 0)
                 {
                     GameObject runner = new GameObject("ExpeditionBattleTriggerRunner");
                     ExpeditionBattleTrigger trigger = runner.AddComponent<ExpeditionBattleTrigger>();
-                    trigger.StartMonitoring(marchingList, targetTr, "SceneBattle");
+                    trigger.StartMonitoring(expeditionMarchers, targetTr, "SceneBattle");
                 }
             }
         }
@@ -309,8 +385,26 @@ public static class BattleData
         if (info == null) return null;
 
         UnitController prefabUnit = null;
+
+        // Ưu tiên chính xác prefab mà đơn vị đã dùng trước trận. Điều này quan
+        // trọng với Cung/Khiên vì chỉ ghi AttackMode là chưa đủ để giữ model.
+        if (!string.IsNullOrEmpty(info.prefabName))
+        {
+            foreach (UnitController candidate in Resources.FindObjectsOfTypeAll<UnitController>())
+            {
+                if (candidate != null && candidate.AttackMode == info.attackMode &&
+                    !candidate.gameObject.scene.IsValid() &&
+                    NormalizePrefabName(candidate.gameObject.name) == info.prefabName)
+                {
+                    prefabUnit = candidate;
+                    break;
+                }
+            }
+        }
+
         foreach (UnitController candidate in Resources.FindObjectsOfTypeAll<UnitController>())
         {
+            if (prefabUnit != null) break;
             if (candidate != null && candidate.AttackMode == info.attackMode && !candidate.gameObject.scene.IsValid())
             {
                 prefabUnit = candidate;
@@ -351,6 +445,13 @@ public static class BattleData
         return unit;
     }
 
+    private static string NormalizePrefabName(string objectName)
+    {
+        return string.IsNullOrEmpty(objectName)
+            ? string.Empty
+            : objectName.Replace("(Clone)", string.Empty).Trim();
+    }
+
     private static SettlementZone FindSettlementZone(string settlementZoneName)
     {
         if (string.IsNullOrEmpty(settlementZoneName)) return null;
@@ -377,9 +478,11 @@ public static class BattleData
         TotalSoldiersInBase = 0;
         HasResult = false;
         LastBattleWasVictory = false;
+        SpawnDragonInCurrentBattle = false;
         SavedCurrentWave = 0;
         SavedEnemyMarches.Clear();
         SavedSoldierMarches.Clear();
+        EnemyInvasionManager.ClearPendingRaidRestore();
     }
 
     public static bool IsAttackingExpedition = false; // true = Xâm Chiếm / Chinh Phạt | false = Phòng Thủ Căn Cứ Nhà
@@ -412,6 +515,7 @@ public static class BattleData
             if (IsPlayerVictory)
             {
                 Debug.Log("[BattleData] 🛡️ PHÒNG THỦ THẮNG! Bảo toàn 100% căn cứ và tài nguyên.");
+                EnemyInvasionManager.Ins?.TriggerDefenseVictory();
             }
             else
             {
@@ -421,6 +525,7 @@ public static class BattleData
 
         HasResult = false;
         IsAttackingExpedition = false;
+        SpawnDragonInCurrentBattle = false;
 
         // Lưu lại trạng thái công trình sau trận đấu vào Save Slot 1
         BuildingSystem buildingSys = BuildingSystem.Ins != null ? BuildingSystem.Ins : Object.FindFirstObjectByType<BuildingSystem>();
@@ -600,6 +705,7 @@ internal sealed class BattleReturnRestoreRunner : MonoBehaviour
         }
 
         BattleData.RestoreWaveAndMarchProgress();
+        EnemyInvasionManager.RestorePendingRaidAfterBattleTransition();
 
         if (BattleData.HasResult)
         {

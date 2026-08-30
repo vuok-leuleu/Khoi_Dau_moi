@@ -83,6 +83,13 @@ public class TroopSelectionModalUI : MonoBehaviour
         targetZone = zone;
         targetSlotIndex = slotIndex;
 
+        // Khóa trực quan Khiên Binh cho đến khi EVENMOOR được giải phóng.
+        // TroopTrainingManager vẫn kiểm tra thêm để tránh bỏ qua bằng script khác.
+        if (trainSpearBtn != null)
+        {
+            trainSpearBtn.interactable = CampaignTutorialManager.IsShieldTroopTrainingUnlocked();
+        }
+
         BuildTrainingUIManager.Ins?.ShowTrainingWindow();
         gameObject.SetActive(true);
         transform.SetAsLastSibling(); // Đưa Popup lên trên cùng của Canvas để không bị che bởi các UI khác

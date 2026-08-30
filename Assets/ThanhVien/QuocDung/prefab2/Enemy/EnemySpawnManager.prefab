@@ -77,7 +77,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a4a7ff61e8ef1794da6fa01ea1f319b6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemySpawn
-  enemyCountInBase: 1
+  isRaidSpawnPoint: 0
+  raidDirection: 0
   enemyPrefab: {fileID: 370480945864454416, guid: 2d56dfb52da6a654ab4fca2a3d449e2d, type: 3}
   defaultEnemySpawnWeight: 1
   additionalEnemyTypes:
@@ -91,6 +92,7 @@ MonoBehaviour:
   spawnPoints:
   - {fileID: 267864803989536797}
   spawnForwardOffset: 3.5
+  fixedWavesToReachTarget: 0
   attackTarget: {fileID: 0}
   useGridSpawn: 1
   rows: 2

@@ -768,6 +768,14 @@ public class TroopTrainingManager : MonoBehaviour
     {
         if (zone == null || slotIndex < 0 || slotIndex >= MAX_TRAINING_SLOTS) return false;
 
+        if (troopType == BuildingType.BarracksSpear && !CampaignTutorialManager.IsShieldTroopTrainingUnlocked())
+        {
+            const string warning = "🔒 Khiên Binh chưa mở khóa. Hãy chinh phục EVENMOOR và xây Mỏ Đá trước trận Rồng!";
+            UIManager.Ins?.ShowWarning(warning);
+            Debug.LogWarning($"[TroopTrainingManager] {warning}");
+            return false;
+        }
+
         if (!IsCentralTrainingSettlement(zone))
         {
             const string warning = "Chỉ có thể huấn luyện lính tại thành đầu tiên có Trại Lính!";

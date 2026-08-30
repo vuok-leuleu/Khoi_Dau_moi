@@ -30,6 +30,13 @@ public class EnemyAI : MonoBehaviour
     private Vector3 startSpawnPosition;
     private bool isWaveInfoInitialized = false;
 
+    /// <summary>
+    /// Vị trí xuất phát thật của cuộc hành quân. EnemyInvasionManager dùng dữ liệu
+    /// này để khôi phục chính xác cuộc tập kích sau khi người chơi đi đánh một
+    /// căn cứ khác rồi quay về bản đồ.
+    /// </summary>
+    public Vector3 StartSpawnPosition => startSpawnPosition;
+
     public void InitializeWaveArrival(int currentWave, int wavesToReach = -1)
     {
         if (startSpawnPosition == Vector3.zero)
@@ -51,6 +58,34 @@ public class EnemyAI : MonoBehaviour
         spawnWave = currentWave;
         targetWave = spawnWave + wavesToReachTarget;
         isWaveInfoInitialized = true;
+    }
+
+    /// <summary>
+    /// Phục hồi địch đang hành quân sau round-trip qua SceneBattle. Không gọi
+    /// InitializeWaveArrival ở đây vì hàm đó sẽ tính lại từ wave hiện tại và
+    /// làm cuộc tập kích bị quay về đầu đường.
+    /// </summary>
+    public void RestoreWaveArrival(
+        Vector3 currentPosition,
+        Vector3 originalSpawnPosition,
+        int savedSpawnWave,
+        int savedTargetWave,
+        int savedWavesToReachTarget,
+        bool wasWaitingAtTarget)
+    {
+        startSpawnPosition = originalSpawnPosition;
+        transform.position = currentPosition;
+        spawnWave = savedSpawnWave;
+        targetWave = savedTargetWave;
+        wavesToReachTarget = Mathf.Max(1, savedWavesToReachTarget);
+        isWaitingAtTarget = wasWaitingAtTarget;
+        isWaveInfoInitialized = true;
+
+        if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh)
+        {
+            agent.Warp(currentPosition);
+            agent.isStopped = wasWaitingAtTarget;
+        }
     }
 
     /// <summary>
@@ -473,6 +508,9 @@ public class EnemyAI : MonoBehaviour
         if (targetZone == null) targetZone = UIEnemyWaveButton.FindZoneFromTarget(transform);
         if (targetZone != null) BattleData.TargetedSettlementZoneName = targetZone.settlementName;
         BattleData.IsAttackingExpedition = false;
+        BattleData.ClearConquestEnemyComposition();
+        BattleData.SpawnDragonInCurrentBattle = EnemyInvasionManager.Ins != null &&
+                                               EnemyInvasionManager.Ins.CurrentRaidSpawnsDragon;
         BattleData.RecordCurrentSceneState(waveCount);
 
         Debug.Log($"[EnemyAI] Bấm nút Tấn Công (Wave = {waveCount} Enemy) -> Đang chuyển sang Scene: {battleSceneName}");
@@ -585,6 +623,7 @@ public class EnemyAI : MonoBehaviour
                     isWaitingAtTarget = true;
                     if (isMeLeader)
                     {
+                        EnemyInvasionManager.Ins?.NotifyEnemiesArrivedAtTarget();
                         StartArrivalPresentation(destination);
                     }
 
@@ -1771,4 +1810,3 @@ public class EnemyAI : MonoBehaviour
         return targetPos;
     }
 }
-

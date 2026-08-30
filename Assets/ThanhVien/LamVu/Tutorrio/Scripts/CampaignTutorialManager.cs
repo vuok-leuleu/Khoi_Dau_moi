@@ -39,6 +39,20 @@ public enum DemaciaTutorialStage
     Completed
 }
 
+/// <summary>
+/// Chuỗi ba trận dùng riêng cho phần thuyết trình. Không thay thế 6 bước
+/// Prologue; chuỗi này bắt đầu sau khi Prologue hoàn tất.
+/// </summary>
+public enum PresentationBattlePhase
+{
+    None,
+    FirstDefenseActive,
+    DragonCountdown,
+    DragonDefenseActive,
+    Completed,
+    Failed
+}
+
 public class CampaignTutorialManager : MonoBehaviour
 {
     public static CampaignTutorialManager Ins { get; private set; }
@@ -60,6 +74,20 @@ public class CampaignTutorialManager : MonoBehaviour
     [SerializeField] private EnemySpawn enemySpawner;       
     [SerializeField] private int tutorialEnemyCount = 3;    
 
+    [Header("=== KỊCH BẢN 3 TRẬN THUYẾT TRÌNH ===")]
+    [Tooltip("Sau Prologue: phòng thủ nhỏ tại Vaskasia, cảnh báo 10 Wave phải chiếm EVENMOOR, rồi phòng thủ lớn có Rồng đúng một lần.")]
+    [SerializeField] private bool enablePresentationBattleSequence = true;
+    [SerializeField] private SettlementZone evenmoorZone;
+    [SerializeField, Min(1)] private int wavesBeforeDragonDefense = 10;
+    [SerializeField, Min(0)] private int warningWavesBeforeFirstDefense = 0;
+    [SerializeField] private PresentationBattlePhase presentationBattlePhase = PresentationBattlePhase.None;
+    [Tooltip("Thoại ngay sau khi thắng phòng thủ nhỏ: báo trước số Wave còn lại trước trận Rồng. Nếu để trống, game dùng câu thoại mặc định.")]
+    [SerializeField] private DialogueData[] dragonCountdownDialogues;
+    [Tooltip("Thoại cảnh báo ngay trước khi đợt Rồng được spawn từ Dragon Raid Spawn Point. Nếu để trống, game dùng câu thoại mặc định.")]
+    [SerializeField] private DialogueData[] dragonDefenseWarningDialogues;
+    [Tooltip("Thoại phát ngay sau khi người chơi phòng thủ thành công trước đợt Rồng. Nếu để trống, game dùng đoạn kết mặc định.")]
+    [SerializeField] private DialogueData[] dragonDefenseVictoryDialogues;
+
     [Header("=== NÚT TẤN CÔNG CĂN CỨ ĐỊCH ===")]
     [SerializeField] private Button outpostAttackButton;
 
@@ -78,14 +106,71 @@ public class CampaignTutorialManager : MonoBehaviour
     private float nextUITargetRefreshTime;
     private const string TutorialStagePrefKey = "PrologueTutorialStage";
     private const int PrologueQuestCount = 6;
+    private const string PresentationBattlePhasePrefKey = "PresentationBattlePhase";
+    private const string DragonDefenseWavePrefKey = "PresentationDragonDefenseWave";
+    private const string ShieldTroopUnlockedPrefKey = "PresentationShieldTroopUnlocked";
+    private const string StoneBuildingsUnlockedPrefKey = "PresentationEvenmoorStoneBuildingsUnlocked";
+    private int dragonDefenseWave = -1;
+    private DayNightManager subscribedDayNightManager;
 
     public bool IsTutorialCompleted()
     {
         return currentStage == DemaciaTutorialStage.Completed || PlayerPrefs.GetInt("TutorialCompleted", 0) == 1;
     }
 
+    /// <summary>
+    /// Khiên Binh vẫn dùng BarracksSpear có sẵn, nhưng sau Prologue chỉ được
+    /// huấn luyện mới sau khi giải phóng EVENMOOR. Trong Prologue luôn cho phép
+    /// để không làm hỏng bước huấn luyện Hộ Vệ ban đầu.
+    /// </summary>
+    public static bool IsShieldTroopTrainingUnlocked()
+    {
+        if (Ins == null || !Ins.enablePresentationBattleSequence || !Ins.IsTutorialCompleted())
+        {
+            return true;
+        }
+
+        if (PlayerPrefs.GetInt(ShieldTroopUnlockedPrefKey, 0) == 1)
+        {
+            return true;
+        }
+
+        return Ins.evenmoorZone != null && Ins.evenmoorZone.IsConquered;
+    }
+
+    /// <summary>
+    /// Mỏ/Kho Đá được mở vĩnh viễn ngay khi EVENMOOR đã chinh phục. Cờ riêng
+    /// này giữ nguyên qua lần chuyển SceneBattle rồi quay về bản đồ chính.
+    /// </summary>
+    public static bool AreStoneBuildingsUnlockedByEvenmoor()
+    {
+        if (PlayerPrefs.GetInt(StoneBuildingsUnlockedPrefKey, 0) == 1)
+        {
+            return true;
+        }
+
+        // Tương thích tiến trình đã chinh phục EVENMOOR trước khi cờ này được
+        // thêm: tự ghi cờ ngay lần đầu shop kiểm tra công trình.
+        if (Ins != null)
+        {
+            Ins.AutoDetectZones();
+            if (Ins.evenmoorZone != null && Ins.evenmoorZone.IsConquered)
+            {
+                PlayerPrefs.SetInt(StoneBuildingsUnlockedPrefKey, 1);
+                PlayerPrefs.Save();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private void OnDestroy()
     {
+        if (subscribedDayNightManager != null)
+        {
+            subscribedDayNightManager.OnWaveStart -= OnWaveStarted;
+        }
         if (Ins == this) Ins = null;
     }
 
@@ -103,20 +188,21 @@ public class CampaignTutorialManager : MonoBehaviour
 
     private void Start()
     {
+        // Tìm đủ cả 3 vùng trước khi kiểm tra trạng thái tutorial/save.
+        AutoDetectZones();
+
         // 1. Kiểm tra nếu đã hoàn thành Tutorial từ trước
         if (PlayerPrefs.GetInt("TutorialCompleted", 0) == 1)
         {
             SetStage(DemaciaTutorialStage.Completed);
             HidePointer();
             UpdateHint("");
-            if (tutorialCanvas != null) tutorialCanvas.gameObject.SetActive(false);
+            EnsureTutorialCanvasCanShowDialogue();
+            StartPresentationBattleSequenceIfNeeded();
             return;
         }
 
-        // 2. Tìm vùng đất tự động: Bắt buộc tìm chính xác ZEFFIRA và VASKASIA
-        AutoDetectZones();
-
-        // 3. Xử lý khi trở về từ SceneBattle
+        // 2. Xử lý khi trở về từ SceneBattle
         // Chỉ tutorial mới được xử lý ở đây. Trước đây mọi trận thắng (ví dụ
         // Brookhollow) đều bị nhánh này bắt vào, sau đó xóa BattleData.HasResult
         // trước khi BattleReturnRestoreRunner kịp áp dụng kết quả chinh phục.
@@ -205,7 +291,7 @@ public class CampaignTutorialManager : MonoBehaviour
     /// </summary>
     private void AutoDetectZones()
     {
-        SettlementZone[] zones = Object.FindObjectsByType<SettlementZone>(FindObjectsSortMode.None);
+        SettlementZone[] zones = Object.FindObjectsByType<SettlementZone>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         
         if (baseZone == null)
         {
@@ -245,12 +331,65 @@ public class CampaignTutorialManager : MonoBehaviour
             }
         }
 
-        Debug.Log($"[CampaignTutorialManager] 🗺️ Base Zone: {(baseZone != null ? baseZone.settlementName : "NULL")}, Enemy Zone: {(enemyZone != null ? enemyZone.settlementName : "NULL")}");
+        if (evenmoorZone == null)
+        {
+            foreach (var z in zones)
+            {
+                if (z != null && z.settlementName.ToUpper().Contains("EVENMOOR"))
+                {
+                    evenmoorZone = z;
+                    break;
+                }
+            }
+
+            if (evenmoorZone == null)
+            {
+                foreach (var z in zones)
+                {
+                    if (z != null && z.GetEffectiveTier() == 2)
+                    {
+                        evenmoorZone = z;
+                        break;
+                    }
+                }
+            }
+        }
+
+        Debug.Log($"[CampaignTutorialManager] 🗺️ Base: {(baseZone != null ? baseZone.settlementName : "NULL")}, Vaskasia: {(enemyZone != null ? enemyZone.settlementName : "NULL")}, Evenmoor: {(evenmoorZone != null ? evenmoorZone.settlementName : "NULL")}");
     }
 
     private void Update()
     {
+        EnsureWaveSubscription();
         UpdateHighlightRingAnimation();
+    }
+
+    /// <summary>
+    /// Countdown trận Rồng phải chạy theo mọi Wave thực tế. Trước đây nó chỉ
+    /// được gọi khi xây xong công trình, vì vậy bấm Qua Ngày/Wave không làm
+    /// tiến trình 10 Wave thay đổi.
+    /// </summary>
+    private void EnsureWaveSubscription()
+    {
+        DayNightManager activeManager = DayNightManager.HasInstance ? DayNightManager.Ins : null;
+        if (subscribedDayNightManager == activeManager) return;
+
+        if (subscribedDayNightManager != null)
+        {
+            subscribedDayNightManager.OnWaveStart -= OnWaveStarted;
+            subscribedDayNightManager = null;
+        }
+
+        if (activeManager == null) return;
+
+        activeManager.OnWaveStart -= OnWaveStarted;
+        activeManager.OnWaveStart += OnWaveStarted;
+        subscribedDayNightManager = activeManager;
+    }
+
+    private void OnWaveStarted(int waveIndex)
+    {
+        UpdateDragonDefenseCountdown();
     }
 
     private void SetCameraControlEnabled(bool isEnabled)
@@ -262,8 +401,22 @@ public class CampaignTutorialManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// TutorialCanvas cũng chứa Dialogue Panel. Không được tắt cả Canvas sau
+    /// Prologue, nếu không thoại không hiện và callback không trả camera về
+    /// trạng thái bật. Hint, tay chỉ và vòng highlight được ẩn riêng.
+    /// </summary>
+    private void EnsureTutorialCanvasCanShowDialogue()
+    {
+        if (tutorialCanvas != null && !tutorialCanvas.gameObject.activeSelf)
+        {
+            tutorialCanvas.gameObject.SetActive(true);
+        }
+    }
+
     private void PlayDialogueSequence(DialogueData[] customArray, DialogueData[] defaultArray, System.Action onComplete = null)
     {
+        EnsureTutorialCanvasCanShowDialogue();
         DialogueData[] toPlay = (customArray != null && customArray.Length > 0) ? customArray : defaultArray;
         if (NPCDialogueUI.Ins != null && toPlay != null && toPlay.Length > 0)
         {
@@ -407,6 +560,8 @@ public class CampaignTutorialManager : MonoBehaviour
             CompleteQuestObjective(2); // Tick xong Quest 2: Huấn luyện xong Hộ Vệ
             StartStage3_MarchToEnemyEast();
         }
+
+        UpdateDragonDefenseCountdown();
     }
 
     // ====================================================================
@@ -655,6 +810,13 @@ public class CampaignTutorialManager : MonoBehaviour
         PlayerPrefs.SetInt("TutorialCompleted", 1);
         PlayerPrefs.Save();
 
+        // Ngăn raid ngẫu nhiên chen vào giữa lời thoại kết Prologue và trận
+        // phòng thủ nhỏ đã định sẵn cho phần thuyết trình.
+        if (enablePresentationBattleSequence)
+        {
+            EnemyInvasionManager.Ins?.SetAutomaticRaidsPaused(true);
+        }
+
         HidePointer();
 
         PlayDialogueSequence(stageCompleteDialogues, new DialogueData[]
@@ -670,17 +832,222 @@ public class CampaignTutorialManager : MonoBehaviour
                 JsonDataManager.Ins.BroadcastAllResources();
             }
             
-            // 🔥 ẨN HOÀN TOÀN HINT TEXT VÀ CANVAS KHI KẾT THÚC HƯỚNG DẪN
+            // Ẩn phần chỉ dẫn của tutorial, nhưng giữ TutorialCanvas hoạt động
+            // vì Dialogue Panel cho chiến dịch/trận Rồng là con của Canvas này.
             UpdateHint("");
             if (hintText != null) hintText.gameObject.SetActive(false);
-            if (tutorialCanvas != null) tutorialCanvas.gameObject.SetActive(false);
+            EnsureTutorialCanvasCanShowDialogue();
 
             // Mở bảng Chapter Quest chúc mừng và hiển thị Chương I
             if (ChapterQuestController.Instance != null)
             {
                 ChapterQuestController.Instance.OpenWindow();
             }
+
+            StartPresentationBattleSequenceIfNeeded();
         });
+    }
+
+    // ====================================================================
+    // KỊCH BẢN THUYẾT TRÌNH: 2 TRẬN NHỎ + 1 TRẬN LỚN CÓ RỒNG
+    // ====================================================================
+    private void StartPresentationBattleSequenceIfNeeded()
+    {
+        if (!enablePresentationBattleSequence || !IsTutorialCompleted()) return;
+
+        AutoDetectZones();
+        LoadPresentationBattleState();
+        if (enemyZone == null || !enemyZone.IsConquered) return;
+
+        EnemyInvasionManager.Ins?.SetAutomaticRaidsPaused(presentationBattlePhase != PresentationBattlePhase.Completed &&
+                                                           presentationBattlePhase != PresentationBattlePhase.Failed);
+
+        if (presentationBattlePhase == PresentationBattlePhase.None)
+        {
+            presentationBattlePhase = PresentationBattlePhase.FirstDefenseActive;
+            SavePresentationBattleState();
+            StartCoroutine(StartFirstPresentationDefense());
+        }
+        else if (presentationBattlePhase == PresentationBattlePhase.DragonCountdown)
+        {
+            UpdateDragonDefenseCountdown();
+        }
+    }
+
+    private IEnumerator StartFirstPresentationDefense()
+    {
+        // Chờ EnemyInvasionManager và bốn điểm Raid hoàn tất khởi tạo.
+        yield return null;
+
+        if (EnemyInvasionManager.Ins == null ||
+            !EnemyInvasionManager.Ins.StartScriptedRaid(enemyZone, false, warningWavesBeforeFirstDefense))
+        {
+            Debug.LogWarning("[CampaignTutorialManager] Không thể bắt đầu trận phòng thủ nhỏ. Kiểm tra 4 Raid Spawn Point.");
+            UIManager.Ins?.ShowWarning("Không thể gọi đợt địch: hãy kiểm tra 4 Raid Spawn Point.");
+        }
+    }
+
+    /// <summary>
+    /// Được EnemyInvasionManager gọi sau khi người chơi thắng một trận phòng thủ.
+    /// Phase đã lưu quyết định đây là trận kịch bản nào; không dùng cờ tạm thời
+    /// của EnemyInvasionManager vì cờ đó mất khi đi qua SceneBattle.
+    /// </summary>
+    public void OnScriptedDefenseVictory(bool wasDragonDefense)
+    {
+        if (presentationBattlePhase == PresentationBattlePhase.FirstDefenseActive && !wasDragonDefense)
+        {
+            // Trận Rồng phải hiện ngay sau khi thắng phòng thủ nhỏ. Mốc 10
+            // Wave là thời gian đoàn Rồng hành quân trên map, không phải chờ
+            // thêm 10 Wave rồi mới cho công trình Rồng xuất hiện.
+            presentationBattlePhase = PresentationBattlePhase.DragonDefenseActive;
+            dragonDefenseWave = -1;
+            SavePresentationBattleState();
+
+            string msg = $"⚠️ MỤC TIÊU KHẨN: Còn {wavesBeforeDragonDefense} Wave nữa Rồng sẽ dẫn quân tấn công! Hãy chinh phục EVENMOOR để mở Mỏ Đá, chuẩn bị lực lượng Khiên Binh.";
+            UIManager.Ins?.ShowWarning(msg);
+            Debug.Log($"[CampaignTutorialManager] {msg}");
+            // Khởi động ngay để công trình Rồng và nhãn "Còn 10 Wave" đã
+            // tồn tại trên map trong lúc lời thoại được hiển thị.
+            StartDragonDefenseFromAssignedSpawnPoint();
+            DialogueData[] countdownDialogue = dragonCountdownDialogues != null && dragonCountdownDialogues.Length > 0
+                ? dragonCountdownDialogues
+                : dragonDefenseWarningDialogues;
+            PlayDialogueSequence(countdownDialogue, new[]
+            {
+                new DialogueData
+                {
+                    speakerName = "Trưởng Làng Marcus",
+                    message = $"Tin khẩn! Trinh sát báo Rồng sẽ dẫn quân tấn công sau {wavesBeforeDragonDefense} Wave. Hãy chinh phục EVENMOOR để mở Mỏ Đá và chuẩn bị Khiên Binh."
+                }
+            });
+            return;
+        }
+
+        if (presentationBattlePhase == PresentationBattlePhase.DragonDefenseActive)
+        {
+            presentationBattlePhase = PresentationBattlePhase.Completed;
+            SavePresentationBattleState();
+
+            const string msg = "🏆 CHIẾN THẮNG LỚN! Rồng đã bị đánh bại, Demacia an toàn.";
+            UIManager.Ins?.ShowWarning(msg);
+            Debug.Log($"[CampaignTutorialManager] {msg}");
+            PlayDialogueSequence(dragonDefenseVictoryDialogues, new[]
+            {
+                new DialogueData
+                {
+                    speakerName = "Trưởng Làng Marcus",
+                    message = "Lãnh chúa, con Rồng đã bị đánh bại! Người dân Demacia cuối cùng cũng có thể sống trong bình yên."
+                },
+                new DialogueData
+                {
+                    speakerName = "Trưởng Làng Marcus",
+                    message = "Chiến thắng hôm nay là minh chứng cho lòng dũng cảm của ngài. Demacia sẽ luôn ghi nhớ ngày này!"
+                }
+            }, () => EnemyInvasionManager.Ins?.SetAutomaticRaidsPaused(false));
+        }
+    }
+
+    /// <summary>
+    /// Trận kịch bản chỉ xuất hiện một lần. Thua sẽ kết thúc chuỗi thay vì tự spawn lại.
+    /// </summary>
+    public void OnScriptedDefenseDefeat(bool wasDragonDefense)
+    {
+        if (presentationBattlePhase != PresentationBattlePhase.FirstDefenseActive &&
+            presentationBattlePhase != PresentationBattlePhase.DragonDefenseActive)
+        {
+            return;
+        }
+
+        presentationBattlePhase = PresentationBattlePhase.Failed;
+        SavePresentationBattleState();
+        EnemyInvasionManager.Ins?.SetAutomaticRaidsPaused(false);
+        Debug.LogWarning($"[CampaignTutorialManager] Thất bại trận {(wasDragonDefense ? "Rồng" : "phòng thủ nhỏ")}; trận kịch bản không tự lặp lại.");
+    }
+
+    /// <summary>
+    /// SettlementZone gọi khi một căn cứ địch bị đánh bại. EVENMOOR mở sẵn Mỏ/Kho Đá
+    /// từ danh sách unlockedBuildingTypes trong Scene, đồng thời mở mốc chuẩn bị Khiên Binh.
+    /// </summary>
+    public void OnSettlementConquered(SettlementZone conqueredZone)
+    {
+        if (conqueredZone == null) return;
+        AutoDetectZones();
+
+        bool isEvenmoor = conqueredZone == evenmoorZone ||
+                          conqueredZone.settlementName.ToUpper().Contains("EVENMOOR");
+        if (!isEvenmoor) return;
+
+        PlayerPrefs.SetInt(ShieldTroopUnlockedPrefKey, 1);
+        PlayerPrefs.SetInt(StoneBuildingsUnlockedPrefKey, 1);
+
+        // Bảo đảm Zone Evenmoor cũng thực sự mang công nghệ Mỏ/Kho Đá, không
+        // chỉ hiện thông báo hay mở khóa Khiên Binh.
+        if (conqueredZone.unlockedBuildingTypes == null)
+        {
+            conqueredZone.unlockedBuildingTypes = new List<BuildingType>();
+        }
+        if (!conqueredZone.unlockedBuildingTypes.Contains(BuildingType.StoneMine))
+        {
+            conqueredZone.unlockedBuildingTypes.Add(BuildingType.StoneMine);
+        }
+        if (!conqueredZone.unlockedBuildingTypes.Contains(BuildingType.StoneStorage))
+        {
+            conqueredZone.unlockedBuildingTypes.Add(BuildingType.StoneStorage);
+        }
+        conqueredZone.SaveSettlementState();
+        PlayerPrefs.Save();
+        const string msg = "⛏️ EVENMOOR đã được chinh phục! Mỏ Đá đã mở khóa; bạn có thể chuẩn bị Khiên Binh cho trận Rồng.";
+        UIManager.Ins?.ShowWarning(msg);
+        Debug.Log($"[CampaignTutorialManager] {msg}");
+    }
+
+    private void UpdateDragonDefenseCountdown()
+    {
+        // Tương thích save cũ: trước đây DragonCountdown chờ 10 Wave trước
+        // khi hiện Rồng. Luồng mới hiện Rồng ngay và để đoàn quân đi 10 Wave.
+        if (presentationBattlePhase == PresentationBattlePhase.DragonCountdown)
+        {
+            presentationBattlePhase = PresentationBattlePhase.DragonDefenseActive;
+            dragonDefenseWave = -1;
+            SavePresentationBattleState();
+            StartDragonDefenseFromAssignedSpawnPoint();
+            return;
+        }
+
+        // Nếu gán Dragon Raid Spawn Point muộn, thử gọi lại ở Wave sau.
+        if (presentationBattlePhase == PresentationBattlePhase.DragonDefenseActive)
+        {
+            if (EnemyInvasionManager.Ins != null && !EnemyInvasionManager.Ins.isInvasionActive)
+            {
+                StartDragonDefenseFromAssignedSpawnPoint();
+            }
+            return;
+        }
+    }
+
+    private void StartDragonDefenseFromAssignedSpawnPoint()
+    {
+        if (EnemyInvasionManager.Ins == null ||
+            !EnemyInvasionManager.Ins.StartScriptedDragonRaid(enemyZone, 0))
+        {
+            Debug.LogWarning("[CampaignTutorialManager] Không thể bắt đầu trận Rồng. Hãy gán Dragon Raid Spawn Point bằng EnemySpawnManager riêng.");
+            UIManager.Ins?.ShowWarning("Chưa gán điểm spawn Rồng riêng. Hãy kéo EnemySpawnManager vào Dragon Raid Spawn Point.");
+        }
+    }
+
+    private void LoadPresentationBattleState()
+    {
+        presentationBattlePhase = (PresentationBattlePhase)PlayerPrefs.GetInt(
+            PresentationBattlePhasePrefKey,
+            (int)presentationBattlePhase);
+        dragonDefenseWave = PlayerPrefs.GetInt(DragonDefenseWavePrefKey, dragonDefenseWave);
+    }
+
+    private void SavePresentationBattleState()
+    {
+        PlayerPrefs.SetInt(PresentationBattlePhasePrefKey, (int)presentationBattlePhase);
+        PlayerPrefs.SetInt(DragonDefenseWavePrefKey, dragonDefenseWave);
+        PlayerPrefs.Save();
     }
 
     // ====================================================================

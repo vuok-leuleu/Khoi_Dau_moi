@@ -19,9 +19,16 @@ public class SettlementZoneClickHandler : MonoBehaviour
 
     private void OnMouseUp()
     {
-        if (MoveModeController.IsMoveModeActive) return;
         if (RTSCameraController.IsMouseDragging || RTSCameraController.WasMouseDragThisPress) return;
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+
+        // Khi đang điều quân, dùng Zone đã được handler này gán sẵn thay vì
+        // raycast qua model. Nhờ đó VASKASIA <-> EVENMOOR đều chọn được làm đích.
+        if (MoveModeController.IsMoveModeActive)
+        {
+            MoveModeController.Ins?.TrySelectDestination(targetZone);
+            return;
+        }
 
         if (targetZone != null)
         {
@@ -39,11 +46,7 @@ public class SettlementZoneClickHandler : MonoBehaviour
                 // tuyệt đối không hiện bảng settlement.
                 SettlementSidePanelUI.Ins?.SetMoveButtonVisible(false);
                 UIManager.Ins?.CloseSettlementPanel();
-                EnemySpawn spawner = targetZone.GetComponentInChildren<EnemySpawn>();
-                if (spawner != null)
-                {
-                    spawner.TryShowAttackButton();
-                }
+                targetZone.TryShowConquestAttackButton();
             }
             else if (SettlementManager.Ins != null)
             {

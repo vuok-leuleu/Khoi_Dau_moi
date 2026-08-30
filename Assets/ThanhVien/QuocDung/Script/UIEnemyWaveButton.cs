@@ -109,32 +109,23 @@ public class UIEnemyWaveButton : MonoBehaviour
         Time.timeScale = 1f;
         if (targetLeadEnemy == null || !isTroopsArrivedAtTarget) return;
 
-        int enemyCount = 5;
-        EnemySpawn spawner = targetLeadEnemy.GetComponentInParent<EnemySpawn>();
-        if (spawner == null) spawner = Object.FindFirstObjectByType<EnemySpawn>();
-        if (spawner != null && spawner.enemyCountInBase > 0)
-        {
-            enemyCount = spawner.enemyCountInBase;
-        }
-        else
-        {
-            SettlementZone zone = targetLeadEnemy.GetComponentInParent<SettlementZone>();
-            if (zone != null && zone.enemyCountInBase > 0)
-            {
-                enemyCount = zone.enemyCountInBase;
-            }
-        }
-
         SettlementZone targetZone = FindZoneFromTarget(targetLeadEnemy);
+        int enemyCount = targetZone != null ? targetZone.GetConquestEnemyCount() : 5;
         if (targetZone != null)
         {
             BattleData.TargetedSettlementZoneName = targetZone.settlementName;
+            BattleData.SetConquestEnemyComposition(targetZone);
             Debug.Log($"[UIEnemyWaveButton] 🎯 Đã ghi nhận Vùng đất mục tiêu chinh phục: {BattleData.TargetedSettlementZoneName}");
+        }
+        else
+        {
+            BattleData.ClearConquestEnemyComposition();
         }
 
         string sceneName = string.IsNullOrWhiteSpace(battleSceneName) ? "SceneBattle" : battleSceneName;
         Debug.Log($"[UIEnemyWaveButton] ⚔️ Người chơi bấm TẤN CÔNG. Chuyển sang {sceneName}...");
         BattleData.IsAttackingExpedition = true;
+        BattleData.SpawnDragonInCurrentBattle = false;
         BattleData.RecordCurrentSceneState(enemyCount);
         CloudSceneTransition.LoadSceneWithCloud(sceneName);
         gameObject.SetActive(false);
@@ -182,10 +173,15 @@ public class UIEnemyWaveButton : MonoBehaviour
     {
         if (leadEnemy == null) return null;
 
+        // Nút phải đứng trên đỉnh công trình, không chỉ cao hơn pivot ở mặt đất.
+        // EnemyTower có model cao nên offset cố định 3.5 dễ bị mesh che mất.
+        heightOffset = GetClearHeightAboveTarget(leadEnemy, heightOffset);
+
         // Ensure only ONE button is created per leader enemy
         UIEnemyWaveButton existing = leadEnemy.GetComponentInChildren<UIEnemyWaveButton>();
         if (existing != null)
         {
+            existing.heightOffset = Mathf.Max(existing.heightOffset, heightOffset);
             if (isArrived)
             {
                 existing.isTroopsArrivedAtTarget = true;
@@ -262,6 +258,23 @@ public class UIEnemyWaveButton : MonoBehaviour
         waveBtn.Initialize(leadEnemy, heightOffset);
 
         return waveBtn;
+    }
+
+    /// <summary>
+    /// Trả về offset đủ cao để Canvas không bị Renderer của công trình che.
+    /// </summary>
+    public static float GetClearHeightAboveTarget(Transform target, float minimumHeight)
+    {
+        if (target == null) return minimumHeight;
+
+        float highestY = target.position.y;
+        Renderer[] renderers = target.GetComponentsInChildren<Renderer>(true);
+        foreach (Renderer renderer in renderers)
+        {
+            if (renderer != null) highestY = Mathf.Max(highestY, renderer.bounds.max.y);
+        }
+
+        return Mathf.Max(minimumHeight, highestY - target.position.y + 1.25f);
     }
 }
 

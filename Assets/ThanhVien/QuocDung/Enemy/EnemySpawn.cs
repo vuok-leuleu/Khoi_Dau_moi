@@ -3,6 +3,14 @@ using System.Collections.Generic;
 
 public class EnemySpawn : MonoBehaviour
 {
+    public enum RaidDirection
+    {
+        North,
+        East,
+        South,
+        West
+    }
+
     [System.Serializable]
     public class EnemyType
     {
@@ -13,10 +21,16 @@ public class EnemySpawn : MonoBehaviour
         [Min(1)] public int spawnWeight = 1;
     }
 
-    [Header("Căn Cứ Địch - Số Lượng Enemy")]
-    [Tooltip("Số lượng Enemy tại căn cứ này khi vào SceneBattle (Có thể chỉnh tùy ý cho từng vị trí trong Inspector).")]
-    public int enemyCountInBase = 5;
-    [Tooltip("Enemy mặc định. Vẫn hoạt động như cũ khi danh sách Enemy Types bên dưới để trống.")]
+    [Header("Raid Spawn Point")]
+    [Tooltip("Chỉ bật trên đúng 4 điểm cố định dùng cho raid tấn công căn cứ. EnemySpawn trong prefab căn cứ chinh phục phải để tắt.")]
+    [SerializeField] private bool isRaidSpawnPoint = false;
+    [SerializeField] private RaidDirection raidDirection = RaidDirection.North;
+
+    public bool IsRaidSpawnPoint => isRaidSpawnPoint;
+    public RaidDirection Direction => raidDirection;
+
+    [Header("Raid Enemy Configuration")]
+    [Tooltip("Enemy mặc định của raid. Không dùng cho địch cần đánh bại để chinh phục SettlementZone; vẫn hoạt động khi danh sách Enemy Types bên dưới để trống.")]
     [SerializeField] private GameObject enemyPrefab;
     [SerializeField, Min(1)] private int defaultEnemySpawnWeight = 1;
 
@@ -27,6 +41,10 @@ public class EnemySpawn : MonoBehaviour
     [SerializeField] private Transform[] spawnPoints;
     [Tooltip("Khoảng cách đẩy vị trí spawn ra phía trước căn cứ (mét) để tránh bị vướng vào nhà/căn cứ.")]
     [SerializeField] private float spawnForwardOffset = 3.5f;
+
+    [Header("Wave Arrival")]
+    [Tooltip("Số Wave đội quân cần để tới thành. Để 0 thì tự tính theo khoảng cách. Manager có thể ghi đè giá trị này cho trận đặc biệt.")]
+    [SerializeField, Min(0)] private int fixedWavesToReachTarget = 0;
 
     /// <summary>
     /// Danh sách các điểm spawn
@@ -65,42 +83,6 @@ public class EnemySpawn : MonoBehaviour
         return transform;
     }
 
-    private bool HasArrivedExpeditionForThisOutpost()
-    {
-        SettlementZone targetZone = UIEnemyWaveButton.FindZoneFromTarget(GetSpawnPoint());
-        if (targetZone == null) return false;
-
-        UnitController[] soldiers = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
-        foreach (UnitController soldier in soldiers)
-        {
-            if (soldier != null && soldier.gameObject.activeInHierarchy &&
-                soldier.hasReachedExpeditionDestination &&
-                soldier.marchDestinationZoneName == targetZone.settlementName)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public void TryShowAttackButton()
-    {
-        if (!HasArrivedExpeditionForThisOutpost()) return;
-
-        UIEnemyWaveButton.CreateButton(GetSpawnPoint(), 3.5f, true);
-    }
-
-    private void HideAttackButtonUntilTroopsArrive()
-    {
-        if (HasArrivedExpeditionForThisOutpost()) return;
-
-        UIEnemyWaveButton[] buttons = GetComponentsInChildren<UIEnemyWaveButton>(true);
-        foreach (UIEnemyWaveButton button in buttons)
-        {
-            if (button != null) Destroy(button.gameObject);
-        }
-    }
     [Header("Attack Target (Optional)")]
     [SerializeField] public Transform attackTarget;
 
@@ -157,6 +139,22 @@ public class EnemySpawn : MonoBehaviour
     private readonly List<GameObject> activeWaveEnemies = new List<GameObject>();
     private int nextSpawnWave = -1;
 
+    /// <summary>
+    /// Lấy các enemy của đúng wave do Spawn này tạo. Danh sách được dùng để lưu
+    /// và khôi phục một cuộc tập kích bị gián đoạn bởi SceneBattle khác.
+    /// </summary>
+    public List<EnemyAI> GetActiveWaveEnemies()
+    {
+        activeWaveEnemies.RemoveAll(enemy => enemy == null);
+        List<EnemyAI> enemies = new List<EnemyAI>();
+        foreach (GameObject enemy in activeWaveEnemies)
+        {
+            EnemyAI enemyAI = enemy != null ? enemy.GetComponent<EnemyAI>() : null;
+            if (enemyAI != null) enemies.Add(enemyAI);
+        }
+        return enemies;
+    }
+
     public void SetAttackTarget(Transform target)
     {
         if (target != null)
@@ -183,7 +181,7 @@ public class EnemySpawn : MonoBehaviour
 
     private void OnEnable()
     {
-        SubscribeToWaveEvents();
+        if (isRaidSpawnPoint) SubscribeToWaveEvents();
     }
 
     private void OnDisable()
@@ -211,6 +209,10 @@ public class EnemySpawn : MonoBehaviour
 
     private void OnWaveStartHandler(int waveIndex)
     {
+        if (!isRaidSpawnPoint) return;
+        // Khi EnemyInvasionManager tồn tại, chỉ Manager được phép chọn một trong
+        // bốn hướng và gọi SpawnEnemy. Điều này chặn bốn điểm tự spawn cùng lúc.
+        if (EnemyInvasionManager.Ins != null) return;
         if (IsTutorialActive() || IsWaveInProgress()) return;
         if (nextSpawnWave < 0) { ScheduleNextSpawn(waveIndex); return; }
         if (waveIndex >= nextSpawnWave) SpawnEnemy();
@@ -218,6 +220,8 @@ public class EnemySpawn : MonoBehaviour
 
     private void Start()
     {
+        if (!isRaidSpawnPoint) return;
+
         SubscribeToWaveEvents();
         GetOrFindAttackTarget();
 
@@ -234,14 +238,10 @@ public class EnemySpawn : MonoBehaviour
         StopWaveSpawning();
     }
 
-    private void OnMouseDown()
-    {
-        if (UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject()) return;
-        TryShowAttackButton();
-    }
-
     private void Update()
     {
+        if (!isRaidSpawnPoint) return;
+
         // Đảm bảo event listener luôn được kết nối nếu DayNightManager khởi tạo trễ
         if (DayNightManager.HasInstance && DayNightManager.Ins != null)
         {
@@ -250,25 +250,6 @@ public class EnemySpawn : MonoBehaviour
         StopWaveSpawning();
 
         RefreshActiveWave();
-        HideAttackButtonUntilTroopsArrive();
-
-        // 🎯 Lắng nghe click chuột vào Căn cứ Địch để hiện nút TẤN CÔNG
-        if (Input.GetMouseButtonDown(0))
-        {
-            if (UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject()) return;
-
-            if (Camera.main != null)
-            {
-                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-                if (Physics.Raycast(ray, out RaycastHit hit, 200f))
-                {
-                    if (hit.transform == transform || hit.transform.IsChildOf(transform))
-                    {
-                        TryShowAttackButton();
-                    }
-                }
-            }
-        }
     }
 
     private void StartWaveSpawning()
@@ -303,7 +284,7 @@ public class EnemySpawn : MonoBehaviour
         }
     }
 
-    public void SpawnEnemy()
+    public void SpawnEnemy(int waveArrivalOverride = -1)
     {
         if (!HasSpawnableEnemyPrefab())
         {
@@ -333,11 +314,11 @@ public class EnemySpawn : MonoBehaviour
 
             if (useGridSpawn)
             {
-                SpawnGridAt(source.position, source.rotation, squadList, spawnedWaveEnemies);
+                SpawnGridAt(source.position, source.rotation, squadList, spawnedWaveEnemies, waveArrivalOverride);
             }
             else
             {
-                SpawnAtPosition(source.position, source.rotation, squadList, spawnedWaveEnemies);
+                SpawnAtPosition(source.position, source.rotation, squadList, spawnedWaveEnemies, waveArrivalOverride);
             }
         }
 
@@ -440,7 +421,7 @@ public class EnemySpawn : MonoBehaviour
         return bestEnemy != null ? bestEnemy : enemies[0];
     }
 
-    private void SpawnGridAt(Vector3 center, Quaternion rotation, List<EnemyAI> squadList, List<GameObject> spawnedWaveEnemies = null)
+    private void SpawnGridAt(Vector3 center, Quaternion rotation, List<EnemyAI> squadList, List<GameObject> spawnedWaveEnemies = null, int waveArrivalOverride = -1)
     {
         Vector3 forward = rotation * Vector3.forward;
         Vector3 right = rotation * Vector3.right;
@@ -453,7 +434,7 @@ public class EnemySpawn : MonoBehaviour
                 float offsetZ = (r - (rows - 1) * 0.5f) * spacingZ;
 
                 Vector3 spawnPos = center + right * offsetX + forward * offsetZ;
-                SpawnAtPosition(spawnPos, rotation, squadList, spawnedWaveEnemies);
+                SpawnAtPosition(spawnPos, rotation, squadList, spawnedWaveEnemies, waveArrivalOverride);
             }
         }
     }
@@ -505,7 +486,7 @@ public class EnemySpawn : MonoBehaviour
         return null;
     }
 
-    private GameObject SpawnAtPosition(Vector3 position, Quaternion rotation, List<EnemyAI> squadList, List<GameObject> spawnedWaveEnemies = null)
+    private GameObject SpawnAtPosition(Vector3 position, Quaternion rotation, List<EnemyAI> squadList, List<GameObject> spawnedWaveEnemies = null, int waveArrivalOverride = -1)
     {
         GameObject prefabToSpawn = SelectEnemyPrefab();
         if (prefabToSpawn == null)
@@ -557,7 +538,10 @@ public class EnemySpawn : MonoBehaviour
             enemyAI.exitPlayModeWhenNoBuildings = exitPlayModeWhenNoBuildings;
 
             int curWave = (DayNightManager.HasInstance && DayNightManager.Ins != null) ? DayNightManager.Ins.CurrentWave : 1;
-            enemyAI.InitializeWaveArrival(curWave, -1);
+            int arrivalWaves = waveArrivalOverride > 0
+                ? waveArrivalOverride
+                : (fixedWavesToReachTarget > 0 ? fixedWavesToReachTarget : -1);
+            enemyAI.InitializeWaveArrival(curWave, arrivalWaves);
 
             if (target != null)
             {
@@ -646,10 +630,3 @@ public class EnemySpawn : MonoBehaviour
         return enemyPrefab;
     }
 }
-
-
-
-
-
-
-

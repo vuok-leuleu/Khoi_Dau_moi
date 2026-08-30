@@ -12,6 +12,16 @@ using TMPro;
 
 public class SettlementZone : MonoBehaviour
 {
+    [System.Serializable]
+    public class EnemyDefenderGroup
+    {
+        [Tooltip("Prefab Enemy xuất hiện trong trận đánh chinh phục vùng đất này.")]
+        public GameObject enemyPrefab;
+
+        [Tooltip("Số lượng của loại Enemy này.")]
+        [Min(1)] public int count = 1;
+    }
+
     // Mỗi thành dùng cùng một quy tắc mở ô: Lv.1 = 4, Lv.2 = 5, Lv.3+ = 6.
     // Các slotPoint thiếu trong Inspector sẽ dùng vị trí lưới dự phòng.
     public const int MaxBuildingSlotCount = 6;
@@ -67,14 +77,14 @@ public class SettlementZone : MonoBehaviour
     [Header("=== CĂN CỨ / CÔNG TRÌNH ĐỊCH (CHINH PHỤC VÙNG ĐẤT) ===")]
     [Tooltip("Tích vào nếu vùng đất này ban đầu bị Kẻ Địch chiếm đóng.")]
     public bool hasEnemyOutpost = false;
-    [Tooltip("Số lượng Enemy tại căn cứ này khi đem quân đến đánh (Tùy chỉnh riêng từng vùng).")]
-    public int enemyCountInBase = 5;
+    [Tooltip("Số lượng địch mặc định khi danh sách Đội hình địch chinh phục để trống. Dùng để giữ tương thích với các vùng đất cũ.")]
+    [Min(1)] public int enemyCountInBase = 5;
+    [Tooltip("Đội hình địch phải đánh bại để chinh phục vùng đất này. Mỗi phần tử là một loại Enemy và số lượng tương ứng. Khi có dữ liệu ở đây, trận đánh không dùng EnemySpawn hay EnemySpawnManager.prefab.")]
+    public List<EnemyDefenderGroup> conquestEnemyGroups = new List<EnemyDefenderGroup>();
     [Tooltip("Kéo Prefab Căn cứ / Công trình Địch từ Project vào đây.")]
     public GameObject enemyOutpostPrefab;
-    [Tooltip("Kéo vị trí / GameObject Spawn / EnemySpawn vào đây (nếu để trống sẽ tự động tìm EnemySpawn trong Scene).")]
+    [Tooltip("Vị trí đặt căn cứ địch hoặc marker của vùng đất. Không cần có EnemySpawn.")]
     public Transform enemySpawnPoint;
-    [Tooltip("Gán EnemySpawn trực tiếp (tùy chọn).")]
-    public EnemySpawn enemySpawn;
 
     /// <summary>
     /// Vùng đất đã được người chơi chinh phục và có thể mở Settlement UI.
@@ -82,6 +92,105 @@ public class SettlementZone : MonoBehaviour
     /// không được mở bảng settlement.
     /// </summary>
     public bool IsConquered => isUnlocked && !hasEnemyOutpost;
+
+    /// <summary>
+    /// Tổng số quân cần đánh bại để chinh phục vùng đất. Nếu chưa cấu hình đội hình,
+    /// dùng số lượng mặc định để các vùng cũ vẫn hoạt động.
+    /// </summary>
+    public int GetConquestEnemyCount()
+    {
+        int configuredCount = 0;
+        if (conquestEnemyGroups != null)
+        {
+            foreach (EnemyDefenderGroup group in conquestEnemyGroups)
+            {
+                if (group != null && group.enemyPrefab != null)
+                {
+                    configuredCount += Mathf.Max(1, group.count);
+                }
+            }
+        }
+
+        return configuredCount > 0 ? configuredCount : Mathf.Max(1, enemyCountInBase);
+    }
+
+    /// <summary>
+    /// Trả về từng prefab Enemy theo đội hình được cấu hình cho trận chinh phục.
+    /// Danh sách rỗng nghĩa là BattleManager dùng Enemy prefab mặc định như các vùng cũ.
+    /// </summary>
+    public List<GameObject> GetConquestEnemyPrefabs()
+    {
+        List<GameObject> prefabs = new List<GameObject>();
+        if (conquestEnemyGroups == null) return prefabs;
+
+        foreach (EnemyDefenderGroup group in conquestEnemyGroups)
+        {
+            if (group == null || group.enemyPrefab == null) continue;
+
+            int groupCount = Mathf.Max(1, group.count);
+            for (int i = 0; i < groupCount; i++)
+            {
+                prefabs.Add(group.enemyPrefab);
+            }
+        }
+
+        return prefabs;
+    }
+
+    /// <summary>
+    /// Lấy mốc thế giới dùng để quân viễn chinh tập kết và hiển thị nút Tấn công.
+    /// Luồng chinh phục không phụ thuộc vào EnemySpawn.
+    /// </summary>
+    public Transform GetConquestTargetTransform()
+    {
+        if (spawnedEnemyOutpostInstance != null && spawnedEnemyOutpostInstance.activeInHierarchy)
+        {
+            return spawnedEnemyOutpostInstance.transform;
+        }
+
+        // Sau khi quay về từ SceneBattle, Unity không giữ lại reference runtime
+        // của tháp cũ. Tìm lại visual thuộc trực tiếp Settlement này để cả nút
+        // Tấn Công lẫn bước dọn dẹp vẫn dùng đúng EnemyTower.
+        GameObject existingOutpost = FindExistingEnemyOutpostVisual();
+        if (existingOutpost != null && existingOutpost.activeInHierarchy)
+        {
+            spawnedEnemyOutpostInstance = existingOutpost;
+            return existingOutpost.transform;
+        }
+
+        if (enemySpawnPoint != null && enemySpawnPoint.gameObject.activeInHierarchy)
+        {
+            return enemySpawnPoint;
+        }
+
+        return townHallPoint != null ? townHallPoint : transform;
+    }
+
+    private bool HasArrivedExpeditionForThisZone()
+    {
+        UnitController[] soldiers = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
+        foreach (UnitController soldier in soldiers)
+        {
+            if (soldier != null && soldier.gameObject.activeInHierarchy &&
+                soldier.hasReachedExpeditionDestination &&
+                soldier.marchDestinationZoneName == settlementName)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Hiển thị nút mở trận chinh phục khi đoàn quân đã tới vùng đất này.
+    /// </summary>
+    public void TryShowConquestAttackButton()
+    {
+        if (!hasEnemyOutpost || !HasArrivedExpeditionForThisZone()) return;
+
+        UIEnemyWaveButton.CreateButton(GetConquestTargetTransform(), 3.5f, true);
+    }
 
     /// <summary>
     /// Kiểm tra xem loại công nghệ công trình này đã được mở khóa toàn quốc (cho phép xây ở mọi vùng đất) chưa.
@@ -104,8 +213,16 @@ public class SettlementZone : MonoBehaviour
             return true;
         }
 
+        // EVENMOOR là mốc chiến dịch mở Mỏ/Kho Đá. Không phụ thuộc vào việc
+        // Scene vừa được nạp lại sau trận chinh phục.
+        if ((type == BuildingType.StoneMine || type == BuildingType.StoneStorage) &&
+            CampaignTutorialManager.AreStoneBuildingsUnlockedByEvenmoor())
+        {
+            return true;
+        }
+
         // 2. CÔNG NGHỆ NÂNG CAO (Kho Đá/Mỏ Đá, Lính Cung, Tháp Canh...): Chỉ mở khóa xây ở mọi nơi sau khi XÂM CHIẾM được Vùng Đất chứa công nghệ đó!
-        SettlementZone[] allZones = Object.FindObjectsByType<SettlementZone>(FindObjectsSortMode.None);
+        SettlementZone[] allZones = Object.FindObjectsByType<SettlementZone>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         if (allZones == null || allZones.Length == 0) return true;
 
         foreach (var zone in allZones)
@@ -314,19 +431,7 @@ public class SettlementZone : MonoBehaviour
         int count;
         if (!isUnlocked || hasEnemyOutpost)
         {
-            count = enemyCountInBase;
-            if (enemySpawn != null && enemySpawn.enemyCountInBase > 0)
-            {
-                count = enemySpawn.enemyCountInBase;
-            }
-            else
-            {
-                EnemySpawn localSpawn = GetComponentInChildren<EnemySpawn>(true);
-                if (localSpawn != null && localSpawn.enemyCountInBase > 0)
-                {
-                    count = localSpawn.enemyCountInBase;
-                }
-            }
+            count = GetConquestEnemyCount();
         }
         else
         {
@@ -573,7 +678,7 @@ public class SettlementZone : MonoBehaviour
         }
 
         // 🔒 Nếu bỏ tích hasEnemyOutpost trong Play Mode hoặc đã tiêu diệt nhưng đối tượng 3D vẫn còn -> Tự động Destroy đối tượng 3D
-        if (!hasEnemyOutpost && (spawnedEnemyOutpostInstance != null || enemySpawn != null || GetComponentInChildren<EnemySpawn>(true) != null))
+        if (!hasEnemyOutpost && spawnedEnemyOutpostInstance != null)
         {
             CleanUpEnemyOutposts();
             if (SettlementSidePanelUI.Ins != null)
@@ -702,6 +807,13 @@ public class SettlementZone : MonoBehaviour
             return;
         }
 
+        // Nếu Scene vừa được nạp lại, reference không còn nhưng EnemyTower cũ
+        // vẫn là con của vùng đất. Nhận lại reference này thay vì sinh tháp mới.
+        if (spawnedEnemyOutpostInstance == null)
+        {
+            spawnedEnemyOutpostInstance = FindExistingEnemyOutpostVisual();
+        }
+
         // 1. Xác định vị trí spawn chuẩn của Vùng đất này
         Vector3 spawnPosition = (enemySpawnPoint != null) ? enemySpawnPoint.position : ((townHallPoint != null) ? townHallPoint.position : transform.position);
         Quaternion spawnRotation = (enemySpawnPoint != null) ? enemySpawnPoint.rotation : transform.rotation;
@@ -717,25 +829,8 @@ public class SettlementZone : MonoBehaviour
             spawnedEnemyOutpostInstance = enemySpawnPoint.gameObject;
         }
 
-        // 3. Lấy EnemySpawn CHỈ THUỘC VỀ Căn cứ Địch vừa sinh dưới Vùng đất này
-        if (spawnedEnemyOutpostInstance != null)
-        {
-            enemySpawn = spawnedEnemyOutpostInstance.GetComponent<EnemySpawn>();
-            if (enemySpawn == null) enemySpawn = spawnedEnemyOutpostInstance.GetComponentInChildren<EnemySpawn>();
-        }
-
-        if (enemySpawn == null)
-        {
-            enemySpawn = GetComponentInChildren<EnemySpawn>();
-        }
-
-        // The town hall is spawned at runtime, so give the local outpost a scene-valid target.
-        if (enemySpawn != null && townHallBuilding != null && townHallBuilding.gameObject.activeInHierarchy)
-        {
-            enemySpawn.SetAttackTarget(townHallBuilding.transform);
-        }
-
-        // 4. Đăng ký sự kiện tiêu diệt Căn cứ Địch
+        // 3. Đăng ký sự kiện tiêu diệt Căn cứ Địch. Căn cứ chỉ là mốc/visual;
+        // lực lượng chinh phục được cấu hình trực tiếp trên SettlementZone.
         if (spawnedEnemyOutpostInstance != null)
         {
             HPTower enemyHP = spawnedEnemyOutpostInstance.GetComponent<HPTower>();
@@ -765,39 +860,84 @@ public class SettlementZone : MonoBehaviour
     }
 
     /// <summary>
-    /// Dọn dẹp / Hủy bỏ toàn bộ GameObject Căn cứ Địch & EnemySpawn thuộc về Vùng đất này khi đã giải phóng / chiếm lĩnh
+    /// Dọn dẹp / Hủy bỏ GameObject Căn cứ Địch thuộc về Vùng đất này khi đã giải phóng / chiếm lĩnh.
     /// </summary>
     public void CleanUpEnemyOutposts()
     {
-        if (spawnedEnemyOutpostInstance != null)
+        // Không chỉ dựa vào reference runtime: BuildMap được nạp lại sẽ làm
+        // reference này thành null, trong khi EnemyTower cũ có thể vẫn tồn tại.
+        // Chỉ quét các con trực tiếp mang tên prefab EnemyTower để không đụng
+        // đến Nhà Chính hay công trình người chơi.
+        System.Collections.Generic.List<GameObject> outpostsToRemove =
+            new System.Collections.Generic.List<GameObject>();
+
+        if (spawnedEnemyOutpostInstance != null &&
+            IsOwnedEnemyOutpostVisual(spawnedEnemyOutpostInstance))
         {
-            if (HasValidEnemyOutpostInstance() || (townHallBuilding != null && spawnedEnemyOutpostInstance != townHallBuilding.gameObject))
-            {
-                spawnedEnemyOutpostInstance.SetActive(false);
-                if (Application.isPlaying) Destroy(spawnedEnemyOutpostInstance);
-                else DestroyImmediate(spawnedEnemyOutpostInstance);
-            }
-            spawnedEnemyOutpostInstance = null;
+            outpostsToRemove.Add(spawnedEnemyOutpostInstance);
         }
 
-        // Dọn dẹp mọi EnemySpawn còn sót lại dưới transform vùng đất
-        EnemySpawn[] childSpawns = GetComponentsInChildren<EnemySpawn>(true);
-        foreach (var spawner in childSpawns)
+        GameObject staleOutpost = FindExistingEnemyOutpostVisual();
+        if (staleOutpost != null && !outpostsToRemove.Contains(staleOutpost))
         {
-            if (spawner != null && spawner.gameObject != this.gameObject && (townHallBuilding == null || spawner.gameObject != townHallBuilding.gameObject))
+            outpostsToRemove.Add(staleOutpost);
+        }
+
+        foreach (GameObject outpost in outpostsToRemove)
+        {
+            if (outpost == null) continue;
+
+            outpost.SetActive(false);
+            if (Application.isPlaying) Destroy(outpost);
+            else DestroyImmediate(outpost);
+        }
+
+        spawnedEnemyOutpostInstance = null;
+    }
+
+    private GameObject FindExistingEnemyOutpostVisual()
+    {
+        for (int i = 0; i < transform.childCount; i++)
+        {
+            Transform child = transform.GetChild(i);
+            if (child != null && IsOwnedEnemyOutpostVisual(child.gameObject))
             {
-                spawner.gameObject.SetActive(false);
-                if (Application.isPlaying) Destroy(spawner.gameObject);
-                else DestroyImmediate(spawner.gameObject);
+                return child.gameObject;
             }
         }
-        enemySpawn = null;
+
+        return null;
+    }
+
+    private bool IsOwnedEnemyOutpostVisual(GameObject candidate)
+    {
+        if (candidate == null || candidate == gameObject || candidate.transform.parent != transform)
+        {
+            return false;
+        }
+
+        // Bảo vệ tuyệt đối Nhà Chính nếu Inspector/reference cũ từng trỏ nhầm.
+        if (townHallBuilding != null && candidate == townHallBuilding.gameObject)
+        {
+            return false;
+        }
+
+        if (candidate == spawnedEnemyOutpostInstance) return true;
+        if (enemyOutpostPrefab == null) return false;
+
+        string prefabName = enemyOutpostPrefab.name;
+        return candidate.name == prefabName ||
+               candidate.name.StartsWith(prefabName + "_") ||
+               candidate.name.StartsWith(prefabName + "(Clone)");
     }
 
     public void OnEnemyOutpostDestroyed()
     {
         hasEnemyOutpost = false;
         isUnlocked = true;
+        // Lưu riêng mốc đã chinh phục để các hệ thống mở khóa (như Raid Spawn
+        // Point) phân biệt được vùng khởi đầu với ải vừa giải phóng.
+        PlayerPrefs.SetInt($"Settlement_{settlementName}_Conquered", 1);
         SaveSettlementState();
         CleanUpEnemyOutposts();
 
@@ -808,6 +948,9 @@ public class SettlementZone : MonoBehaviour
         {
             SettlementManager.Ins.UpdateAllZoneTiers();
         }
+
+        EnemyInvasionManager.Ins?.NotifySettlementConquered(this);
+        CampaignTutorialManager.Ins?.OnSettlementConquered(this);
 
         if (SettlementSidePanelUI.Ins != null)
         {
