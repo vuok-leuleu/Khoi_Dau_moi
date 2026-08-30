@@ -12,6 +12,9 @@ using UnityEngine.UI;
 /// </summary>
 public class ResearchPanel : MonoBehaviour
 {
+    /// <summary>Raised whenever the set of researched nodes changes.</summary>
+    public event Action ResearchStateChanged;
+
     [Serializable]
     public class ResearchNode
     {
@@ -25,7 +28,6 @@ public class ResearchPanel : MonoBehaviour
         [Header("Unlock cost")]
         [Min(0)] public int woodCost;
         [Min(0)] public int stoneCost;
-        [Min(0)] public int foodCost;
         [Min(0)] public int goldCost;
         public bool unlockedAtStart;
 
@@ -131,7 +133,7 @@ public class ResearchPanel : MonoBehaviour
         foreach (ResearchNode node in nodes)
         {
             if (node == null || string.IsNullOrWhiteSpace(node.id)) continue;
-            ApplyRecommendedContent(node);
+            SetNodeLabel(node);
 
             if (nodeById.ContainsKey(node.id))
             {
@@ -144,11 +146,13 @@ public class ResearchPanel : MonoBehaviour
         }
 
         if (resetRuntimeState) hasRuntimeState = true;
+        ConfigureDemaciaConnections();
         BindButtons();
         BindResourceEvents();
         HideDetails();
         RefreshVisuals();
         initialized = true;
+        ResearchStateChanged?.Invoke();
     }
 
     private void BindButtons()
@@ -186,7 +190,6 @@ public class ResearchPanel : MonoBehaviour
 
         resourceManager.OnWoodChanged += OnResourcesChanged;
         resourceManager.OnStoneChanged += OnResourcesChanged;
-        resourceManager.OnFoodChanged += OnResourcesChanged;
         resourceManager.OnGoldChanged += OnResourcesChanged;
         resourceEventsBound = true;
     }
@@ -197,7 +200,6 @@ public class ResearchPanel : MonoBehaviour
 
         resourceManager.OnWoodChanged -= OnResourcesChanged;
         resourceManager.OnStoneChanged -= OnResourcesChanged;
-        resourceManager.OnFoodChanged -= OnResourcesChanged;
         resourceManager.OnGoldChanged -= OnResourcesChanged;
         resourceEventsBound = false;
     }
@@ -234,7 +236,7 @@ public class ResearchPanel : MonoBehaviour
             return false;
         }
 
-        if (!resourceManager.TrySpendCombined(node.woodCost, node.stoneCost, node.foodCost, node.goldCost))
+        if (!resourceManager.TrySpendCombined(woodCost: node.woodCost, stoneCost: node.stoneCost, goldCost: node.goldCost))
         {
             RefreshVisuals();
             return false;
@@ -246,6 +248,7 @@ public class ResearchPanel : MonoBehaviour
         // SelectNode và mở lại DetailPanel như bình thường.
         HideDetails();
         RefreshVisuals();
+        ResearchStateChanged?.Invoke();
         return true;
     }
 
@@ -256,6 +259,7 @@ public class ResearchPanel : MonoBehaviour
         selectedNodeId = null;
         HideDetails();
         RefreshVisuals();
+        ResearchStateChanged?.Invoke();
     }
 
     public void ClosePanel()
@@ -281,10 +285,62 @@ public class ResearchPanel : MonoBehaviour
         return true;
     }
 
+    /// <summary>Lets gameplay systems query research without exposing the serialized list.</summary>
+    public bool IsUnlocked(string nodeId)
+    {
+        return !string.IsNullOrWhiteSpace(nodeId)
+               && nodeById.TryGetValue(nodeId, out ResearchNode node)
+               && node.unlocked;
+    }
+
+    // The visual cards already contain a TMP label. Keep it synchronized with
+    // the serialized node content so the card and detail panel cannot diverge.
+    private static void SetNodeLabel(ResearchNode node)
+    {
+        if (node == null || node.button == null) return;
+        TMP_Text label = node.button.GetComponentInChildren<TMP_Text>(true);
+        if (label != null) label.text = node.displayName;
+    }
+
+    // Preserve the authored connector artwork while pointing it to the new
+    // node ids. The visual paths form branches; gameplay prerequisites remain
+    // the authoritative requirements shown in the detail card.
+    private void ConfigureDemaciaConnections()
+    {
+        if (connections.Count < 17 || !nodeById.ContainsKey("command_1")) return;
+
+        string[,] pairs =
+        {
+            { "command_1", "formation_1" },
+            { "formation_1", "formation_2" },
+            { "formation_2", "formation_3" },
+            { "command_1", "sword_damage_1" },
+            { "command_1", "shield_damage_1" },
+            { "command_1", "bow_damage_1" },
+            { "command_1", "unlock_crossbow_tower_1" },
+            { "unlock_crossbow_tower_1", "crossbow_damage_1" },
+            { "sword_damage_1", "sword_defense_1" },
+            { "shield_damage_1", "shield_defense_1" },
+            { "bow_damage_1", "bow_defense_1" },
+            { "crossbow_damage_1", "crossbow_defense_1" },
+            { "command_1", "unlock_cannon_tower_1" },
+            { "unlock_cannon_tower_1", "cannon_damage_1" },
+            { "cannon_damage_1", "cannon_defense_1" },
+            { "crossbow_defense_1", "army_doctrine_1" },
+            { "formation_3", "army_doctrine_1" }
+        };
+
+        for (int i = 0; i < pairs.GetLength(0); i++)
+        {
+            connections[i].fromNodeId = pairs[i, 0];
+            connections[i].toNodeId = pairs[i, 1];
+        }
+    }
+
     private bool HasEnoughResources(ResearchNode node)
     {
         return resourceManager != null && resourceManager.HasEnoughResources(
-            node.woodCost, node.stoneCost, node.foodCost, node.goldCost);
+            node.woodCost, node.stoneCost, 0, node.goldCost);
     }
 
     private void RefreshVisuals()
@@ -359,7 +415,6 @@ public class ResearchPanel : MonoBehaviour
         List<string> costs = new List<string>();
         if (node.woodCost > 0) costs.Add($"Gỗ: {node.woodCost}");
         if (node.stoneCost > 0) costs.Add($"Đá: {node.stoneCost}");
-        if (node.foodCost > 0) costs.Add($"Lương thực: {node.foodCost}");
         if (node.goldCost > 0) costs.Add($"Vàng: {node.goldCost}");
         return costs.Count == 0 ? "Chi phí: Miễn phí" : "Chi phí: " + string.Join("  •  ", costs);
     }
@@ -377,37 +432,4 @@ public class ResearchPanel : MonoBehaviour
         return "Yêu cầu: " + string.Join(" + ", names);
     }
 
-    // Các node sẵn có trong prefab nhận sẵn nội dung và chi phí. Node mới vẫn nhập trong Inspector.
-    private void ApplyRecommendedContent(ResearchNode node)
-    {
-        switch (node.id)
-        {
-            case "infantry_1": ApplyIfEmpty(node, "Huấn luyện cơ bản", "Chuẩn hóa kỷ luật và trang bị cho dân binh.", "Mở khóa nhánh bộ binh, thương binh và hậu cần."); break;
-            case "infantry_2": ApplyIfEmpty(node, "Khiên gỗ", "Gia cố khiên gỗ để bộ binh chống chịu tốt hơn trước đòn đánh tầm xa.", "+15% phòng thủ cho bộ binh.", 80, 25, 30); break;
-            case "archer_1": ApplyIfEmpty(node, "Cung thủ dân binh", "Huấn luyện đội ngũ cung thủ đầu tiên cho căn cứ.", "Mở khóa và tăng sức mạnh cung thủ cơ bản.", 100, 0, 70, 20); break;
-            case "spearman_1": ApplyIfEmpty(node, "Đội thương", "Trang bị thương dài để chặn đợt lao vào của kẻ địch.", "+20% sát thương chống đơn vị cận chiến.", 120, 40, 60); break;
-            case "infantry_3": ApplyIfEmpty(node, "Giáp da", "Bổ sung giáp da cho các chiến binh tuyến đầu.", "+20% máu cho bộ binh.", 140, 80, 75, 20); break;
-            case "archer_2": ApplyIfEmpty(node, "Mũi tên thép", "Chế tác mũi tên sắc và ổn định hơn.", "+25% sát thương cho cung thủ.", 150, 20, 100, 50); break;
-            case "armor_1": ApplyIfEmpty(node, "Xưởng áo giáp", "Xây dựng quy trình rèn áo giáp cơ bản.", "+10% phòng thủ cho toàn quân.", 100, 140, 0, 50); break;
-            case "watchtower_1": ApplyIfEmpty(node, "Tháp canh", "Dựng vị trí quan sát và báo động sớm quanh căn cứ.", "+1 tầm nhìn, mở khóa nâng cấp phòng thủ.", 180, 160, 75); break;
-            case "granary_1": ApplyIfEmpty(node, "Kho lương", "Cải thiện bảo quản lương thực cho đội quân dài ngày.", "+20% lương thực thu được.", 160, 80, 30); break;
-            case "blacksmith_1": ApplyIfEmpty(node, "Lò rèn", "Mở lò rèn để nâng chất lượng vũ khí và công cụ.", "Mở khóa trang bị tinh nhuệ.", 220, 250, 100, 100); break;
-            case "elite_guard_1": ApplyIfEmpty(node, "Cận vệ tinh nhuệ", "Tuyển chọn và rèn luyện nhóm lính bảo vệ mạnh nhất.", "Mở khóa cận vệ, +30% máu và phòng thủ.", 300, 300, 150, 150); break;
-            case "longbow_1": ApplyIfEmpty(node, "Trường cung", "Hoàn thiện kỹ thuật cung dài để bắn xa hơn.", "+30% tầm đánh cho cung thủ.", 260, 100, 160, 120); break;
-        }
-    }
-
-    private void ApplyIfEmpty(ResearchNode node, string title, string description, string benefit, int wood = 0, int stone = 0, int food = 0, int gold = 0)
-    {
-        if (string.IsNullOrWhiteSpace(node.displayName)) node.displayName = title;
-        if (string.IsNullOrWhiteSpace(node.description)) node.description = description;
-        if (string.IsNullOrWhiteSpace(node.benefitDescription)) node.benefitDescription = benefit;
-        if (node.woodCost == 0 && node.stoneCost == 0 && node.foodCost == 0 && node.goldCost == 0)
-        {
-            node.woodCost = wood;
-            node.stoneCost = stone;
-            node.foodCost = food;
-            node.goldCost = gold;
-        }
-    }
 }

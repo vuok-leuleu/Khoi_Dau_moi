@@ -17,7 +17,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &8099143682547729987
 RectTransform:
   m_ObjectHideFlags: 0
@@ -683,7 +683,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 313276656404034598}
-  m_LocalRotation: {x: 0, y: 0, z: -0.34904015, w: 0.9371078}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 278.09116}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -695,8 +695,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 600, y: -194}
-  m_SizeDelta: {x: 230, y: 12}
+  m_AnchoredPosition: {x: 484.5, y: -345}
+  m_SizeDelta: {x: 433, y: 12}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5014643324159137880
 CanvasRenderer:
@@ -719,7 +719,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.25, g: 0.2, b: 0.12, a: 0.8}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -801,7 +801,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Infantry I
+  m_text: "M\u1EDF r\u1ED9ng \u0111\u1ED9i h\xECnh III"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -938,7 +938,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: New Text
+  m_text: "V\u0103n b\u1EA3n m\u1EDBi"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -1027,7 +1027,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &8316104397988902213
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1098,7 +1098,7 @@ GameObject:
   - component: {fileID: 8192568946560132240}
   - component: {fileID: 3117859261834258958}
   m_Layer: 0
-  m_Name: Node_Infantry_1 (11)
+  m_Name: Node_cannon_defense_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1769,7 +1769,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Infantry I
+  m_text: "M\u1EDF r\u1ED9ng \u0111\u1ED9i h\xECnh II"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -1877,6 +1877,672 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: -20, y: -20}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &900000000000000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 900000000000000002}
+  - component: {fileID: 900000000000000003}
+  - component: {fileID: 900000000000000004}
+  - component: {fileID: 900000000000000005}
+  m_Layer: 0
+  m_Name: Node_unlock_crossbow_tower_1
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &900000000000000002
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000001}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 278.09116}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 900000000000000023}
+  m_Father: {fileID: 492337036913953657}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 268, y: -60}
+  m_SizeDelta: {x: 190, y: 190}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &900000000000000003
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000001}
+  m_CullTransparentMesh: 1
+--- !u!114 &900000000000000004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.35, g: 0.35, b: 0.35, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: -842908887, guid: c0971fffc4e9229499a4f694700f1234, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 1
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!114 &900000000000000005
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+  m_Navigation:
+    m_Mode: 3
+    m_WrapAround: 0
+    m_SelectOnUp: {fileID: 0}
+    m_SelectOnDown: {fileID: 0}
+    m_SelectOnLeft: {fileID: 0}
+    m_SelectOnRight: {fileID: 0}
+  m_Transition: 1
+  m_Colors:
+    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
+    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
+    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
+    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
+    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_ColorMultiplier: 1
+    m_FadeDuration: 0.1
+  m_SpriteState:
+    m_HighlightedSprite: {fileID: 0}
+    m_PressedSprite: {fileID: 0}
+    m_SelectedSprite: {fileID: 0}
+    m_DisabledSprite: {fileID: 0}
+  m_AnimationTriggers:
+    m_NormalTrigger: Normal
+    m_HighlightedTrigger: Highlighted
+    m_PressedTrigger: Pressed
+    m_SelectedTrigger: Selected
+    m_DisabledTrigger: Disabled
+  m_Interactable: 1
+  m_TargetGraphic: {fileID: 900000000000000004}
+  m_OnClick:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!1 &900000000000000009
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 900000000000000010}
+  - component: {fileID: 900000000000000011}
+  - component: {fileID: 900000000000000012}
+  m_Layer: 0
+  m_Name: Line_command_to_crossbow_tower
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &900000000000000010
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000009}
+  m_LocalRotation: {x: 0, y: 0, z: -0.08421128, w: 0.9964479}
+  m_LocalPosition: {x: 0, y: 0, z: 278.09116}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 492337036913953657}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 13.5, y: 97}
+  m_SizeDelta: {x: 1656.4941, y: 12}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &900000000000000011
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000009}
+  m_CullTransparentMesh: 1
+--- !u!114 &900000000000000012
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000009}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.95, g: 0.65, b: 0.15, a: 1}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Type: 1
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!1 &900000000000000013
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 900000000000000014}
+  - component: {fileID: 900000000000000015}
+  - component: {fileID: 900000000000000016}
+  m_Layer: 0
+  m_Name: Line_command_to_cannon_tower
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &900000000000000014
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000013}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 278.09116}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 492337036913953657}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 948, y: -42}
+  m_SizeDelta: {x: 236, y: 12}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &900000000000000015
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000013}
+  m_CullTransparentMesh: 1
+--- !u!114 &900000000000000016
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000013}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.25, g: 0.2, b: 0.12, a: 0.8}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Type: 1
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!1 &900000000000000017
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 900000000000000018}
+  - component: {fileID: 900000000000000019}
+  - component: {fileID: 900000000000000020}
+  - component: {fileID: 900000000000000021}
+  m_Layer: 0
+  m_Name: Node_unlock_cannon_tower_1
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &900000000000000018
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000017}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 278.09116}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 900000000000000027}
+  m_Father: {fileID: 492337036913953657}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 830, y: -42}
+  m_SizeDelta: {x: 190, y: 190}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &900000000000000019
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000017}
+  m_CullTransparentMesh: 1
+--- !u!114 &900000000000000020
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000017}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.35, g: 0.35, b: 0.35, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 517787340, guid: 3728f565efe50a044a979a090bc60dbc, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 1
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!114 &900000000000000021
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000017}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+  m_Navigation:
+    m_Mode: 3
+    m_WrapAround: 0
+    m_SelectOnUp: {fileID: 0}
+    m_SelectOnDown: {fileID: 0}
+    m_SelectOnLeft: {fileID: 0}
+    m_SelectOnRight: {fileID: 0}
+  m_Transition: 1
+  m_Colors:
+    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
+    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
+    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
+    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
+    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_ColorMultiplier: 1
+    m_FadeDuration: 0.1
+  m_SpriteState:
+    m_HighlightedSprite: {fileID: 0}
+    m_PressedSprite: {fileID: 0}
+    m_SelectedSprite: {fileID: 0}
+    m_DisabledSprite: {fileID: 0}
+  m_AnimationTriggers:
+    m_NormalTrigger: Normal
+    m_HighlightedTrigger: Highlighted
+    m_PressedTrigger: Pressed
+    m_SelectedTrigger: Selected
+    m_DisabledTrigger: Disabled
+  m_Interactable: 1
+  m_TargetGraphic: {fileID: 900000000000000020}
+  m_OnClick:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!1 &900000000000000022
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 900000000000000023}
+  - component: {fileID: 900000000000000024}
+  - component: {fileID: 900000000000000025}
+  m_Layer: 0
+  m_Name: TitleText
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &900000000000000023
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000022}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 900000000000000002}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: -122}
+  m_SizeDelta: {x: 240, y: 44}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &900000000000000024
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000022}
+  m_CullTransparentMesh: 1
+--- !u!114 &900000000000000025
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000022}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 0.92, b: 0.68, a: 1}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_text: "M\u1EDF kh\xF3a th\xE1p n\u1ECF"
+  m_isRightToLeft: 0
+  m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
+  m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
+  m_fontSharedMaterials: []
+  m_fontMaterial: {fileID: 0}
+  m_fontMaterials: []
+  m_fontColor32:
+    serializedVersion: 2
+    rgba: 4294967295
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+  m_enableVertexGradient: 0
+  m_colorMode: 3
+  m_fontColorGradient:
+    topLeft: {r: 1, g: 1, b: 1, a: 1}
+    topRight: {r: 1, g: 1, b: 1, a: 1}
+    bottomLeft: {r: 1, g: 1, b: 1, a: 1}
+    bottomRight: {r: 1, g: 1, b: 1, a: 1}
+  m_fontColorGradientPreset: {fileID: 0}
+  m_spriteAsset: {fileID: 0}
+  m_tintAllSprites: 0
+  m_StyleSheet: {fileID: 0}
+  m_TextStyleHashCode: -1183493901
+  m_overrideHtmlColors: 0
+  m_faceColor:
+    serializedVersion: 2
+    rgba: 4294967295
+  m_fontSize: 26
+  m_fontSizeBase: 36
+  m_fontWeight: 400
+  m_enableAutoSizing: 0
+  m_fontSizeMin: 0
+  m_fontSizeMax: 0
+  m_fontStyle: 0
+  m_HorizontalAlignment: 1
+  m_VerticalAlignment: 256
+  m_textAlignment: 65535
+  m_characterSpacing: 0
+  m_characterHorizontalScale: 1
+  m_wordSpacing: 0
+  m_lineSpacing: 0
+  m_lineSpacingMax: 0
+  m_paragraphSpacing: 0
+  m_charWidthMaxAdj: 0
+  m_TextWrappingMode: 1
+  m_wordWrappingRatios: 0.4
+  m_overflowMode: 0
+  m_linkedTextComponent: {fileID: 0}
+  parentLinkedComponent: {fileID: 0}
+  m_enableKerning: 0
+  m_ActiveFontFeatures: 
+  m_enableExtraPadding: 0
+  checkPaddingRequired: 0
+  m_isRichText: 1
+  m_EmojiFallbackSupport: 1
+  m_parseCtrlCharacters: 1
+  m_isOrthographic: 1
+  m_isCullingEnabled: 0
+  m_horizontalMapping: 0
+  m_verticalMapping: 0
+  m_uvLineOffset: 0
+  m_geometrySortingOrder: 0
+  m_IsTextObjectScaleStatic: 0
+  m_VertexBufferAutoSizeReduction: 0
+  m_useMaxVisibleDescender: 1
+  m_pageToDisplay: 1
+  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_isUsingLegacyAnimationComponent: 0
+  m_isVolumetricText: 0
+  m_hasFontAssetChanged: 0
+  m_baseMaterial: {fileID: 0}
+  m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!1 &900000000000000026
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 900000000000000027}
+  - component: {fileID: 900000000000000028}
+  - component: {fileID: 900000000000000029}
+  m_Layer: 0
+  m_Name: TitleText
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &900000000000000027
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000026}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 900000000000000018}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: -122}
+  m_SizeDelta: {x: 240, y: 44}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &900000000000000028
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000026}
+  m_CullTransparentMesh: 1
+--- !u!114 &900000000000000029
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000026}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 0.92, b: 0.68, a: 1}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_text: "M\u1EDF kh\xF3a ph\xE1o \u0111\xE0i"
+  m_isRightToLeft: 0
+  m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
+  m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
+  m_fontSharedMaterials: []
+  m_fontMaterial: {fileID: 0}
+  m_fontMaterials: []
+  m_fontColor32:
+    serializedVersion: 2
+    rgba: 4294967295
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+  m_enableVertexGradient: 0
+  m_colorMode: 3
+  m_fontColorGradient:
+    topLeft: {r: 1, g: 1, b: 1, a: 1}
+    topRight: {r: 1, g: 1, b: 1, a: 1}
+    bottomLeft: {r: 1, g: 1, b: 1, a: 1}
+    bottomRight: {r: 1, g: 1, b: 1, a: 1}
+  m_fontColorGradientPreset: {fileID: 0}
+  m_spriteAsset: {fileID: 0}
+  m_tintAllSprites: 0
+  m_StyleSheet: {fileID: 0}
+  m_TextStyleHashCode: -1183493901
+  m_overrideHtmlColors: 0
+  m_faceColor:
+    serializedVersion: 2
+    rgba: 4294967295
+  m_fontSize: 26
+  m_fontSizeBase: 36
+  m_fontWeight: 400
+  m_enableAutoSizing: 0
+  m_fontSizeMin: 0
+  m_fontSizeMax: 0
+  m_fontStyle: 0
+  m_HorizontalAlignment: 1
+  m_VerticalAlignment: 256
+  m_textAlignment: 65535
+  m_characterSpacing: 0
+  m_characterHorizontalScale: 1
+  m_wordSpacing: 0
+  m_lineSpacing: 0
+  m_lineSpacingMax: 0
+  m_paragraphSpacing: 0
+  m_charWidthMaxAdj: 0
+  m_TextWrappingMode: 1
+  m_wordWrappingRatios: 0.4
+  m_overflowMode: 0
+  m_linkedTextComponent: {fileID: 0}
+  parentLinkedComponent: {fileID: 0}
+  m_enableKerning: 0
+  m_ActiveFontFeatures: 
+  m_enableExtraPadding: 0
+  checkPaddingRequired: 0
+  m_isRichText: 1
+  m_EmojiFallbackSupport: 1
+  m_parseCtrlCharacters: 1
+  m_isOrthographic: 1
+  m_isCullingEnabled: 0
+  m_horizontalMapping: 0
+  m_verticalMapping: 0
+  m_uvLineOffset: 0
+  m_geometrySortingOrder: 0
+  m_IsTextObjectScaleStatic: 0
+  m_VertexBufferAutoSizeReduction: 0
+  m_useMaxVisibleDescender: 1
+  m_pageToDisplay: 1
+  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_isUsingLegacyAnimationComponent: 0
+  m_isVolumetricText: 0
+  m_hasFontAssetChanged: 0
+  m_baseMaterial: {fileID: 0}
+  m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1 &927632777711654911
 GameObject:
   m_ObjectHideFlags: 0
@@ -1942,7 +2608,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: New Text
+  m_text: "V\u0103n b\u1EA3n m\u1EDBi"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -2114,7 +2780,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1271689966209440846}
-  m_LocalRotation: {x: 0, y: 0, z: -0.34904015, w: 0.9371078}
+  m_LocalRotation: {x: 0, y: 0, z: -0.007731266, w: 0.99997014}
   m_LocalPosition: {x: 0, y: 0, z: 278.09116}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -2126,8 +2792,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 110, y: -184}
-  m_SizeDelta: {x: 230, y: 12}
+  m_AnchoredPosition: {x: 222, y: -37.5}
+  m_SizeDelta: {x: 582.0696, y: 12}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7647725138740738456
 CanvasRenderer:
@@ -2150,7 +2816,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.25, g: 0.2, b: 0.12, a: 0.8}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2364,7 +3030,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2408,7 +3074,7 @@ GameObject:
   - component: {fileID: 8359925754046306326}
   - component: {fileID: 3380881524521413596}
   m_Layer: 0
-  m_Name: Node_Infantry_1
+  m_Name: Node_command_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2576,7 +3242,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.35, g: 0.35, b: 0.35, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2658,7 +3324,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: New Text
+  m_text: "V\u0103n b\u1EA3n m\u1EDBi"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -2743,7 +3409,7 @@ GameObject:
   - component: {fileID: 1914403138921830894}
   - component: {fileID: 4180341655142005797}
   m_Layer: 0
-  m_Name: Node_Archer_1
+  m_Name: Node_sword_damage_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2866,7 +3532,7 @@ GameObject:
   - component: {fileID: 7477021839229098861}
   - component: {fileID: 8532883097998547943}
   m_Layer: 0
-  m_Name: Node_Infantry_1 (12)
+  m_Name: Node_army_doctrine_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3376,7 +4042,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: New Text
+  m_text: "V\u0103n b\u1EA3n m\u1EDBi"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -3650,7 +4316,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Archer I
+  m_text: "Hu\u1EA5n luy\u1EC7n cung th\u1EE7"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -3735,7 +4401,7 @@ GameObject:
   - component: {fileID: 5968137204209467756}
   - component: {fileID: 3636686083769293082}
   m_Layer: 0
-  m_Name: Node_Infantry_1 (9)
+  m_Name: Node_formation_3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4265,7 +4931,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.35, g: 0.35, b: 0.35, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -4347,7 +5013,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: New Text
+  m_text: "V\u0103n b\u1EA3n m\u1EDBi"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -4432,7 +5098,7 @@ GameObject:
   - component: {fileID: 1395791327660919775}
   - component: {fileID: 6976735880387444246}
   m_Layer: 0
-  m_Name: Node_Infantry_1 (3)
+  m_Name: Node_shield_defense_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4819,7 +5485,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Infantry I
+  m_text: "N\u1ECF th\u1EE7 - C\u01A1 c\u1EA5u th\xE9p"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -4956,7 +5622,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Infantry II
+  m_text: "M\u1EDF r\u1ED9ng \u0111\u1ED9i h\xECnh I"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -5093,7 +5759,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Infantry I
+  m_text: "Ph\xE1o binh - C\xF4ng s\u1EF1"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -5230,7 +5896,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Infantry I
+  m_text: "N\u1ECF th\u1EE7 - Gi\xE1p x\xEDch"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -5402,7 +6068,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3311533973831059120}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0.18465205, w: 0.982804}
   m_LocalPosition: {x: 0, y: 0, z: 278.09116}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -5414,8 +6080,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -251, y: -27}
-  m_SizeDelta: {x: 200, y: 12}
+  m_AnchoredPosition: {x: -52.5, y: -63.5}
+  m_SizeDelta: {x: 1617.2872, y: 12}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &236359741185147440
 CanvasRenderer:
@@ -5438,7 +6104,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.25, g: 0.2, b: 0.12, a: 0.8}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -5787,7 +6453,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 1, g: 0.85, b: 0.25, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -5897,7 +6563,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2048744242983689811
 RectTransform:
   m_ObjectHideFlags: 0
@@ -5939,7 +6605,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 0}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -6070,7 +6736,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Infantry I
+  m_text: "Khi\xEAn binh - Ph\u1EA3n k\xEDch"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -6185,6 +6851,8 @@ RectTransform:
   - {fileID: 5415740219949469346}
   - {fileID: 2605148113753673841}
   - {fileID: 7716929091354659815}
+  - {fileID: 900000000000000010}
+  - {fileID: 900000000000000014}
   - {fileID: 3287924644119434565}
   - {fileID: 8576917135068870803}
   - {fileID: 6066724478117435871}
@@ -6200,6 +6868,8 @@ RectTransform:
   - {fileID: 4521783566955821913}
   - {fileID: 4478928811709187227}
   - {fileID: 8548935197171819061}
+  - {fileID: 900000000000000002}
+  - {fileID: 900000000000000018}
   m_Father: {fileID: 8643492291530196315}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -6477,7 +7147,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.35, g: 0.35, b: 0.35, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -6552,14 +7222,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.35, g: 0.35, b: 0.35, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 361954704, guid: 44cdf0bf595e15e41afa991576ce5f12, type: 3}
+  m_Sprite: {fileID: 64042085, guid: bae282ac14f77c542b26124e94904b24, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -6594,7 +7264,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4315304013616822233}
-  m_LocalRotation: {x: 0, y: 0, z: 0.38268343, w: 0.92387956}
+  m_LocalRotation: {x: 0, y: 0, z: -0.47659108, w: 0.8791251}
   m_LocalPosition: {x: 0, y: 0, z: 278.09116}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -6606,8 +7276,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 45}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 624, y: 99}
-  m_SizeDelta: {x: 200, y: 12}
+  m_AnchoredPosition: {x: 884, y: -51}
+  m_SizeDelta: {x: 670.6713, y: 12}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8936021495027043346
 CanvasRenderer:
@@ -6630,7 +7300,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.25, g: 0.2, b: 0.12, a: 0.8}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -6833,7 +7503,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: New Text
+  m_text: "V\u0103n b\u1EA3n m\u1EDBi"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -6963,14 +7633,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.35, g: 0.35, b: 0.35, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 361954704, guid: 44cdf0bf595e15e41afa991576ce5f12, type: 3}
+  m_Sprite: {fileID: -2072698059, guid: b9abc381c7f427f4d91b5db599ed21c1, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -7259,7 +7929,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4723055467451849850}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 278.09116}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -7271,8 +7941,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -259, y: -352}
-  m_SizeDelta: {x: 200, y: 12}
+  m_AnchoredPosition: {x: -258, y: 236}
+  m_SizeDelta: {x: 1090, y: 12}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2951285996567582546
 CanvasRenderer:
@@ -7295,7 +7965,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.95, g: 0.65, b: 0.15, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -7424,8 +8094,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -618, y: 231}
-  m_SizeDelta: {x: 200, y: 12}
+  m_AnchoredPosition: {x: -622.5, y: 236}
+  m_SizeDelta: {x: 361, y: 12}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &776787409541995694
 CanvasRenderer:
@@ -7448,7 +8118,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.95, g: 0.65, b: 0.15, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -7627,7 +8297,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5121813692804282536}
-  m_LocalRotation: {x: 0, y: 0, z: -0.34904015, w: 0.9371078}
+  m_LocalRotation: {x: 0, y: 0, z: -0.87267214, w: 0.4883066}
   m_LocalPosition: {x: 0, y: 0, z: 278.09116}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -7639,8 +8309,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -620, y: 67}
-  m_SizeDelta: {x: 230, y: 12}
+  m_AnchoredPosition: {x: 109, y: -54}
+  m_SizeDelta: {x: 680.54095, y: 12}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5980184974128353667
 CanvasRenderer:
@@ -7663,7 +8333,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.25, g: 0.2, b: 0.12, a: 0.8}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -7738,7 +8408,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.35, g: 0.35, b: 0.35, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -7895,7 +8565,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Infantry I
+  m_text: "H\u1ECDc thuy\u1EBFt t\u1ED5ng l\u1EF1c"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -8032,7 +8702,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Infantry I
+  m_text: "Khi\xEAn binh - Khi\xEAn petricite"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -8121,7 +8791,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &6263029822506833935
 RectTransform:
   m_ObjectHideFlags: 0
@@ -8342,7 +9012,7 @@ GameObject:
   - component: {fileID: 6814374754952310074}
   - component: {fileID: 7461725280145603988}
   m_Layer: 0
-  m_Name: Node_Infantry_1 (8)
+  m_Name: Node_bow_defense_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -8517,7 +9187,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: New Text
+  m_text: "V\u0103n b\u1EA3n m\u1EDBi"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -8739,7 +9409,7 @@ GameObject:
   - component: {fileID: 5965391674306553210}
   - component: {fileID: 1393893752036725016}
   m_Layer: 0
-  m_Name: Node_Infantry_1 (7)
+  m_Name: Node_crossbow_defense_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -8907,7 +9577,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.35, g: 0.35, b: 0.35, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -8982,7 +9652,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.35, g: 0.35, b: 0.35, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -9060,7 +9730,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6094383577141563038}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: -0.17474063, w: 0.98461455}
   m_LocalPosition: {x: 0, y: 0, z: 278.09116}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -9072,8 +9742,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 129, y: -352}
-  m_SizeDelta: {x: 200, y: 12}
+  m_AnchoredPosition: {x: -436, y: 101.5}
+  m_SizeDelta: {x: 781.73975, y: 12}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8699626862516298430
 CanvasRenderer:
@@ -9096,7 +9766,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.95, g: 0.65, b: 0.15, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -9130,7 +9800,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2215513140671124605
 RectTransform:
   m_ObjectHideFlags: 0
@@ -9201,7 +9871,7 @@ GameObject:
   - component: {fileID: 6821407991009493003}
   - component: {fileID: 979514425656338138}
   m_Layer: 0
-  m_Name: Node_Infantry_1 (1)
+  m_Name: Node_shield_damage_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -9226,7 +9896,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -803, y: -344}
+  m_AnchoredPosition: {x: 287, y: 236}
   m_SizeDelta: {x: 190, y: 190}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6593090754665905784
@@ -9376,7 +10046,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: New Text
+  m_text: "V\u0103n b\u1EA3n m\u1EDBi"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -9698,7 +10368,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6397465386073735300}
-  m_LocalRotation: {x: 0, y: 0, z: 0.38268343, w: 0.92387956}
+  m_LocalRotation: {x: 0, y: 0, z: 0.7058058, w: 0.70840544}
   m_LocalPosition: {x: 0, y: 0, z: 278.09116}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -9710,8 +10380,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 45}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 368, y: -192}
-  m_SizeDelta: {x: 200, y: 12}
+  m_AnchoredPosition: {x: 1066.5, y: 94}
+  m_SizeDelta: {x: 272.00183, y: 12}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4153900473524172200
 CanvasRenderer:
@@ -9734,7 +10404,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.25, g: 0.2, b: 0.12, a: 0.8}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -9816,7 +10486,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Infantry I
+  m_text: "Ph\xE1o binh - Thu\u1ED1c s\xFAng tinh luy\u1EC7n"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -10028,7 +10698,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Infantry I
+  m_text: "Qu\xE2n l\u1EC7nh kh\u1EDFi \u0111\u1EA7u"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -10165,7 +10835,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Infantry I
+  m_text: "Cung th\u1EE7 - M\u0169i t\xEAn xuy\xEAn gi\xE1p"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -10262,7 +10932,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6665170590996126195}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: -0.7071068, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 278.09116}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -10274,8 +10944,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 779, y: -55}
-  m_SizeDelta: {x: 450, y: 12}
+  m_AnchoredPosition: {x: 268, y: -202.5}
+  m_SizeDelta: {x: 285, y: 12}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8745173088649850254
 CanvasRenderer:
@@ -10298,7 +10968,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.25, g: 0.2, b: 0.12, a: 0.8}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -10328,7 +10998,7 @@ GameObject:
   - component: {fileID: 7031618840217763873}
   - component: {fileID: 449337861814154367}
   m_Layer: 0
-  m_Name: Node_Infantry_2
+  m_Name: Node_formation_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -10463,7 +11133,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6742580106293565377}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: -0.87267834, w: 0.4882956}
   m_LocalPosition: {x: 0, y: 0, z: 278.09116}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -10475,8 +11145,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -56, y: 231}
-  m_SizeDelta: {x: 600, y: 12}
+  m_AnchoredPosition: {x: -624, y: -60.5}
+  m_SizeDelta: {x: 695.8053, y: 12}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6576694375772768326
 CanvasRenderer:
@@ -10499,7 +11169,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.25, g: 0.2, b: 0.12, a: 0.8}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -10581,7 +11251,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Infantry I
+  m_text: "Ki\u1EBFm s\u0129 - Gi\xE1p t\u1EA5m"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -10786,7 +11456,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.35, g: 0.35, b: 0.35, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -10868,7 +11538,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: New Text
+  m_text: "V\u0103n b\u1EA3n m\u1EDBi"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -10998,14 +11668,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.35, g: 0.35, b: 0.35, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 361954704, guid: 44cdf0bf595e15e41afa991576ce5f12, type: 3}
+  m_Sprite: {fileID: -1959657733, guid: 2b5bdbac71a10c44886a252ba0db4a03, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -11328,6 +11998,7 @@ GameObject:
   - component: {fileID: 7686344178843910979}
   - component: {fileID: 3549492849076423031}
   - component: {fileID: 66972453976706130}
+  - component: {fileID: 918466214558437921}
   m_Layer: 5
   m_Name: ResearchPanel
   m_TagString: Untagged
@@ -11408,16 +12079,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ResearchPanel
   nodes:
-  - id: infantry_1
-    displayName: "Hu\u1EA5n luy\u1EC7n c\u01A1 b\u1EA3n"
-    description: "Chu\u1EA9n h\xF3a k\u1EF7 lu\u1EADt v\xE0 trang b\u1ECB cho d\xE2n
-      binh."
-    benefitDescription: "M\u1EDF kh\xF3a nh\xE1nh b\u1ED9 binh, th\u01B0\u01A1ng
-      binh v\xE0 h\u1EADu c\u1EA7n."
+  - id: command_1
+    displayName: "Qu\xE2n l\u1EC7nh kh\u1EDFi \u0111\u1EA7u"
+    description: "m\u1EDF kh\xF3a l\xEDnh c\u1EA7m ki\u1EBFm"
+    benefitDescription: "M\u1ED7i lo\u1EA1i l\xEDnh m\u1EB7c \u0111\u1ECBnh c\xF3
+      3 qu\xE2n."
     requiredNodeIds: []
     woodCost: 0
     stoneCost: 0
-    foodCost: 0
     goldCost: 0
     unlockedAtStart: 1
     button: {fileID: 3380881524521413596}
@@ -11426,18 +12095,16 @@ MonoBehaviour:
     onUnlocked:
       m_PersistentCalls:
         m_Calls: []
-  - id: infantry_2
-    displayName: "Khi\xEAn g\u1ED7"
-    description: "Gia c\u1ED1 khi\xEAn g\u1ED7 \u0111\u1EC3 b\u1ED9 binh ch\u1ED1ng
-      ch\u1ECBu t\u1ED1t h\u01A1n tr\u01B0\u1EDBc \u0111\xF2n \u0111\xE1nh t\u1EA7m
-      xa."
-    benefitDescription: "+15% ph\xF2ng th\u1EE7 cho b\u1ED9 binh."
+  - id: formation_1
+    displayName: "M\u1EDF r\u1ED9ng \u0111\u1ED9i h\xECnh I"
+    description: "B\u1ED5 sung qu\xE2n s\u1ED1 cho m\u1ECDi \u0111\u01A1n v\u1ECB
+      l\xEDnh."
+    benefitDescription: "Qu\xE2n s\u1ED1 m\u1ED7i lo\u1EA1i: 3 \u2192 4 (+1)."
     requiredNodeIds:
-    - infantry_1
-    woodCost: 80
-    stoneCost: 25
-    foodCost: 30
-    goldCost: 0
+    - command_1
+    woodCost: 90
+    stoneCost: 35
+    goldCost: 10
     unlockedAtStart: 0
     button: {fileID: 449337861814154367}
     icon: {fileID: 4541477288852093462}
@@ -11445,17 +12112,14 @@ MonoBehaviour:
     onUnlocked:
       m_PersistentCalls:
         m_Calls: []
-  - id: archer_1
-    displayName: "Cung th\u1EE7 d\xE2n binh"
-    description: "Hu\u1EA5n luy\u1EC7n \u0111\u1ED9i ng\u0169 cung th\u1EE7 \u0111\u1EA7u
-      ti\xEAn cho c\u0103n c\u1EE9."
-    benefitDescription: "M\u1EDF kh\xF3a v\xE0 t\u0103ng s\u1EE9c m\u1EA1nh cung
-      th\u1EE7 c\u01A1 b\u1EA3n."
+  - id: sword_damage_1
+    displayName: "Hu\u1EA5n luy\u1EC7n cung th\u1EE7"
+    description: "hu\u1EA5n luy\u1EC7n cung th\u1EE7"
+    benefitDescription: "M\u1EDF kh\xF3a l\xEDnh cung"
     requiredNodeIds:
-    - infantry_1
+    - command_1
     woodCost: 100
-    stoneCost: 0
-    foodCost: 70
+    stoneCost: 30
     goldCost: 20
     unlockedAtStart: 0
     button: {fileID: 4180341655142005797}
@@ -11464,18 +12128,15 @@ MonoBehaviour:
     onUnlocked:
       m_PersistentCalls:
         m_Calls: []
-  - id: spearman_1
-    displayName: "\u0110\u1ED9i th\u01B0\u01A1ng"
-    description: "Trang b\u1ECB th\u01B0\u01A1ng d\xE0i \u0111\u1EC3 ch\u1EB7n \u0111\u1EE3t
-      lao v\xE0o c\u1EE7a k\u1EBB \u0111\u1ECBch."
-    benefitDescription: "+20% s\xE1t th\u01B0\u01A1ng ch\u1ED1ng \u0111\u01A1n v\u1ECB
-      c\u1EADn chi\u1EBFn."
+  - id: shield_damage_1
+    displayName: "Khi\xEAn binh - Ph\u1EA3n k\xEDch"
+    description: "M\u1EDF kh\xF3a l\xEDnh khi\xEAn"
+    benefitDescription: "M\u1EDF kh\xF3a l\xEDnh khi\xEAn"
     requiredNodeIds:
-    - infantry_1
+    - command_1
     woodCost: 120
-    stoneCost: 40
-    foodCost: 60
-    goldCost: 0
+    stoneCost: 55
+    goldCost: 20
     unlockedAtStart: 0
     button: {fileID: 979514425656338138}
     icon: {fileID: 7666845599467878838}
@@ -11483,16 +12144,16 @@ MonoBehaviour:
     onUnlocked:
       m_PersistentCalls:
         m_Calls: []
-  - id: infantry_3
-    displayName: "Gi\xE1p da"
-    description: "B\u1ED5 sung gi\xE1p da cho c\xE1c chi\u1EBFn binh tuy\u1EBFn \u0111\u1EA7u."
-    benefitDescription: "+20% m\xE1u cho b\u1ED9 binh."
+  - id: sword_defense_1
+    displayName: "Ki\u1EBFm s\u0129 - Gi\xE1p t\u1EA5m"
+    description: "Trang b\u1ECB gi\xE1p t\u1EA5m nh\u1EB9 cho tuy\u1EBFn c\u1EADn
+      chi\u1EBFn."
+    benefitDescription: "+10% ph\xF2ng th\u1EE7 l\xEDnh ki\u1EBFm."
     requiredNodeIds:
-    - spearman_1
-    woodCost: 140
-    stoneCost: 80
-    foodCost: 75
-    goldCost: 20
+    - sword_damage_1
+    woodCost: 120
+    stoneCost: 85
+    goldCost: 25
     unlockedAtStart: 0
     button: {fileID: 7546940408637213138}
     icon: {fileID: 4591034269939786620}
@@ -11500,16 +12161,16 @@ MonoBehaviour:
     onUnlocked:
       m_PersistentCalls:
         m_Calls: []
-  - id: armor_1
-    displayName: "X\u01B0\u1EDFng \xE1o gi\xE1p"
-    description: "X\xE2y d\u1EF1ng quy tr\xECnh r\xE8n \xE1o gi\xE1p c\u01A1 b\u1EA3n."
-    benefitDescription: "+10% ph\xF2ng th\u1EE7 cho to\xE0n qu\xE2n."
+  - id: shield_defense_1
+    displayName: "Khi\xEAn binh - Khi\xEAn petricite"
+    description: "B\u1ECDc m\u1EB7t khi\xEAn b\u1EB1ng petricite ch\u1ED1ng c\xE1c
+      \u0111\xF2n t\u1EA5n c\xF4ng m\u1EA1nh."
+    benefitDescription: "+10% ph\xF2ng th\u1EE7 khi\xEAn binh."
     requiredNodeIds:
-    - infantry_3
-    woodCost: 100
-    stoneCost: 140
-    foodCost: 0
-    goldCost: 50
+    - shield_damage_1
+    woodCost: 150
+    stoneCost: 120
+    goldCost: 35
     unlockedAtStart: 0
     button: {fileID: 6976735880387444246}
     icon: {fileID: 427637009743170784}
@@ -11517,17 +12178,16 @@ MonoBehaviour:
     onUnlocked:
       m_PersistentCalls:
         m_Calls: []
-  - id: archer_2
-    displayName: "M\u0169i t\xEAn th\xE9p"
-    description: "Ch\u1EBF t\xE1c m\u0169i t\xEAn s\u1EAFc v\xE0 \u1ED5n \u0111\u1ECBnh
-      h\u01A1n."
-    benefitDescription: "+25% s\xE1t th\u01B0\u01A1ng cho cung th\u1EE7."
+  - id: bow_damage_1
+    displayName: "Cung th\u1EE7 - M\u0169i t\xEAn xuy\xEAn gi\xE1p"
+    description: "C\u1EA3i ti\u1EBFn \u0111\u1EA7u t\xEAn \u0111\u1EC3 cung th\u1EE7
+      xuy\xEAn qua gi\xE1p nh\u1EB9."
+    benefitDescription: "+15% s\xE1t th\u01B0\u01A1ng cung th\u1EE7."
     requiredNodeIds:
-    - archer_1
-    woodCost: 150
-    stoneCost: 20
-    foodCost: 100
-    goldCost: 50
+    - command_1
+    woodCost: 110
+    stoneCost: 25
+    goldCost: 25
     unlockedAtStart: 0
     button: {fileID: 4434565013931869795}
     icon: {fileID: 2593995253361267082}
@@ -11535,18 +12195,16 @@ MonoBehaviour:
     onUnlocked:
       m_PersistentCalls:
         m_Calls: []
-  - id: watchtower_1
-    displayName: "Th\xE1p canh"
-    description: "D\u1EF1ng v\u1ECB tr\xED quan s\xE1t v\xE0 b\xE1o \u0111\u1ED9ng
-      s\u1EDBm quanh c\u0103n c\u1EE9."
-    benefitDescription: "+1 t\u1EA7m nh\xECn, m\u1EDF kh\xF3a n\xE2ng c\u1EA5p ph\xF2ng
-      th\u1EE7."
+  - id: formation_2
+    displayName: "M\u1EDF r\u1ED9ng \u0111\u1ED9i h\xECnh II"
+    description: "M\u1EDF r\u1ED9ng bi\xEAn ch\u1EBF sau khi \u0111\u1ED9i h\xECnh
+      \u0111\u1EA7u ti\xEAn \u0111\xE3 ho\xE0n ch\u1EC9nh."
+    benefitDescription: "Qu\xE2n s\u1ED1 m\u1ED7i lo\u1EA1i: 4 \u2192 5 (+1)."
     requiredNodeIds:
-    - infantry_2
-    woodCost: 180
-    stoneCost: 160
-    foodCost: 75
-    goldCost: 0
+    - formation_1
+    woodCost: 160
+    stoneCost: 70
+    goldCost: 30
     unlockedAtStart: 0
     button: {fileID: 5327289549315733067}
     icon: {fileID: 776713170062873992}
@@ -11554,18 +12212,16 @@ MonoBehaviour:
     onUnlocked:
       m_PersistentCalls:
         m_Calls: []
-  - id: granary_1
-    displayName: "Kho l\u01B0\u01A1ng"
-    description: "C\u1EA3i thi\u1EC7n b\u1EA3o qu\u1EA3n l\u01B0\u01A1ng th\u1EF1c
-      cho \u0111\u1ED9i qu\xE2n d\xE0i ng\xE0y."
-    benefitDescription: "+20% l\u01B0\u01A1ng th\u1EF1c thu \u0111\u01B0\u1EE3c."
+  - id: crossbow_damage_1
+    displayName: "N\u1ECF th\u1EE7 - C\u01A1 c\u1EA5u th\xE9p"
+    description: "Gia c\u1ED1 c\u01A1 c\u1EA5u k\xE9o d\xE2y n\u1ECF \u0111\u1EC3
+      t\u0103ng l\u1EF1c b\u1EAFn."
+    benefitDescription: "+15% s\xE1t th\u01B0\u01A1ng n\u1ECF th\u1EE7."
     requiredNodeIds:
-    - armor_1
-    - archer_2
-    woodCost: 160
-    stoneCost: 80
-    foodCost: 30
-    goldCost: 0
+    - unlock_crossbow_tower_1
+    woodCost: 150
+    stoneCost: 45
+    goldCost: 35
     unlockedAtStart: 0
     button: {fileID: 6597737955034684096}
     icon: {fileID: 1398117735494863704}
@@ -11573,18 +12229,33 @@ MonoBehaviour:
     onUnlocked:
       m_PersistentCalls:
         m_Calls: []
-  - id: elite_guard_1
-    displayName: "C\u1EADn v\u1EC7 tinh nhu\u1EC7"
-    description: "Tuy\u1EC3n ch\u1ECDn v\xE0 r\xE8n luy\u1EC7n nh\xF3m l\xEDnh b\u1EA3o
-      v\u1EC7 m\u1EA1nh nh\u1EA5t."
-    benefitDescription: "M\u1EDF kh\xF3a c\u1EADn v\u1EC7, +30% m\xE1u v\xE0 ph\xF2ng
-      th\u1EE7."
+  - id: unlock_crossbow_tower_1
+    displayName: "M\u1EDF kh\xF3a th\xE1p n\u1ECF"
+    description: "Cho ph\xE9p x\xE2y Th\xE1p N\u1ECF \u0111\u1EC3 ph\xF2ng th\u1EE7
+      l\xE3nh \u0111\u1ECBa."
+    benefitDescription: "M\u1EDF kh\xF3a c\xF4ng tr\xECnh t\u1EA5n c\xF4ng N\u1ECF."
     requiredNodeIds:
-    - blacksmith_1
-    woodCost: 300
-    stoneCost: 300
-    foodCost: 150
-    goldCost: 150
+    - command_1
+    woodCost: 140
+    stoneCost: 70
+    goldCost: 35
+    unlockedAtStart: 0
+    button: {fileID: 900000000000000005}
+    icon: {fileID: 900000000000000004}
+    lockedOverlay: {fileID: 0}
+    onUnlocked:
+      m_PersistentCalls:
+        m_Calls: []
+  - id: crossbow_defense_1
+    displayName: "N\u1ECF th\u1EE7 - Gi\xE1p x\xEDch"
+    description: "B\u1ED5 sung gi\xE1p x\xEDch \u0111\u1EC3 b\u1EA3o v\u1EC7 t\u1ED5
+      n\u1ECF."
+    benefitDescription: "+10% ph\xF2ng th\u1EE7 n\u1ECF th\u1EE7."
+    requiredNodeIds:
+    - crossbow_damage_1
+    woodCost: 180
+    stoneCost: 120
+    goldCost: 45
     unlockedAtStart: 0
     button: {fileID: 1393893752036725016}
     icon: {fileID: 5945986312226408502}
@@ -11592,18 +12263,16 @@ MonoBehaviour:
     onUnlocked:
       m_PersistentCalls:
         m_Calls: []
-  - id: blacksmith_1
-    displayName: "L\xF2 r\xE8n"
-    description: "M\u1EDF l\xF2 r\xE8n \u0111\u1EC3 n\xE2ng ch\u1EA5t l\u01B0\u1EE3ng
-      v\u0169 kh\xED v\xE0 c\xF4ng c\u1EE5."
-    benefitDescription: "M\u1EDF kh\xF3a trang b\u1ECB tinh nhu\u1EC7."
+  - id: bow_defense_1
+    displayName: "Cung th\u1EE7 - Gi\xE1p da"
+    description: "Gia c\u1ED1 gi\xE1p da \u0111\u1EC3 cung th\u1EE7 tr\u1EE5 v\u1EEFng
+      khi b\u1ECB \xE1p s\xE1t."
+    benefitDescription: "+10% ph\xF2ng th\u1EE7 cung th\u1EE7."
     requiredNodeIds:
-    - watchtower_1
-    - granary_1
-    woodCost: 220
-    stoneCost: 250
-    foodCost: 100
-    goldCost: 100
+    - bow_damage_1
+    woodCost: 130
+    stoneCost: 80
+    goldCost: 30
     unlockedAtStart: 0
     button: {fileID: 7461725280145603988}
     icon: {fileID: 8608696781785908793}
@@ -11611,17 +12280,16 @@ MonoBehaviour:
     onUnlocked:
       m_PersistentCalls:
         m_Calls: []
-  - id: longbow_1
-    displayName: "Tr\u01B0\u1EDDng cung"
-    description: "Ho\xE0n thi\u1EC7n k\u1EF9 thu\u1EADt cung d\xE0i \u0111\u1EC3
-      b\u1EAFn xa h\u01A1n."
-    benefitDescription: "+30% t\u1EA7m \u0111\xE1nh cho cung th\u1EE7."
+  - id: formation_3
+    displayName: "M\u1EDF r\u1ED9ng \u0111\u1ED9i h\xECnh III"
+    description: "Ho\xE0n thi\u1EC7n bi\xEAn ch\u1EBF chi\u1EBFn \u0111\u1EA5u cho
+      c\u1EA3 qu\xE2n \u0111o\xE0n."
+    benefitDescription: "Qu\xE2n s\u1ED1 m\u1ED7i lo\u1EA1i: 5 \u2192 6 (+1)."
     requiredNodeIds:
-    - blacksmith_1
+    - formation_2
     woodCost: 260
-    stoneCost: 100
-    foodCost: 160
-    goldCost: 120
+    stoneCost: 130
+    goldCost: 60
     unlockedAtStart: 0
     button: {fileID: 3636686083769293082}
     icon: {fileID: 7033864333379304501}
@@ -11629,17 +12297,16 @@ MonoBehaviour:
     onUnlocked:
       m_PersistentCalls:
         m_Calls: []
-  - id: ranged_tactics_1
-    displayName: "Chi\u1EBFn thu\u1EADt t\u1EA7m xa"
-    description: "Ph\u1ED1i h\u1EE3p \u0111\u1ED9i h\xECnh \u0111\u1EC3 khai th\xE1c
-      hi\u1EC7u qu\u1EA3 h\u1ECFa l\u1EF1c t\u1EA7m xa."
-    benefitDescription: "+15% t\u1ED1c \u0111\u1ED9 \u0111\xE1nh cho cung th\u1EE7."
+  - id: cannon_damage_1
+    displayName: "Ph\xE1o binh - Thu\u1ED1c s\xFAng tinh luy\u1EC7n"
+    description: "Tinh luy\u1EC7n thu\u1ED1c s\xFAng cho nh\u1EEFng \u0111\u1EE3t
+      ph\xE1o k\xEDch m\u1EA1nh h\u01A1n."
+    benefitDescription: "+15% s\xE1t th\u01B0\u01A1ng ph\xE1o binh."
     requiredNodeIds:
-    - blacksmith_1
-    woodCost: 240
-    stoneCost: 120
-    foodCost: 150
-    goldCost: 130
+    - unlock_cannon_tower_1
+    woodCost: 190
+    stoneCost: 95
+    goldCost: 60
     unlockedAtStart: 0
     button: {fileID: 7955663347230654515}
     icon: {fileID: 631403734396501157}
@@ -11647,17 +12314,32 @@ MonoBehaviour:
     onUnlocked:
       m_PersistentCalls:
         m_Calls: []
-  - id: tower_fortification_1
-    displayName: "Gia c\u1ED1 th\xE1p canh"
-    description: "C\u1EE7ng c\u1ED1 th\xE1p canh b\u1EB1ng g\u1ED7 v\xE0 \u0111\xE1
-      \u0111\u1EC3 t\u0103ng s\u1EE9c ph\xF2ng th\u1EE7."
-    benefitDescription: "+25% \u0111\u1ED9 b\u1EC1n c\xF4ng tr\xECnh ph\xF2ng th\u1EE7."
+  - id: unlock_cannon_tower_1
+    displayName: "M\u1EDF kh\xF3a ph\xE1o \u0111\xE0i"
+    description: "Cho ph\xE9p x\xE2y Ph\xE1o \u0111\u1EC3 b\u1EA3o v\u1EC7 l\xE3nh
+      \u0111\u1ECBa."
+    benefitDescription: "M\u1EDF kh\xF3a c\xF4ng tr\xECnh t\u1EA5n c\xF4ng Ph\xE1o."
     requiredNodeIds:
-    - longbow_1
-    woodCost: 300
-    stoneCost: 260
-    foodCost: 100
-    goldCost: 120
+    - command_1
+    woodCost: 190
+    stoneCost: 110
+    goldCost: 55
+    unlockedAtStart: 0
+    button: {fileID: 900000000000000021}
+    icon: {fileID: 900000000000000020}
+    lockedOverlay: {fileID: 0}
+    onUnlocked:
+      m_PersistentCalls:
+        m_Calls: []
+  - id: cannon_defense_1
+    displayName: "Ph\xE1o binh - C\xF4ng s\u1EF1"
+    description: "D\u1EF1ng c\xF4ng s\u1EF1 che ch\u1EAFn cho k\xEDp ph\xE1o."
+    benefitDescription: "+10% ph\xF2ng th\u1EE7 ph\xE1o binh."
+    requiredNodeIds:
+    - cannon_damage_1
+    woodCost: 220
+    stoneCost: 165
+    goldCost: 70
     unlockedAtStart: 0
     button: {fileID: 3117859261834258958}
     icon: {fileID: 295779589191672514}
@@ -11665,17 +12347,22 @@ MonoBehaviour:
     onUnlocked:
       m_PersistentCalls:
         m_Calls: []
-  - id: master_armory_1
-    displayName: "Kho v\u0169 kh\xED tinh nhu\u1EC7"
-    description: "Ho\xE0n thi\u1EC7n kho v\u0169 kh\xED cho l\u1EF1c l\u01B0\u1EE3ng
-      c\u1EADn v\u1EC7."
-    benefitDescription: "+20% s\xE1t th\u01B0\u01A1ng cho c\u1EADn v\u1EC7 tinh nhu\u1EC7."
+  - id: army_doctrine_1
+    displayName: "H\u1ECDc thuy\u1EBFt t\u1ED5ng l\u1EF1c"
+    description: "K\u1EBFt h\u1EE3p h\u1ECFa l\u1EF1c, \u0111\u1ED9i h\xECnh v\xE0
+      gi\xE1p tr\u1EE5 c\u1EE7a c\u1EA3 n\u0103m binh ch\u1EE7ng."
+    benefitDescription: "+10% s\xE1t th\u01B0\u01A1ng v\xE0 +10% ph\xF2ng th\u1EE7
+      to\xE0n qu\xE2n."
     requiredNodeIds:
-    - elite_guard_1
+    - sword_defense_1
+    - bow_defense_1
+    - shield_defense_1
+    - crossbow_defense_1
+    - cannon_defense_1
+    - formation_3
     woodCost: 360
-    stoneCost: 320
-    foodCost: 180
-    goldCost: 200
+    stoneCost: 280
+    goldCost: 150
     unlockedAtStart: 0
     button: {fileID: 8532883097998547943}
     icon: {fileID: 3113554660639324012}
@@ -11684,50 +12371,56 @@ MonoBehaviour:
       m_PersistentCalls:
         m_Calls: []
   connections:
-  - fromNodeId: infantry_1
-    toNodeId: infantry_2
+  - fromNodeId: command_1
+    toNodeId: formation_1
     line: {fileID: 1214263856905784006}
-  - fromNodeId: infantry_2
-    toNodeId: watchtower_1
+  - fromNodeId: formation_1
+    toNodeId: formation_2
     line: {fileID: 7499403159135499044}
-  - fromNodeId: archer_1
-    toNodeId: archer_2
+  - fromNodeId: formation_2
+    toNodeId: formation_3
     line: {fileID: 4429578850423672738}
-  - fromNodeId: spearman_1
-    toNodeId: infantry_3
+  - fromNodeId: command_1
+    toNodeId: sword_damage_1
     line: {fileID: 1093325916621635408}
-  - fromNodeId: infantry_3
-    toNodeId: armor_1
+  - fromNodeId: command_1
+    toNodeId: shield_damage_1
     line: {fileID: 8927319417816028249}
-  - fromNodeId: armor_1
-    toNodeId: granary_1
+  - fromNodeId: command_1
+    toNodeId: bow_damage_1
     line: {fileID: 2234053323680136318}
-  - fromNodeId: longbow_1
-    toNodeId: tower_fortification_1
+  - fromNodeId: command_1
+    toNodeId: unlock_crossbow_tower_1
     line: {fileID: 3858220316640967100}
-  - fromNodeId: blacksmith_1
-    toNodeId: ranged_tactics_1
+  - fromNodeId: unlock_crossbow_tower_1
+    toNodeId: crossbow_damage_1
     line: {fileID: 5745173061916455804}
-  - fromNodeId: elite_guard_1
-    toNodeId: master_armory_1
+  - fromNodeId: sword_damage_1
+    toNodeId: sword_defense_1
     line: {fileID: 8042226123290142863}
-  - fromNodeId: infantry_1
-    toNodeId: archer_1
+  - fromNodeId: shield_damage_1
+    toNodeId: shield_defense_1
     line: {fileID: 8224752788970591547}
-  - fromNodeId: archer_2
-    toNodeId: granary_1
+  - fromNodeId: bow_damage_1
+    toNodeId: bow_defense_1
     line: {fileID: 3425145152224285380}
-  - fromNodeId: blacksmith_1
-    toNodeId: elite_guard_1
+  - fromNodeId: crossbow_damage_1
+    toNodeId: crossbow_defense_1
     line: {fileID: 1359163906493030663}
-  - fromNodeId: granary_1
-    toNodeId: blacksmith_1
+  - fromNodeId: command_1
+    toNodeId: unlock_cannon_tower_1
+    line: {fileID: 900000000000000012}
+  - fromNodeId: unlock_cannon_tower_1
+    toNodeId: cannon_damage_1
+    line: {fileID: 900000000000000016}
+  - fromNodeId: cannon_damage_1
+    toNodeId: cannon_defense_1
     line: {fileID: 8270531205128999166}
-  - fromNodeId: watchtower_1
-    toNodeId: blacksmith_1
+  - fromNodeId: crossbow_defense_1
+    toNodeId: army_doctrine_1
     line: {fileID: 7735776201840147439}
-  - fromNodeId: blacksmith_1
-    toNodeId: longbow_1
+  - fromNodeId: formation_3
+    toNodeId: army_doctrine_1
     line: {fileID: 5707250904197156295}
   keepProgressBetweenEnable: 1
   closeButton: {fileID: 5162150575227707992}
@@ -11746,6 +12439,18 @@ MonoBehaviour:
   unlockedColor: {r: 1, g: 0.85, b: 0.25, a: 1}
   inactiveConnectionColor: {r: 0.25, g: 0.2, b: 0.12, a: 0.8}
   activeConnectionColor: {r: 0.95, g: 0.65, b: 0.15, a: 1}
+--- !u!114 &918466214558437921
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7294317820271064453}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d6b1ab8e2594e639b98dc4e32a414b7, type: 3}
+  m_Name: ResearchUpgradeEffects
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchUpgradeEffects
 --- !u!1 &7423367131021308982
 GameObject:
   m_ObjectHideFlags: 0
@@ -11759,7 +12464,7 @@ GameObject:
   - component: {fileID: 6973855446228064600}
   - component: {fileID: 4434565013931869795}
   m_Layer: 0
-  m_Name: Node_Infantry_1 (4)
+  m_Name: Node_bow_damage_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -11894,7 +12599,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7434139198616029168}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: -0.30766928, w: 0.9514934}
   m_LocalPosition: {x: 0, y: 0, z: 278.09116}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -11906,8 +12611,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -617, y: -352}
-  m_SizeDelta: {x: 200, y: 12}
+  m_AnchoredPosition: {x: -623, y: 106}
+  m_SizeDelta: {x: 444.07205, y: 12}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4303885482560018123
 CanvasRenderer:
@@ -11930,7 +12635,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.95, g: 0.65, b: 0.15, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -11972,7 +12677,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7443610866569231232}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: -0.13441499, w: 0.99092513}
   m_LocalPosition: {x: 0, y: 0, z: 278.09116}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -11984,8 +12689,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 876, y: 226}
-  m_SizeDelta: {x: 450, y: 12}
+  m_AnchoredPosition: {x: -267.5, y: 88}
+  m_SizeDelta: {x: 1111.1512, y: 12}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &9028169018441666417
 CanvasRenderer:
@@ -12008,7 +12713,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.95, g: 0.65, b: 0.15, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -12170,7 +12875,7 @@ GameObject:
   - component: {fileID: 5080418829068298924}
   - component: {fileID: 7546940408637213138}
   m_Layer: 0
-  m_Name: Node_Infantry_1 (2)
+  m_Name: Node_sword_defense_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -12413,14 +13118,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.35, g: 0.35, b: 0.35, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 361954704, guid: 44cdf0bf595e15e41afa991576ce5f12, type: 3}
+  m_Sprite: {fileID: -212183788, guid: d733a722900967441afa54656a28c0c8, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -12488,14 +13193,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.35, g: 0.35, b: 0.35, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 361954704, guid: 44cdf0bf595e15e41afa991576ce5f12, type: 3}
+  m_Sprite: {fileID: -1953538444, guid: 50df2ec0bcbe05f44be9a87947edbceb, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -12563,7 +13268,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.35, g: 0.35, b: 0.35, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -12638,7 +13343,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.35, g: 0.35, b: 0.35, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -12818,7 +13523,7 @@ GameObject:
   - component: {fileID: 1780248950807053162}
   - component: {fileID: 7955663347230654515}
   m_Layer: 0
-  m_Name: Node_Infantry_1 (10)
+  m_Name: Node_cannon_damage_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -13091,7 +13796,7 @@ GameObject:
   - component: {fileID: 9125918006352596242}
   - component: {fileID: 6597737955034684096}
   m_Layer: 0
-  m_Name: Node_Infantry_1 (6)
+  m_Name: Node_crossbow_damage_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -13226,7 +13931,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8279471192649645550}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: -0.7048937, w: 0.70931304}
   m_LocalPosition: {x: 0, y: 0, z: 278.09116}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -13238,8 +13943,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 891, y: -360}
-  m_SizeDelta: {x: 230, y: 12}
+  m_AnchoredPosition: {x: -442, y: -184}
+  m_SizeDelta: {x: 320.00626, y: 12}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &692423786390535763
 CanvasRenderer:
@@ -13262,7 +13967,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.25, g: 0.2, b: 0.12, a: 0.8}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -13292,7 +13997,7 @@ GameObject:
   - component: {fileID: 3358111152098450443}
   - component: {fileID: 5327289549315733067}
   m_Layer: 0
-  m_Name: Node_Infantry_1 (5)
+  m_Name: Node_formation_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -13317,7 +14022,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 259, y: 233}
+  m_AnchoredPosition: {x: -806, y: -357}
   m_SizeDelta: {x: 190, y: 190}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1376804897829085914
@@ -13467,7 +14172,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: New Text
+  m_text: "V\u0103n b\u1EA3n m\u1EDBi"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -13754,7 +14459,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Infantry I
+  m_text: "Cung th\u1EE7 - Gi\xE1p da"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -14242,7 +14947,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: New Text
+  m_text: "V\u0103n b\u1EA3n m\u1EDBi"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -14339,7 +15044,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8809860162417999073}
-  m_LocalRotation: {x: 0, y: 0, z: -0.34904015, w: 0.9371078}
+  m_LocalRotation: {x: 0, y: 0, z: 0.017751167, w: 0.99984246}
   m_LocalPosition: {x: 0, y: 0, z: 278.09116}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -14351,8 +15056,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 390, y: 108}
-  m_SizeDelta: {x: 200, y: 12}
+  m_AnchoredPosition: {x: 884, y: -338.5}
+  m_SizeDelta: {x: 366.2308, y: 12}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2883575844467738662
 CanvasRenderer:
@@ -14375,7 +15080,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.25, g: 0.2, b: 0.12, a: 0.8}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -14409,7 +15114,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1438654259815774892
 RectTransform:
   m_ObjectHideFlags: 0
@@ -14757,7 +15462,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: New Text
+  m_text: "V\u0103n b\u1EA3n m\u1EDBi"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
   m_sharedMaterial: {fileID: 4819360934523329738, guid: 56fbdf04c50159f4e9860c2501b9a228, type: 2}
@@ -14929,7 +15634,7 @@ MonoBehaviour:
   m_DecelerationRate: 0.135
   m_ScrollSensitivity: 1
   m_Viewport: {fileID: 8643492291530196315}
-  m_HorizontalScrollbar: {fileID: 6340372088406516922}
+  m_HorizontalScrollbar: {fileID: 0}
   m_VerticalScrollbar: {fileID: 0}
   m_HorizontalScrollbarVisibility: 2
   m_VerticalScrollbarVisibility: 0
