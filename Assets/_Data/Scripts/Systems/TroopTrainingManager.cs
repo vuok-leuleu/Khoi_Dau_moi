@@ -436,11 +436,19 @@ public class TroopTrainingManager : MonoBehaviour
     {
         availableSlotIndices = new List<int>();
         if (zone == null || requiredGroupCount <= 0) return false;
-        // Vùng có căn cứ địch không có Nhà Chính nhưng vẫn là mục tiêu tấn
-        // công hợp lệ. Các nhóm được đặt sẵn index riêng để không đè lên nhau
-        // khi vùng đó được chinh phục. Vùng trống chưa có Nhà Chính thì không
-        // thể nhận quân đồn trú.
-        if (!zone.isTownHallEstablished && !zone.hasEnemyOutpost) return false;
+        // Vùng vừa chinh phục có thể chưa xây Nhà Chính, nhưng vẫn phải nhận
+        // được quân đồn trú theo sức chứa của Trại Lính ở ZEFFIRA. Vùng còn
+        // căn cứ địch cũng là mục tiêu tấn công hợp lệ; chỉ vùng chưa mở khóa
+        // và không có căn cứ địch mới không được nhận quân.
+        if (!zone.IsConquered && !zone.hasEnemyOutpost) return false;
+
+        // Chỉ ZEFFIRA (vùng có Trại Lính trung tâm) quyết định sức chứa quân
+        // cho toàn bản đồ. Các vùng khác chỉ hiển thị quân đồn trú nên phải
+        // dùng đúng số ô mà Trại Lính ở ZEFFIRA đã mở khóa.
+        int destinationSlotCapacity = IsCentralTrainingSettlement(zone)
+            ? GetUnlockedSlotsCountForZone(zone)
+            : GetGarrisonSlotCapacity();
+        if (destinationSlotCapacity <= 0) return false;
 
         HashSet<int> occupied = new HashSet<int>();
 
@@ -496,10 +504,10 @@ public class TroopTrainingManager : MonoBehaviour
 
         if (hasUnknownMarchingReservation)
         {
-            for (int i = 0; i < MAX_TRAINING_SLOTS; i++) occupied.Add(i);
+            for (int i = 0; i < destinationSlotCapacity; i++) occupied.Add(i);
         }
 
-        for (int i = 0; i < MAX_TRAINING_SLOTS && availableSlotIndices.Count < requiredGroupCount; i++)
+        for (int i = 0; i < destinationSlotCapacity && availableSlotIndices.Count < requiredGroupCount; i++)
         {
             if (!occupied.Contains(i)) availableSlotIndices.Add(i);
         }
@@ -530,14 +538,18 @@ public class TroopTrainingManager : MonoBehaviour
         SyncFoodToDataManager();
     }
 
-    private static TroopTrainingSlotData[] CreateGarrisonDisplaySlots(SettlementZone zone)
+    private TroopTrainingSlotData[] CreateGarrisonDisplaySlots(SettlementZone zone)
     {
-        if (zone == null || !zone.isTownHallEstablished)
+        // Nhà Chính chỉ quyết định việc xây công trình. Sau khi đã chinh phục
+        // vùng đất, người chơi vẫn có các ô Quân đồn trú dù chưa xây Nhà Chính.
+        if (zone == null || !zone.IsConquered)
         {
             return CreateDisplaySlots(0);
         }
 
-        TroopTrainingSlotData[] slots = CreateDisplaySlots(MAX_TRAINING_SLOTS);
+        // Quân đồn trú ở mọi vùng dùng sức chứa do Trại Lính duy nhất tại
+        // ZEFFIRA mở khóa, không phải tám ô cố định.
+        TroopTrainingSlotData[] slots = CreateDisplaySlots(GetGarrisonSlotCapacity());
         Dictionary<int, List<UnitController>> groups = GetGarrisonGroups(zone);
 
         foreach (KeyValuePair<int, List<UnitController>> group in groups)
@@ -545,6 +557,10 @@ public class TroopTrainingManager : MonoBehaviour
             int slotIndex = group.Key;
             if (slotIndex < 0 || slotIndex >= slots.Length || group.Value == null || group.Value.Count == 0) continue;
 
+            // Không làm ẩn nhóm quân cũ nếu nó từng ở một ô cao hơn trước khi
+            // giới hạn sức chứa được áp dụng. Ô trống còn lại vẫn giữ trạng
+            // thái khóa cho đến khi nâng Trại Lính ở ZEFFIRA.
+            slots[slotIndex].isUnlocked = true;
             slots[slotIndex].isGarrisonSlot = true;
             slots[slotIndex].troopType = ToBuildingType(group.Value[0].AttackMode);
             slots[slotIndex].stationedSoldierCount = group.Value.Count;
@@ -554,6 +570,12 @@ public class TroopTrainingManager : MonoBehaviour
         for (int i = 0; i < slots.Length; i++) slots[i].isGarrisonSlot = true;
 
         return slots;
+    }
+
+    private int GetGarrisonSlotCapacity()
+    {
+        SettlementZone centralZone = ResolveCentralSettlement();
+        return Mathf.Clamp(GetUnlockedSlotsCountForZone(centralZone), 0, MAX_TRAINING_SLOTS);
     }
 
     private static Dictionary<int, List<UnitController>> GetGarrisonGroups(SettlementZone zone)
