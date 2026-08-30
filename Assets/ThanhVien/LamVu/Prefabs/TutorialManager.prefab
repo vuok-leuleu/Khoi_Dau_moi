@@ -27,7 +27,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3917167444888736694}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 968.5365, y: 540, z: 34.76844}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -74,56 +74,75 @@ MonoBehaviour:
   enemyZone: {fileID: 0}
   enemySpawner: {fileID: 0}
   tutorialEnemyCount: 2
+  enablePresentationBattleSequence: 1
+  evenmoorZone: {fileID: 0}
+  wavesBeforeDragonDefense: 10
+  warningWavesBeforeFirstDefense: 1
+  presentationBattlePhase: 0
+  dragonCountdownDialogues: []
+  dragonDefenseWarningDialogues:
+  - speakerName: "Gi\xE0 l\xE0ng"
+    speakerAvatar: {fileID: -1410745400, guid: 012c4f79dcfed8c4591f242ba9a517de, type: 3}
+    message: "C\u1EA9n th\u1EADn s\u1EAFp c\xF3 1 cu\u1ED9c chi\u1EBFn l\u1EDBn,
+      k\u1EC3 \u0111\u1ECBch m\u1EA1nh \u0111\xE2ng ti\u1EBFn \u0111\u1EBFn, h\u1EABy
+      n\xE2ng c\u1EA5p v\xE0 m\u1EDF kh\xF3a l\xEDnh khi\xEAn \u0111\u1EC3 ch\u1ED1ng
+      l\u1EA1i."
+  dragonDefenseVictoryDialogues:
+  - speakerName: "Gi\xE0 l\xE0ng"
+    speakerAvatar: {fileID: -1410745400, guid: 012c4f79dcfed8c4591f242ba9a517de, type: 3}
+    message: "T\u1ED1t l\u1EAFm ch\xFAng ta th\xE0nh c\xF4ng ph\xF2ng th\u1EE7 k\u1EBB
+      \u0111\u1ECBch r\u1ED3i, b\xE2y gi\u1EDD b\u1EA1n c\xF3 th\u1EC3 th\u1EED chinh
+      ph\u1EE5c c\xE1c khu v\u1EF1c c\xF2n l\u1EA1i."
   outpostAttackButton: {fileID: 0}
   stage0Dialogues:
   - speakerName: "Gi\xE0 l\xE0ng"
     speakerAvatar: {fileID: -1410745400, guid: 012c4f79dcfed8c4591f242ba9a517de, type: 3}
-    message: "\"Th\u01B0a l\xE3nh ch\xFAa, khu \u0111\u1ECBnh c\u01B0 Zeffira c\u1EE7a
+    message: "Th\u01B0a l\xE3nh ch\xFAa, khu \u0111\u1ECBnh c\u01B0 Zeffira c\u1EE7a
       ch\xFAng ta c\u1EA7n \u0111\u01B0\u1EE3c t\xE1i thi\u1EBFt sau nh\u1EEFng bi\u1EBFn
-      \u0111\u1ED9ng. H\xE3y ki\u1EC3m tra t\xECnh h\xECnh b\xEAn trong l\xE3nh \u0111\u1ECBa.\""
+      \u0111\u1ED9ng. H\xE3y ki\u1EC3m tra t\xECnh h\xECnh b\xEAn trong l\xE3nh \u0111\u1ECBa."
   stage1Dialogues:
   - speakerName: "Gi\xE0 l\xE0ng"
     speakerAvatar: {fileID: -1410745400, guid: 012c4f79dcfed8c4591f242ba9a517de, type: 3}
-    message: "\"G\u1ED7 l\xE0 t\xE0i nguy\xEAn ti\xEAn quy\u1EBFt \u0111\u1EC3 x\xE2y
+    message: "G\u1ED7 l\xE0 t\xE0i nguy\xEAn ti\xEAn quy\u1EBFt \u0111\u1EC3 x\xE2y
       d\u1EF1ng l\xE3nh \u0111\u1ECBa. H\xE3y ch\u1ECDn m\u1ED9t \xF4 \u0111\u1EA5t
-      tr\u1ED1ng \u0111\u1EC3 l\u1EADp X\u01B0\u1EDFng G\u1ED7.\""
+      tr\u1ED1ng \u0111\u1EC3 l\u1EADp X\u01B0\u1EDFng G\u1ED7."
   stage2Dialogues:
   - speakerName: "Gi\xE0 l\xE0ng"
     speakerAvatar: {fileID: -1410745400, guid: 012c4f79dcfed8c4591f242ba9a517de, type: 3}
-    message: "\"Khu v\u1EF1c bi\xEAn c\u01B0\u01A1ng l\xE2n c\u1EADn \u0111ang b\u1ECB
+    message: "Khu v\u1EF1c bi\xEAn c\u01B0\u01A1ng l\xE2n c\u1EADn \u0111ang b\u1ECB
       k\u1EBB \u0111\u1ECBch d\xF2m ng\xF3. H\xE3y chi\xEAu m\u1ED9 m\u1ED9t H\u1ED9
-      V\u1EC7 (Guard) t\u1EA1i Doanh Tr\u1EA1i \u0111\u1EC3 b\u1EA3o v\u1EC7 ng\u01B0\u1EDDi
-      d\xE2n.\""
+      V\u1EC7 t\u1EA1i Doanh Tr\u1EA1i \u0111\u1EC3 b\u1EA3o v\u1EC7 ng\u01B0\u1EDDi
+      d\xE2n."
   stage3Dialogues:
   - speakerName: "Gi\xE0 l\xE0ng"
     speakerAvatar: {fileID: -1410745400, guid: 012c4f79dcfed8c4591f242ba9a517de, type: 3}
-    message: "\"Trinh s\xE1t b\xE1o v\u1EC1: Ph\xEDa \u0110\xF4ng Zeffira c\xF3 m\u1ED9t
+    message: "Trinh s\xE1t b\xE1o v\u1EC1: Ph\xEDa \u0110\xF4ng Zeffira c\xF3 m\u1ED9t
       c\u0103n c\u1EE9 \u0111\u1ECBch \u0111ang chi\u1EBFm \u0111\xF3ng v\xF9ng \u0111\u1EA5t
       m\xE0u m\u1EE1 Vaskasia. H\xE3y xu\u1EA5t qu\xE2n ti\u1EBFn v\u1EC1 ph\xEDa
-      \u0110\xF4ng!\""
+      \u0110\xF4ng!"
   stage4Dialogues:
   - speakerName: "Gi\xE0 l\xE0ng"
     speakerAvatar: {fileID: -1410745400, guid: 012c4f79dcfed8c4591f242ba9a517de, type: 3}
-    message: "\"Qu\xE2n \u0111\u1ECBch \u0111\xE3 d\xE0n tr\u1EADn s\u1EB5n s\xE0ng!
+    message: "Qu\xE2n \u0111\u1ECBch \u0111\xE3 d\xE0n tr\u1EADn s\u1EB5n s\xE0ng!
       H\xE3y ch\u1EC9 huy l\u1EF1c l\u01B0\u1EE3ng ti\u1EBFn c\xF4ng v\xE0 gi\xE0nh
-      l\u1EA5y chi\u1EBFn th\u1EAFng \u0111\u1EA7u ti\xEAn!\""
+      l\u1EA5y chi\u1EBFn th\u1EAFng \u0111\u1EA7u ti\xEAn!"
   - speakerName: "Gi\xE0 l\xE0ng"
     speakerAvatar: {fileID: -1410745400, guid: 012c4f79dcfed8c4591f242ba9a517de, type: 3}
-    message: "\"Chi\u1EBFn th\u1EAFng vang d\u1ED9i! L\u1EF1c l\u01B0\u1EE3ng \u0111\u1ECBch
+    message: "Chi\u1EBFn th\u1EAFng vang d\u1ED9i! L\u1EF1c l\u01B0\u1EE3ng \u0111\u1ECBch
       \u0111\xE3 b\u1ECB qu\xE9t s\u1EA1ch, v\xF9ng \u0111\u1EA5t Vaskasia \u0111\xE3
-      \u0111\u01B0\u1EE3c gi\u1EA3i ph\xF3ng ho\xE0n to\xE0n.\""
+      \u0111\u01B0\u1EE3c gi\u1EA3i ph\xF3ng ho\xE0n to\xE0n."
   stage5Dialogues:
   - speakerName: "Gi\xE0 l\xE0ng"
     speakerAvatar: {fileID: -1410745400, guid: 012c4f79dcfed8c4591f242ba9a517de, type: 3}
-    message: "\"V\xF9ng \u0111\u1EA5t n\xE0y gi\u1EDD \u0111\xE3 an to\xE0n. H\xE3y
+    message: "V\xF9ng \u0111\u1EA5t n\xE0y gi\u1EDD \u0111\xE3 an to\xE0n. H\xE3y
       l\u1EADp t\u1EE9c kh\u1EDFi c\xF4ng x\xE2y d\u1EF1ng Nh\xE0 Ch\xEDnh \u0111\u1EC3
       bi\u1EBFn n\u01A1i \u0111\xE2y th\xE0nh khu \u0111\u1ECBnh c\u01B0 m\u1EDBi
-      mang t\xEAn Vaskasia!\""
+      mang t\xEAn Vaskasia!"
   stageCompleteDialogues:
   - speakerName: "Gi\xE0 l\xE0ng"
     speakerAvatar: {fileID: -1410745400, guid: 012c4f79dcfed8c4591f242ba9a517de, type: 3}
-    message: "\"C\u1EA3m \u01A1n n\u1ED7 l\u1EF1c c\u1EE7a ng\u01B0\u01A1i, ng\u01B0\u1EDDi
-      anh h\xF9ng. D\xE2n l\xE0ng \u0111\xE3 \u0111\u01B0\u1EE3c an to\xE0n!\"\"Ch\xFAc
+    message: "C\u1EA3m \u01A1n n\u1ED7 l\u1EF1c c\u1EE7a ng\u01B0\u01A1i, ng\u01B0\u1EDDi
+      anh h\xF9ng. D\xE2n l\xE0ng \u0111\xE3 \u0111\u01B0\u1EE3c an to\xE0n!\"Ch\xFAc
       m\u1EEBng l\xE3nh ch\xFAa! Ng\u01B0\u1EDDi \u0111\xE3 ho\xE0n th\xE0nh xu\u1EA5t
       s\u1EAFc giai \u0111o\u1EA1n M\u1EDF \u0110\u1EA7u."
 --- !u!114 &4716681498478775652
