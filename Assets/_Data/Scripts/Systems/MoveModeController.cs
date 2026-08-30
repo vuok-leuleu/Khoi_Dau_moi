@@ -409,9 +409,6 @@ public class MoveModeController : MonoBehaviour
 
         List<UnitController> available = GetSoldiersStationedInZone(zone);
         int targetCount = slot.MoveUnitCount;
-        bool centralTraining = TroopTrainingManager.Ins != null &&
-                               TroopTrainingManager.Ins.IsCentralTrainingSettlement(zone);
-        if (centralTraining) targetCount = 3;
         if (targetCount <= 0) targetCount = 3;
 
         // Ưu tiên các lính đã có đúng slot index. Đây là đường chính cho các
