@@ -396,6 +396,7 @@ public class BuildingSystem : Singleton<BuildingSystem>
         if (saveData.buildings == null || saveData.buildings.Count == 0) return;
 
         BuildingManager.Ins.LoadStates(saveData.buildings);
+        TroopTrainingManager.Ins?.SyncFoodToDataManager();
     }
 
     private GameObject GetGhostPrefab(BuildingType type)

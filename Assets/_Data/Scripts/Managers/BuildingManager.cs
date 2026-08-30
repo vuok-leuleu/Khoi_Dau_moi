@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 
 /*
@@ -377,6 +377,9 @@ public class BuildingManager : Singleton<BuildingManager>
             SettlementSidePanelUI.Ins.UpdateHeaderVisual();
             SettlementSidePanelUI.Ins.RefreshPanel();
         }
+
+        // 🌾 Đồng bộ lại chỉ số Lúa mì sau khi toàn bộ công trình trong Scene được load xong
+        TroopTrainingManager.Ins?.SyncFoodToDataManager();
     }
 
     /// <summary>Phá hủy toàn bộ công trình hiện có – chỉ gọi trước LoadStates().</summary>

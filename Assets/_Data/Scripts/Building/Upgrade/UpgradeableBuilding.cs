@@ -588,6 +588,9 @@ public class UpgradeableBuilding : MonoBehaviour
 
         if (BuildingUpgradeSidePanelUI.Ins != null) BuildingUpgradeSidePanelUI.Ins.RefreshPanel();
         if (SettlementSidePanelUI.Ins != null) SettlementSidePanelUI.Ins.RefreshPanel();
+
+        // 🌾 Đồng bộ lại chỉ số Lúa mì nếu Kho Lúa bị phá hủy
+        TroopTrainingManager.Ins?.SyncFoodToDataManager();
     }
 
     public void StartRepair()
@@ -813,6 +816,7 @@ public class UpgradeableBuilding : MonoBehaviour
         }
 
         OnLevelChanged?.Invoke();
+        TroopTrainingManager.Ins?.SyncFoodToDataManager();
     }
 
     public void LoadLevel(int level)

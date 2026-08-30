@@ -65,12 +65,24 @@ public class TroopTrainingManager : MonoBehaviour
     {
         SubscribeDayNight();
         SyncFoodToDataManager();
+        StopAllCoroutines();
+        StartCoroutine(DeferredSyncFood());
     }
 
     private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
     {
         centralSettlement = null;
         SubscribeDayNight();
+        SyncFoodToDataManager();
+        StopAllCoroutines();
+        StartCoroutine(DeferredSyncFood());
+    }
+
+    private System.Collections.IEnumerator DeferredSyncFood()
+    {
+        // Chờ 2 frame để tất cả hệ thống BuildingSystem / BattleData / Spawner nạp và khôi phục xong hoàn toàn
+        yield return null;
+        yield return null;
         SyncFoodToDataManager();
     }
 
@@ -136,6 +148,12 @@ public class TroopTrainingManager : MonoBehaviour
             }
         }
 
+        if (zones.Length > 0)
+        {
+            centralSettlement = zones[0];
+            return centralSettlement;
+        }
+
         return null;
     }
 
@@ -188,6 +206,46 @@ public class TroopTrainingManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Giải phóng đúng số ô lính đã hoàn thành khi một phần quân bị tiêu diệt (VD: xâm chiếm thua).
+    /// Khác với ClearZoneTrainingSlots (xóa HẾT), hàm này chỉ xóa đúng số slot cần thiết,
+    /// giữ nguyên slot của lính còn sống ở nhà.
+    /// </summary>
+    /// <param name="killedSoldierCount">Số lính (UnitController) thực tế đã bị tiêu diệt</param>
+    public void FreeCompletedSlots(int killedSoldierCount)
+    {
+        if (killedSoldierCount <= 0) return;
+
+        SettlementZone centralZone = ResolveCentralSettlement();
+        if (centralZone == null) return;
+
+        TroopTrainingSlotData[] slots = GetSlotsForZone(centralZone);
+        if (slots == null) return;
+
+        // Mỗi slot = SOLDIERS_PER_TRAINING_UNIT lính (= 3). Tính số slot cần xóa.
+        int slotsToFree = Mathf.CeilToInt(killedSoldierCount / (float)SOLDIERS_PER_TRAINING_UNIT);
+
+        int freed = 0;
+        for (int i = MAX_TRAINING_SLOTS - 1; i >= 0 && freed < slotsToFree; i--)
+        {
+            if (slots[i] != null && slots[i].isCompleted)
+            {
+                slots[i].isCompleted = false;
+                slots[i].isTraining = false;
+                slots[i].remainingWaves = 1;
+                freed++;
+            }
+        }
+
+        if (freed > 0)
+        {
+            SaveZoneTrainingData(centralZone.settlementName);
+            centralZone.UpdateZoneVisualText();
+            SyncFoodToDataManager();
+            Debug.Log($"[TroopTrainingManager] 🌾 Giải phóng {freed} slot lính sau khi {killedSoldierCount} lính tử trận.");
+        }
+    }
+
+    /// <summary>
     /// Xóa sạch dữ liệu ô huấn luyện của Vùng Đất khi bị phòng thủ thua hoặc thất bại trận đánh
     /// </summary>
     public void ClearZoneTrainingSlots(string zoneName)
@@ -206,6 +264,7 @@ public class TroopTrainingManager : MonoBehaviour
             }
         }
         SaveZoneTrainingData(centralZone.settlementName);
+        centralZone.UpdateZoneVisualText();
 
         // 🌾 Giải phóng slot lính -> hoàn trả lại lúa khả dụng
         SyncFoodToDataManager();
@@ -232,8 +291,8 @@ public class TroopTrainingManager : MonoBehaviour
 
             bool isFoodBuilding = b.buildingType == BuildingType.FoodStorage ||
                                   b.buildingType == BuildingType.Rice ||
-                                  nameLower.Contains("food") || nameLower.Contains("lúa") || nameLower.Contains("lương") ||
-                                  bNameLower.Contains("lúa") || bNameLower.Contains("lương");
+                                  nameLower.Contains("food") || nameLower.Contains("lúa") || nameLower.Contains("lương") || nameLower.Contains("rice") ||
+                                  bNameLower.Contains("lúa") || bNameLower.Contains("lương") || bNameLower.Contains("food") || bNameLower.Contains("rice");
 
             if (isFoodBuilding)
             {
@@ -250,16 +309,32 @@ public class TroopTrainingManager : MonoBehaviour
     {
         int usedCount = 0;
         SettlementZone centralZone = ResolveCentralSettlement();
-        if (centralZone == null) return usedCount;
-
-        TroopTrainingSlotData[] slots = GetSlotsForZone(centralZone);
-        if (slots == null) return usedCount;
-
-        for (int i = 0; i < MAX_TRAINING_SLOTS; i++)
+        if (centralZone != null)
         {
-            if (slots[i] != null && (slots[i].isTraining || slots[i].isCompleted))
+            TroopTrainingSlotData[] slots = GetSlotsForZone(centralZone);
+            if (slots != null)
             {
-                usedCount++;
+                for (int i = 0; i < MAX_TRAINING_SLOTS; i++)
+                {
+                    if (slots[i] != null && (slots[i].isTraining || slots[i].isCompleted))
+                    {
+                        usedCount++;
+                    }
+                }
+                return usedCount;
+            }
+        }
+
+        // Fallback: Quét tất cả dữ liệu zone trong bộ nhớ nếu centralZone chưa kịp xác định
+        foreach (var kvp in zoneSlotsDict)
+        {
+            if (kvp.Value == null) continue;
+            for (int i = 0; i < MAX_TRAINING_SLOTS; i++)
+            {
+                if (kvp.Value[i] != null && (kvp.Value[i].isTraining || kvp.Value[i].isCompleted))
+                {
+                    usedCount++;
+                }
             }
         }
 
@@ -386,10 +461,6 @@ public class TroopTrainingManager : MonoBehaviour
         TroopTrainingSlotData[] currentSlots = zoneSlotsDict[zoneName];
         int unlockedCount = GetUnlockedSlotsCountForZone(zone);
 
-        int activeSoldierCount = GetStationedSoldierCount(zone, BuildingType.None);
-        int requiredGarrisonSlots = Mathf.CeilToInt(activeSoldierCount / (float)SOLDIERS_PER_TRAINING_UNIT);
-        int completedCount = 0;
-
         for (int i = 0; i < MAX_TRAINING_SLOTS; i++)
         {
             if (currentSlots[i] == null)
@@ -397,22 +468,6 @@ public class TroopTrainingManager : MonoBehaviour
                 currentSlots[i] = new TroopTrainingSlotData { slotIndex = i };
             }
             currentSlots[i].isUnlocked = (i < unlockedCount);
-
-            // Đồng bộ ô hoàn thành chứa lính với số lính thực tế đang có trên bản đồ
-            if (currentSlots[i].isUnlocked && currentSlots[i].isCompleted)
-            {
-                if (completedCount < requiredGarrisonSlots)
-                {
-                    completedCount++;
-                }
-                else
-                {
-                    // Nếu số lính thực tế ít hơn (VD: 0 lính), reset ô về Ô Trống
-                    currentSlots[i].isCompleted = false;
-                    currentSlots[i].isTraining = false;
-                    currentSlots[i].remainingWaves = 1;
-                }
-            }
         }
 
         return currentSlots;
@@ -442,6 +497,28 @@ public class TroopTrainingManager : MonoBehaviour
         }
 
         return slots;
+    }
+
+    /// <summary>
+    /// Đếm tổng số lính đang còn sống trong toàn bộ quân đội (kể cả đang hành quân hoặc đồn trú ở bất kỳ ải nào)
+    /// </summary>
+    public static int GetTotalAliveSoldierCount(BuildingType troopType = BuildingType.None)
+    {
+        int total = 0;
+        UnitController[] allUnits = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
+        foreach (UnitController soldier in allUnits)
+        {
+            if (soldier == null || !soldier.gameObject.activeInHierarchy || soldier.isDead)
+            {
+                continue;
+            }
+
+            if (troopType == BuildingType.None || ToBuildingType(soldier.AttackMode) == troopType)
+            {
+                total++;
+            }
+        }
+        return total;
     }
 
     private static int GetStationedSoldierCount(SettlementZone zone, BuildingType troopType)

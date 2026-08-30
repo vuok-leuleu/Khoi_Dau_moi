@@ -422,6 +422,12 @@ public static class BattleData
         {
             buildingSys.SaveBuildingsToSlot(1);
         }
+
+        // 🌾 Đồng bộ lại chỉ số Lúa mì sau khi áp dụng kết quả trận đánh
+        if (TroopTrainingManager.Ins != null)
+        {
+            TroopTrainingManager.Ins.SyncFoodToDataManager();
+        }
     }
 
     /// <summary>
@@ -477,7 +483,8 @@ public static class BattleData
     /// </summary>
     private static void ApplyExpeditionDefeatResult()
     {
-        // Tiêu diệt các đoàn lính đang hành quân xuất trận
+        // Đếm số lính thực tế bị tiêu diệt để giải phóng đúng số slot lúa
+        int killedCount = 0;
         UnitController[] activeUnits = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
         foreach (var u in activeUnits)
         {
@@ -485,12 +492,19 @@ public static class BattleData
                 u.hasReachedExpeditionDestination &&
                 u.marchDestinationZoneName == TargetedSettlementZoneName)
             {
+                killedCount++;
                 Object.Destroy(u.gameObject);
             }
         }
 
+        // 🌾 Giải phóng đúng số slot lúa tương ứng (lính ở nhà vẫn giữ nguyên slot)
+        if (TroopTrainingManager.Ins != null && killedCount > 0)
+        {
+            TroopTrainingManager.Ins.FreeCompletedSlots(killedCount);
+        }
+
         TargetedSettlementZoneName = "";
-        Debug.Log("[BattleData] 💀 XÂM CHIẾM THUA! Mất toàn bộ lực lượng lính đã cử đi xâm chiếm. Lính tại căn cứ nhà giữ nguyên.");
+        Debug.Log($"[BattleData] 💀 XÂM CHIẾM THUA! Mất {killedCount} lính đã cử đi xâm chiếm. Lính tại căn cứ nhà giữ nguyên.");
     }
 
     /// <summary>
@@ -598,6 +612,12 @@ internal sealed class BattleReturnRestoreRunner : MonoBehaviour
         if (BattleData.HasResult)
         {
             BattleData.ApplyBattleResultToScene();
+        }
+
+        // 🌾 Đồng bộ lại chỉ số Lúa mì sau khi toàn bộ công trình và lính được khôi phục sau Battle
+        if (TroopTrainingManager.Ins != null)
+        {
+            TroopTrainingManager.Ins.SyncFoodToDataManager();
         }
 
         restoreQueued = false;
