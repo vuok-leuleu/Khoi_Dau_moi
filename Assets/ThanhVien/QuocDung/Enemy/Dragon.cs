@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -14,7 +15,7 @@ public interface IDeathAnimationHandler
 
 /// <summary>
 /// Controls the dragon's entrance and ground combat.
-/// Attack order: Attack 1, Attack 1, Attack 2, then repeats.
+/// Attack order: Attack 1, Attack 1, Attack 2 (area damage), then repeats.
 /// </summary>
 [DisallowMultipleComponent]
 public class Dragon : MonoBehaviour, IDeathAnimationHandler
@@ -37,14 +38,24 @@ public class Dragon : MonoBehaviour, IDeathAnimationHandler
     [Tooltip("When enabled, the dragon ignores soldiers/towers and goes straight to the Main target.")]
     [SerializeField] private bool attackMainDirectly;
 
-    [Header("Movement")]
-    [SerializeField, Min(0.1f)] private float moveSpeed = 4f;
-    [SerializeField, Min(0.1f)] private float stoppingDistance = 3f;
-    [SerializeField, Min(0f)] private float turnSpeed = 720f;
+    // Kept for backward-compatible prefab serialization. The stationary dragon
+    // no longer reads the movement values; turnSpeed is used only to face an
+    // in-range target before playing an attack animation.
+    [SerializeField, HideInInspector] private float moveSpeed = 4f;
+    [SerializeField, HideInInspector] private float stoppingDistance = 3f;
+    [SerializeField, HideInInspector] private float turnSpeed = 720f;
 
     [Header("Combat")]
+    [Tooltip("Rồng chỉ đánh mục tiêu khi mục tiêu tiến vào bán kính này; rồng không tự di chuyển đến mục tiêu.")]
+    [SerializeField, Min(0.1f)] private float attackRange = 3f;
     [SerializeField, Min(0f)] private float attackDamage = 25f;
     [SerializeField, Min(0.05f)] private float attackCooldown = 1.5f;
+
+    [Header("Third attack - area damage")]
+    [Tooltip("Bán kính sát thương vùng của nhịp đánh thứ ba. Tâm vùng là mục tiêu chính của đòn đánh.")]
+    [SerializeField, Min(0.1f)] private float thirdAttackAreaRadius = 4f;
+    [Tooltip("Prefab VFX được tạo tại tâm sát thương vùng khi thực hiện đòn thứ ba. Có thể kéo GroundPunchVFX.prefab vào đây.")]
+    [SerializeField] private GameObject thirdAttackVfxPrefab;
 
     [Header("Animator state names")]
     [Tooltip("Names of the states in the Animator window, not necessarily the imported clip names.")]
@@ -68,6 +79,9 @@ public class Dragon : MonoBehaviour, IDeathAnimationHandler
     private float nextTargetRefreshTime;
     private float nextAttackTime;
     private int attackStep;
+    private Transform attackTarget;
+    private bool currentAttackIsArea;
+    private bool attackDamageApplied;
     private bool spawnPresentationFinished;
     private bool isAttacking;
     private bool isDead;
@@ -102,12 +116,9 @@ public class Dragon : MonoBehaviour, IDeathAnimationHandler
         if (animator == null) animator = GetComponentInChildren<Animator>();
         if (agent == null) agent = GetComponent<NavMeshAgent>();
 
-        if (agent != null)
-        {
-            agent.speed = moveSpeed;
-            agent.stoppingDistance = stoppingDistance;
-            agent.angularSpeed = turnSpeed;
-        }
+        // The dragon is a stationary boss. Do not let a leftover NavMesh path
+        // move or rotate it after it has spawned at its fixed direction.
+        StopMoving();
     }
 
     private void Start()
@@ -127,6 +138,10 @@ public class Dragon : MonoBehaviour, IDeathAnimationHandler
 
             if (!SetTrigger(breatheFireTrigger)) PlayState(breatheFireState);
             yield return new WaitForSeconds(GetStateDuration(breatheFireState, breatheFireDuration));
+
+            // Do not remain in the entrance animation. The dragon waits in Idle
+            // until a soldier has entered its attack range.
+            PlayState(idleState);
         }
 
         spawnPresentationFinished = true;
@@ -158,17 +173,14 @@ public class Dragon : MonoBehaviour, IDeathAnimationHandler
     {
         if (!isPrimaryDragon || isDead || !spawnPresentationFinished || !autoStartCombat) return;
 
+        // The dragon never chases: it remains at the landing position until a
+        // soldier enters range, then turns in place so the attack animation faces it.
+        StopMoving();
         RefreshTargetIfNeeded();
         if (!IsValidTarget(currentTarget)) return;
 
-        float distance = GetDistanceToTarget(currentTarget);
-        if (distance > stoppingDistance)
-        {
-            MoveTo(currentTarget);
-            return;
-        }
+        if (GetDistanceToTarget(currentTarget) > attackRange) return;
 
-        StopMoving();
         FaceTarget(currentTarget.position);
 
         if (!isAttacking && Time.time >= nextAttackTime)
@@ -200,22 +212,51 @@ public class Dragon : MonoBehaviour, IDeathAnimationHandler
     {
         isAttacking = true;
         nextAttackTime = Time.time + attackCooldown;
+        attackTarget = target;
 
-        // 0 -> Attack 1, 1 -> Attack 1, 2 -> Attack 2, repeat.
-        bool useAttack2 = attackStep == 2;
-        string stateToPlay = useAttack2 ? attack2State : attack1State;
-        string triggerToSet = useAttack2 ? attack2Trigger : attack1Trigger;
+        // 0 -> Attack 1, 1 -> Attack 1, 2 -> Attack 2 (area damage), repeat.
+        bool isThirdAttack = attackStep == 2;
+        currentAttackIsArea = isThirdAttack;
+        attackDamageApplied = false;
+        string stateToPlay = isThirdAttack ? attack2State : attack1State;
+        string triggerToSet = isThirdAttack ? attack2Trigger : attack1Trigger;
         attackStep = (attackStep + 1) % 3;
         if (!SetTrigger(triggerToSet)) PlayState(stateToPlay);
 
-        // EnemyAI applies the damage as soon as an attack begins, so the dragon
-        // does the same. Use animation events later if a frame-perfect hit is needed.
-        DamageTarget(target);
-
-        yield return new WaitForSeconds(GetStateDuration(stateToPlay, attackCooldown));
+        float attackDuration = GetStateDuration(stateToPlay, attackCooldown);
+        // Keep a code-side fallback at the authored impact frame. This covers
+        // clips that were reimported without events while avoiding duplicate
+        // damage when the AnimationEvent callback does fire.
+        float impactTime = isThirdAttack ? 2.0333333f : 0.6333333f;
+        float waitToImpact = Mathf.Min(impactTime, attackDuration);
+        yield return new WaitForSeconds(waitToImpact);
+        if (!attackDamageApplied) AnimationEventAttack();
+        yield return new WaitForSeconds(Mathf.Max(0f, attackDuration - waitToImpact));
 
         isAttacking = false;
         attackRoutine = null;
+        attackTarget = null;
+    }
+
+    /// <summary>
+    /// Animation-event callback used by the Attack 1 and Attack 2 clips.
+    /// Animation events cannot reliably pass a scene Transform reference, so
+    /// resolve the target captured when the attack started instead.
+    /// </summary>
+    public void AnimationEventAttack()
+    {
+        if (!isPrimaryDragon || isDead || !isAttacking || attackDamageApplied) return;
+        if (!IsValidTarget(attackTarget)) return;
+
+        attackDamageApplied = true;
+        if (currentAttackIsArea)
+        {
+            DamageArea(attackTarget.position);
+        }
+        else
+        {
+            DamageTarget(attackTarget);
+        }
     }
 
     private void RefreshTargetIfNeeded()
@@ -355,6 +396,41 @@ public class Dragon : MonoBehaviour, IDeathAnimationHandler
         if (damageable != null)
         {
             damageable.TakeDamage(attackDamage, target.position);
+        }
+    }
+
+    private void DamageArea(Vector3 center)
+    {
+        if (thirdAttackVfxPrefab != null)
+        {
+            GameObject vfxInstance = Instantiate(thirdAttackVfxPrefab, center, Quaternion.identity);
+
+            // GroundPunchVFX is a one-shot component with Play On Enable off,
+            // so explicitly fire it after instantiation. Other VFX prefabs
+            // keep their existing behaviour unchanged.
+            GroundPunchVFX groundPunch = vfxInstance.GetComponentInChildren<GroundPunchVFX>(true);
+            if (groundPunch != null)
+            {
+                groundPunch.Play(center, Vector3.up);
+            }
+        }
+
+        Collider[] candidates = Physics.OverlapSphere(
+            center,
+            thirdAttackAreaRadius,
+            targetLayers,
+            QueryTriggerInteraction.Ignore);
+
+        // A unit can have several colliders; damage each IDamageable only once.
+        HashSet<IDamageable> damagedTargets = new HashSet<IDamageable>();
+        foreach (Collider candidate in candidates)
+        {
+            if (candidate == null || candidate.transform.IsChildOf(transform)) continue;
+
+            IDamageable damageable = candidate.GetComponentInParent<IDamageable>();
+            if (damageable == null || damageable.CurrentHealth <= 0f || !damagedTargets.Add(damageable)) continue;
+
+            damageable.TakeDamage(attackDamage, candidate.ClosestPoint(center));
         }
     }
 

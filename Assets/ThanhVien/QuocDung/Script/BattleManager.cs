@@ -13,8 +13,8 @@ public class BattleManager : MonoBehaviour
     [Tooltip("Điểm spawn trên cao dành riêng cho Rồng. Nếu bỏ trống, BattleManager sẽ tự tạo phía trên Right Spawn Point.")]
     [SerializeField] private Transform dragonHighSpawnPoint;
     [SerializeField, Min(0f)] private float dragonSpawnHeight = 10f;
-    [Tooltip("Độ cao cộng thêm khi đáp. Idle Landing đã căn theo bàn chân nên mặc định là 0.")]
-    [SerializeField, Min(0f)] private float dragonLandingHeightOffset = 0f;
+    [Tooltip("Độ lệch độ cao khi rồng đáp. Giá trị âm hạ rồng xuống để bàn chân chạm cùng mặt đất với Enemy.")]
+    [SerializeField, Range(-5f, 5f)] private float dragonLandingHeightOffset = -0.5f;
 
     [Header("Distance & Grid Spacing Settings")]
     [SerializeField] private float buildingSpacing = 4.0f;
@@ -682,7 +682,9 @@ public class BattleManager : MonoBehaviour
         for (int i = 0; i < testBarracksCount; i++)
         {
             int lvl = Mathf.Clamp(testBarracksLevel, 1, 3);
-            int soldiers = (lvl == 1) ? 4 : (lvl == 2 ? 6 : 8);
+            // Battle scene owns troop spawning. A unit starts at 3 soldiers;
+            // Research Formation I/II/III is applied below while spawning.
+            int soldiers = 3;
 
             BattleData.PlayerBuildings.Add(new BattleData.BuildingInfo
             {
@@ -750,9 +752,11 @@ public class BattleManager : MonoBehaviour
         switch (mode)
         {
             case AttackMode.Ranged:
+                if (!ResearchUpgradeEffects.ArcherUnlocked) return null;
                 if (archerSoldierPrefab != null) return archerSoldierPrefab;
                 break;
             case AttackMode.Tank:
+                if (!ResearchUpgradeEffects.ShieldUnlocked) return null;
                 if (tankSoldierPrefab != null) return tankSoldierPrefab;
                 break;
             case AttackMode.Melee:
@@ -796,6 +800,31 @@ public class BattleManager : MonoBehaviour
     }
 
     /// <summary>
+    /// BattleData contains the base squad size from the main scene. Formation
+    /// research adds one soldier to every squad at the moment it is spawned in
+    /// SceneBattle: 3 → 4 → 5 → 6. SpawnSoldier is deliberately not involved.
+    /// </summary>
+    private static int GetBattleSquadSize(int baseSoldierCount)
+    {
+        return Mathf.Max(0, baseSoldierCount) + ResearchUpgradeEffects.FormationBonus;
+    }
+
+    private static void AddFormationReinforcements(List<AttackMode> soldierModes)
+    {
+        int bonusPerUnit = ResearchUpgradeEffects.FormationBonus;
+        if (bonusPerUnit <= 0 || soldierModes == null || soldierModes.Count == 0) return;
+
+        // A formation upgrade gives the same +1 to every troop type that was
+        // actually sent to the expedition, rather than creating a new type.
+        List<AttackMode> deployedTypes = new List<AttackMode>();
+        foreach (AttackMode mode in soldierModes)
+            if (!deployedTypes.Contains(mode)) deployedTypes.Add(mode);
+
+        foreach (AttackMode mode in deployedTypes)
+            for (int i = 0; i < bonusPerUnit; i++) soldierModes.Add(mode);
+    }
+
+    /// <summary>
     /// Spawn toàn bộ Công trình và Lính của Người Chơi ở BÊN TRÁI
     /// </summary>
     private void SpawnPlayerSide()
@@ -826,6 +855,8 @@ public class BattleManager : MonoBehaviour
                 expeditionSoldierModes.Add(AttackMode.Melee);
             }
 
+            AddFormationReinforcements(expeditionSoldierModes);
+
             for (int i = 0; i < expeditionSoldierModes.Count; i++)
             {
                 GameObject prefab = GetSoldierPrefabForAttackMode(expeditionSoldierModes[i]);
@@ -850,7 +881,7 @@ public class BattleManager : MonoBehaviour
             // 2. Trường hợp Phòng thủ: Spawn theo từng Doanh Trại tương ứng loại lính
             foreach (var buildingInfo in BattleData.PlayerBuildings)
             {
-                int countToSpawn = buildingInfo.soldierCount;
+                int countToSpawn = GetBattleSquadSize(buildingInfo.soldierCount);
                 GameObject prefab = GetSoldierPrefabForBuildingType(buildingInfo.buildingType);
 
                 for (int i = 0; i < countToSpawn; i++)
@@ -945,7 +976,15 @@ public class BattleManager : MonoBehaviour
     {
         if (!spawnDragonAtBattleStart || dragonPrefab == null || dragonHighSpawnPoint == null) return;
 
-        Quaternion dragonRotation = Quaternion.Euler(0f, -90f, 0f);
+        // Make the model face into the battlefield instead of relying on a
+        // world-axis direction. In the current scene this resolves to Y = -90.
+        Vector3 battleDirection = leftSpawnPoint != null
+            ? leftSpawnPoint.position - dragonHighSpawnPoint.position
+            : Vector3.left;
+        battleDirection.y = 0f;
+        Quaternion dragonRotation = battleDirection.sqrMagnitude > 0.001f
+            ? Quaternion.LookRotation(battleDirection.normalized)
+            : Quaternion.Euler(0f, -90f, 0f);
         GameObject spawnedDragon = Instantiate(dragonPrefab, dragonHighSpawnPoint.position, dragonRotation);
 
         // Bảo đảm vẫn nhìn thấy được nếu prefab được lưu ở trạng thái inactive.

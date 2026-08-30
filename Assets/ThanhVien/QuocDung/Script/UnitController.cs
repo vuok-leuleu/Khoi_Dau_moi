@@ -10,6 +10,16 @@ public enum AttackMode
     Tank
 }
 
+public enum SoldierResearchType
+{
+    Auto,
+    Sword,
+    Bow,
+    Shield,
+    Crossbow,
+    Cannon
+}
+
 public enum UnitState
 {
     Idle,
@@ -34,6 +44,10 @@ public class UnitController : MonoBehaviour
 
     [Header("Combat Config")]
     [SerializeField] float attackDamage = 15f;
+    [Tooltip("Auto identifies the troop from its prefab name. Set this explicitly when a prefab uses an unusual name.")]
+    [SerializeField] private SoldierResearchType researchType = SoldierResearchType.Auto;
+    private float baseAttackDamage;
+    public SoldierResearchType ResearchType => GetResearchType();
     [SerializeField] float attackRate = 1.5f;
     [SerializeField] GameObject projectilePrefab;
     [SerializeField] Transform firePoint;
@@ -172,6 +186,8 @@ public class UnitController : MonoBehaviour
 
     void Awake()
     {
+        baseAttackDamage = attackDamage;
+        RefreshResearchDamage();
         agent = GetComponent<NavMeshAgent>();
         hpSoldier = GetComponent<HPSoldier>();
         if (hpSoldier == null)
@@ -854,7 +870,26 @@ public class UnitController : MonoBehaviour
 
     public void SetAttackDamage(float damage)
     {
-        attackDamage = damage;
+        baseAttackDamage = damage;
+        RefreshResearchDamage();
+    }
+
+    /// <summary>Re-applies research after a new node is unlocked.</summary>
+    public void RefreshResearchDamage()
+    {
+        attackDamage = baseAttackDamage * ResearchUpgradeEffects.GetDamageMultiplier(GetResearchType());
+    }
+
+    private SoldierResearchType GetResearchType()
+    {
+        if (researchType != SoldierResearchType.Auto) return researchType;
+
+        string troopName = gameObject.name.ToLowerInvariant();
+        if (troopName.Contains("crossbow") || troopName.Contains("nỏ") || troopName.Contains("no binh")) return SoldierResearchType.Crossbow;
+        if (troopName.Contains("cannon") || troopName.Contains("pháo") || troopName.Contains("phao binh")) return SoldierResearchType.Cannon;
+        if (troopName.Contains("shield") || troopName.Contains("khiên") || troopName.Contains("khien") || troopName.Contains("tank")) return SoldierResearchType.Shield;
+        if (troopName.Contains("archer") || troopName.Contains("bow") || troopName.Contains("cung")) return SoldierResearchType.Bow;
+        return SoldierResearchType.Sword;
     }
 
     void OnDisable()

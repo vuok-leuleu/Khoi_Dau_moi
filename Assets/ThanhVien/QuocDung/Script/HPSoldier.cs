@@ -36,7 +36,12 @@ public class HPSoldier : MonoBehaviour, IDamageable
     {
         if (isDead) return;
 
-        CurrentHealth -= amount;
+        // Defence research reduces incoming damage, so it works for both old and
+        // newly spawned soldiers without modifying their prefab health values.
+        UnitController unit = GetComponent<UnitController>();
+        if (unit == null) unit = GetComponentInParent<UnitController>();
+        CurrentHealth -= amount / ResearchUpgradeEffects.GetDefenseMultiplier(
+            unit != null ? unit.ResearchType : SoldierResearchType.Sword);
         // Debug.Log($"[HPSoldier] {gameObject.name} nhận {amount} sát thương tại {hitPoint}. HP còn lại: {CurrentHealth}/{MaxHealth}");
 
         // Tạo hiệu ứng trúng đòn tại điểm va chạm
@@ -106,4 +111,3 @@ public class HPSoldier : MonoBehaviour, IDamageable
         return false;
     }
 }
-

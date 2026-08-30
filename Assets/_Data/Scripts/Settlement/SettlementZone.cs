@@ -84,6 +84,14 @@ public class SettlementZone : MonoBehaviour
         // Trại Lính chỉ tồn tại sẵn ở thành khởi đầu, tuyệt đối không mở khóa để xây thêm.
         if (TroopTrainingManager.IsCentralBarracksType(type)) return false;
 
+        // The two advanced attack buildings are unlocked by the research tree.
+        // In scenes without that tree, retain the previous territory-based rule.
+        if (ResearchUpgradeEffects.IsResearchTreeAvailable)
+        {
+            if (type == BuildingType.ArcherTower) return ResearchUpgradeEffects.CrossbowTowerUnlocked;
+            if (type == BuildingType.Cannon) return ResearchUpgradeEffects.CannonTowerUnlocked;
+        }
+
         // 1. CÔNG TRÌNH CƠ BẢN KHỞI ĐẦU: Mặc định được mở khóa xây dựng ở tất cả các vùng đất
         if (type == BuildingType.House || 
             type == BuildingType.WoodCutter || 
