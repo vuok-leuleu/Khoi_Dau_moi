@@ -66,6 +66,7 @@ public class SpawnSoldier : MonoBehaviour
     private GameObject GetRandomSoldierPrefab()
     {
         List<GameObject> configuredPrefabs = GetConfiguredSoldierPrefabs();
+        configuredPrefabs.RemoveAll(prefab => !IsResearchUnlockedForPrefab(prefab));
         if (configuredPrefabs.Count == 0)
         {
             return null;
@@ -86,8 +87,50 @@ public class SpawnSoldier : MonoBehaviour
         return configuredPrefabs[soldierTypeIndex];
     }
 
+    /// <summary>
+    /// Uses the same research gates as BattleManager. This is deliberately kept
+    /// here as well because training completes in the main scene and must not
+    /// be able to bypass the BattleScene spawn rules.
+    /// </summary>
+    public static bool IsTroopTrainingUnlocked(BuildingType troopType)
+    {
+        switch (troopType)
+        {
+            case BuildingType.BarracksArcher:
+                return ResearchUpgradeEffects.ArcherUnlocked;
+            case BuildingType.BarracksSpear:
+                return ResearchUpgradeEffects.ShieldUnlocked;
+            default:
+                return true;
+        }
+    }
+
+    private static bool IsResearchUnlockedForAttackMode(AttackMode attackMode)
+    {
+        switch (attackMode)
+        {
+            case AttackMode.Ranged:
+                return ResearchUpgradeEffects.ArcherUnlocked;
+            case AttackMode.Tank:
+                return ResearchUpgradeEffects.ShieldUnlocked;
+            default:
+                return true;
+        }
+    }
+
+    private static bool IsResearchUnlockedForPrefab(GameObject prefab)
+    {
+        if (prefab == null) return false;
+
+        UnitController unit = prefab.GetComponent<UnitController>();
+        if (unit == null) unit = prefab.GetComponentInChildren<UnitController>();
+        return unit == null || IsResearchUnlockedForAttackMode(unit.AttackMode);
+    }
+
     private GameObject GetTrainedSoldierPrefab(BuildingType troopType)
     {
+        if (!IsTroopTrainingUnlocked(troopType)) return null;
+
         AttackMode expectedAttackMode;
         switch (troopType)
         {
@@ -120,7 +163,7 @@ public class SpawnSoldier : MonoBehaviour
 
     public bool CanSpawnTrainedSoldier(BuildingType troopType)
     {
-        return GetTrainedSoldierPrefab(troopType) != null;
+        return IsTroopTrainingUnlocked(troopType) && GetTrainedSoldierPrefab(troopType) != null;
     }
 
     public List<UnitController> GetActiveSoldierControllers()
@@ -282,9 +325,9 @@ public class SpawnSoldier : MonoBehaviour
     public GameObject SpawnOneTrainedSoldier(GameObject customPrefab = null)
     {
         GameObject prefabToUse = customPrefab != null ? customPrefab : GetRandomSoldierPrefab();
-        if (prefabToUse == null)
+        if (prefabToUse == null || !IsResearchUnlockedForPrefab(prefabToUse))
         {
-            Debug.LogWarning($"[SpawnSoldier] ⚠️ Chưa gán Soldier Prefabs cho {gameObject.name}!");
+            Debug.LogWarning($"[SpawnSoldier] ⚠️ Lính chưa được mở khóa nghiên cứu hoặc chưa gán prefab cho {gameObject.name}!");
             return null;
         }
 
@@ -326,6 +369,12 @@ public class SpawnSoldier : MonoBehaviour
     /// </summary>
     public int SpawnTrainedSoldiers(BuildingType troopType, int count, int troopSlotIndex = -1)
     {
+        if (!IsTroopTrainingUnlocked(troopType))
+        {
+            Debug.LogWarning($"[SpawnSoldier] {troopType} chưa được mở khóa nghiên cứu, không thể spawn tại {gameObject.name}.");
+            return 0;
+        }
+
         GameObject prefabToUse = GetTrainedSoldierPrefab(troopType);
         if (prefabToUse == null)
         {
@@ -625,9 +674,10 @@ public class SpawnSoldier : MonoBehaviour
 
     private void SpawnSoldiersInternal(int count, GameObject fixedPrefab)
     {
-        if (fixedPrefab == null && GetRandomSoldierPrefab() == null)
+        if ((fixedPrefab == null && GetRandomSoldierPrefab() == null) ||
+            (fixedPrefab != null && !IsResearchUnlockedForPrefab(fixedPrefab)))
         {
-            Debug.LogWarning("Soldier Prefabs chưa được gán trong Inspector!");
+            Debug.LogWarning("Soldier Prefabs chưa được gán hoặc chưa mở khóa nghiên cứu!");
             return;
         }
 
@@ -649,6 +699,7 @@ public class SpawnSoldier : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             GameObject prefabToUse = fixedPrefab != null ? fixedPrefab : GetRandomSoldierPrefab();
+            if (prefabToUse == null || !IsResearchUnlockedForPrefab(prefabToUse)) continue;
             Vector2 randomCircle = Random.insideUnitCircle * spawnRadius;
             Vector3 rawPosition = new Vector3(
                 baseSpawnCenter.x + randomCircle.x,
@@ -796,7 +847,8 @@ public class SpawnSoldier : MonoBehaviour
 
     private void SpawnHologramSoldiersInternal(int count, GameObject fixedPrefab)
     {
-        if (fixedPrefab == null && GetRandomSoldierPrefab() == null)
+        if ((fixedPrefab == null && GetRandomSoldierPrefab() == null) ||
+            (fixedPrefab != null && !IsResearchUnlockedForPrefab(fixedPrefab)))
         {
             Debug.LogWarning("Soldier Prefabs chưa được gán trong Inspector!");
             return;
@@ -818,6 +870,7 @@ public class SpawnSoldier : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             GameObject prefabToUse = fixedPrefab != null ? fixedPrefab : GetRandomSoldierPrefab();
+            if (prefabToUse == null || !IsResearchUnlockedForPrefab(prefabToUse)) continue;
             Vector2 randomCircle = Random.insideUnitCircle * spawnRadius;
             Vector3 rawPosition = new Vector3(
                 baseSpawnCenter.x + randomCircle.x,

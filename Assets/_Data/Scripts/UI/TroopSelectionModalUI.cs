@@ -16,6 +16,8 @@ public class TroopSelectionModalUI : MonoBehaviour
     [SerializeField] private Button trainMeleeBtn;
     [SerializeField] private Button trainArcherBtn;
     [SerializeField] private Button trainSpearBtn;
+    [SerializeField] private Button trainCrossbowBtn;
+    [SerializeField] private Button trainCannonBtn;
     [SerializeField] private Button closeBtn;
 
     private SettlementZone targetZone;
@@ -32,6 +34,7 @@ public class TroopSelectionModalUI : MonoBehaviour
         }
 
         InitListeners();
+        EnsureSupplementaryItemLabels();
     }
 
     private void OnDestroy()
@@ -83,12 +86,7 @@ public class TroopSelectionModalUI : MonoBehaviour
         targetZone = zone;
         targetSlotIndex = slotIndex;
 
-        // Khóa trực quan Khiên Binh cho đến khi EVENMOOR được giải phóng.
-        // TroopTrainingManager vẫn kiểm tra thêm để tránh bỏ qua bằng script khác.
-        if (trainSpearBtn != null)
-        {
-            trainSpearBtn.interactable = CampaignTutorialManager.IsShieldTroopTrainingUnlocked();
-        }
+        RefreshResearchAvailability();
 
         BuildTrainingUIManager.Ins?.ShowTrainingWindow();
         gameObject.SetActive(true);
@@ -106,6 +104,59 @@ public class TroopSelectionModalUI : MonoBehaviour
     private void OnClickMelee() => OnSelectTroop(BuildingType.BarracksMelee);
     private void OnClickArcher() => OnSelectTroop(BuildingType.BarracksArcher);
     private void OnClickSpear() => OnSelectTroop(BuildingType.BarracksSpear);
+
+    private void RefreshResearchAvailability()
+    {
+        SetItemAvailability(trainMeleeBtn, true);
+        SetItemAvailability(trainArcherBtn, SpawnSoldier.IsTroopTrainingUnlocked(BuildingType.BarracksArcher));
+        SetItemAvailability(trainSpearBtn,
+            SpawnSoldier.IsTroopTrainingUnlocked(BuildingType.BarracksSpear) &&
+            CampaignTutorialManager.IsShieldTroopTrainingUnlocked());
+
+        // Nỏ/Pháo are research display entries until dedicated UnitController
+        // prefabs are supplied. Their visual state still follows the tree.
+        SetItemAvailability(trainCrossbowBtn, ResearchUpgradeEffects.CrossbowTowerUnlocked, false);
+        SetItemAvailability(trainCannonBtn, ResearchUpgradeEffects.CannonTowerUnlocked, false);
+    }
+
+    private void EnsureSupplementaryItemLabels()
+    {
+        AddLabelIfMissing(trainCrossbowBtn, "Huấn Luyện Nỏ");
+        AddLabelIfMissing(trainCannonBtn, "Huấn Luyện Pháo");
+    }
+
+    private void AddLabelIfMissing(Button button, string label)
+    {
+        if (button == null || button.GetComponentInChildren<TMP_Text>(true) != null) return;
+
+        TMP_Text template = trainMeleeBtn != null
+            ? trainMeleeBtn.GetComponentInChildren<TMP_Text>(true)
+            : null;
+        if (template == null) return;
+
+        TMP_Text text = Instantiate(template, button.transform);
+        RectTransform rect = text.rectTransform;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        text.text = label;
+        text.raycastTarget = false;
+    }
+
+    private static void SetItemAvailability(Button button, bool isUnlocked, bool canSelect = true)
+    {
+        if (button == null) return;
+
+        button.interactable = isUnlocked && canSelect;
+        CanvasGroup group = button.GetComponent<CanvasGroup>();
+        if (group == null) group = button.gameObject.AddComponent<CanvasGroup>();
+
+        // A locked item is visibly dimmed to 30% and cannot receive clicks.
+        group.alpha = isUnlocked ? 1f : 0.3f;
+        group.interactable = isUnlocked && canSelect;
+        group.blocksRaycasts = isUnlocked && canSelect;
+    }
 
     private void OnSelectTroop(BuildingType troopType)
     {

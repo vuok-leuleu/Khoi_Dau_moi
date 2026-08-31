@@ -768,6 +768,14 @@ public class TroopTrainingManager : MonoBehaviour
     {
         if (zone == null || slotIndex < 0 || slotIndex >= MAX_TRAINING_SLOTS) return false;
 
+        if (!SpawnSoldier.IsTroopTrainingUnlocked(troopType))
+        {
+            string warning = $"🔒 {GetTrainingTroopName(troopType)} chưa được mở khóa trong Viện Binh.";
+            UIManager.Ins?.ShowWarning(warning);
+            Debug.LogWarning($"[TroopTrainingManager] {warning}");
+            return false;
+        }
+
         if (troopType == BuildingType.BarracksSpear && !CampaignTutorialManager.IsShieldTroopTrainingUnlocked())
         {
             const string warning = "🔒 Khiên Binh chưa mở khóa. Hãy chinh phục EVENMOOR và xây Mỏ Đá trước trận Rồng!";
@@ -840,6 +848,16 @@ public class TroopTrainingManager : MonoBehaviour
         if (slotIndex < 3) return 1;
         if (slotIndex < 5) return 2;
         return 3;
+    }
+
+    private static string GetTrainingTroopName(BuildingType troopType)
+    {
+        switch (troopType)
+        {
+            case BuildingType.BarracksArcher: return "Cung Thủ";
+            case BuildingType.BarracksSpear: return "Hộ Vệ";
+            default: return "Lính này";
+        }
     }
 
     /// <summary>
