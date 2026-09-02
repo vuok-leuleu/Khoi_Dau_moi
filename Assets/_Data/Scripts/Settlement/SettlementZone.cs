@@ -981,18 +981,26 @@ public class SettlementZone : MonoBehaviour
 
         if (isTownHallEstablished && townHallBuilding != null) return true;
 
-        // Trừ tài nguyên
+        // Trừ giá lập thành từ bảng Demacia tập trung (fallback về giá cũ nếu chưa có bảng).
         if (JsonDataManager.Ins != null)
         {
-            const int foodCost = 0;
-            if (!JsonDataManager.Ins.HasEnoughResources(establishWoodCost, establishStoneCost, foodCost))
+            ConstructionManager.BuildingCost cost = ConstructionManager.Ins != null
+                ? ConstructionManager.Ins.GetSettlementEstablishCost(this)
+                : new ConstructionManager.BuildingCost
+                {
+                    buildingType = BuildingType.House,
+                    goldCost = 0,
+                    woodCost = establishWoodCost,
+                    stoneCost = establishStoneCost,
+                    foodCost = 0
+                };
+
+            if (!JsonDataManager.Ins.TrySpendCombined(cost.woodCost, cost.stoneCost, 0, cost.goldCost))
             {
-                if (UIManager.Ins != null) UIManager.Ins.ShowWarning("Không đủ tài nguyên xây Nhà Chính!");
+                if (UIManager.Ins != null) UIManager.Ins.ShowWarning("Không đủ Vàng, Gỗ hoặc Đá để xây Nhà Chính!");
                 return false;
             }
-
-            JsonDataManager.Ins.AddWood(-establishWoodCost);
-            JsonDataManager.Ins.AddStone(-establishStoneCost);
+            JsonDataManager.Ins.BroadcastAllResources();
         }
 
         isTownHallEstablished = true;

@@ -14,6 +14,7 @@ public class ConstructionManager : Singleton<ConstructionManager>
     public struct BuildingCost
     {
         public BuildingType buildingType;
+        public int goldCost;
         public int woodCost;
         public int stoneCost;
         public int foodCost;
@@ -55,6 +56,21 @@ public class ConstructionManager : Singleton<ConstructionManager>
     public GameObject stonePrefab;
 
     private Dictionary<BuildingType, int> buildingCounts = new Dictionary<BuildingType, int>();
+    private DemaciaConstructionPricing demaciaPricing;
+
+    /// <summary>Giá tập trung gắn cùng GameObject với ConstructionManager.</summary>
+    public DemaciaConstructionPricing DemaciaPricing
+    {
+        get
+        {
+            if (demaciaPricing == null)
+            {
+                demaciaPricing = GetComponent<DemaciaConstructionPricing>();
+            }
+
+            return demaciaPricing;
+        }
+    }
 
     private void Start()
     {
@@ -79,7 +95,20 @@ public class ConstructionManager : Singleton<ConstructionManager>
 
     public BuildingCost GetBuildingCost(BuildingType type)
     {
-        BuildingCost baseCost = new BuildingCost { buildingType = type, woodCost = 0, stoneCost = 0, foodCost = 0 };
+        if (DemaciaPricing != null && DemaciaPricing.TryGetConstructionCost(type, out DemaciaConstructionPricing.ResourceCost demaciaCost))
+        {
+            // Bảng Demacia là giá cố định: không tăng dần theo số lượng công trình.
+            return new BuildingCost
+            {
+                buildingType = type,
+                goldCost = demaciaCost.goldCost,
+                woodCost = demaciaCost.woodCost,
+                stoneCost = demaciaCost.stoneCost,
+                foodCost = 0
+            };
+        }
+
+        BuildingCost baseCost = new BuildingCost { buildingType = type, goldCost = 0, woodCost = 0, stoneCost = 0, foodCost = 0 };
         foreach (var cost in constructionCosts)
         {
             if (cost.buildingType == type)
@@ -104,6 +133,29 @@ public class ConstructionManager : Singleton<ConstructionManager>
         // Lương thực chỉ dùng để giới hạn huấn luyện lính, không phải chi phí xây dựng.
         baseCost.foodCost = 0;
         return baseCost;
+    }
+
+    /// <summary>Lấy giá lập Nhà Chính theo tên SettlementZone từ bảng giá tập trung.</summary>
+    public BuildingCost GetSettlementEstablishCost(SettlementZone zone)
+    {
+        BuildingCost legacyCost = new BuildingCost
+        {
+            buildingType = BuildingType.House,
+            goldCost = 0,
+            woodCost = zone != null ? zone.establishWoodCost : 0,
+            stoneCost = zone != null ? zone.establishStoneCost : 0,
+            foodCost = 0
+        };
+
+        if (zone != null && DemaciaPricing != null &&
+            DemaciaPricing.TryGetSettlementBuildCost(zone.settlementName, out DemaciaConstructionPricing.ResourceCost demaciaCost))
+        {
+            legacyCost.goldCost = demaciaCost.goldCost;
+            legacyCost.woodCost = demaciaCost.woodCost;
+            legacyCost.stoneCost = demaciaCost.stoneCost;
+        }
+
+        return legacyCost;
     }
 
     public void UpdateCostUI(BuildingType type)
@@ -154,16 +206,23 @@ public class ConstructionManager : Singleton<ConstructionManager>
 
         BuildingCost cost = GetBuildingCost(type);
 
+        // Không trừ tài nguyên nếu prefab chưa được gán cho loại công trình này.
+        if (GetPrefab(type) == null)
+        {
+            Debug.LogWarning($"[ConstructionManager] Chưa có prefab cho {type}.");
+            UIManager.Ins?.ShowWarning("Công trình này chưa được cấu hình prefab.");
+            return;
+        }
+
         if (JsonDataManager.Ins != null)
         {
-            if (!JsonDataManager.Ins.HasEnoughResources(cost.woodCost, cost.stoneCost, cost.foodCost))
+            if (!JsonDataManager.Ins.TrySpendCombined(cost.woodCost, cost.stoneCost, 0, cost.goldCost))
             {
                 Debug.LogWarning($"[ConstructionManager] Thiếu tài nguyên xây {type}!");
+                UIManager.Ins?.ShowWarning("Không đủ Vàng, Gỗ hoặc Đá để xây công trình này!");
                 return;
             }
 
-            JsonDataManager.Ins.AddWood(-cost.woodCost);
-            JsonDataManager.Ins.AddStone(-cost.stoneCost);
             JsonDataManager.Ins.BroadcastAllResources();
         }
 

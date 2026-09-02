@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.Serialization;
 
 /*
  * BuildingShopUI.cs
@@ -32,7 +33,7 @@ public class BuildingShopUI : MonoBehaviour
     [Header("=== CHI PHÍ TÀI NGUYÊN (TMP) ===")]
     [SerializeField] private TextMeshProUGUI woodCostTMP;
     [SerializeField] private TextMeshProUGUI stoneCostTMP;
-    [SerializeField] private TextMeshProUGUI foodCostTMP;
+    [SerializeField, FormerlySerializedAs("foodCostTMP")] private TextMeshProUGUI goldCostTMP;
 
     [Header("=== NÚT XÂY DỰNG & THỜI GIAN ===")]
     [SerializeField] private Button constructBtn;
@@ -49,7 +50,7 @@ public class BuildingShopUI : MonoBehaviour
         if (Ins == null) Ins = this;
         else Destroy(gameObject);
 
-        HideFoodCostDisplay();
+        ShowGoldCostDisplay();
     }
 
     private void OnDestroy()
@@ -57,10 +58,9 @@ public class BuildingShopUI : MonoBehaviour
         if (Ins == this) Ins = null;
     }
 
-    private void HideFoodCostDisplay()
+    private void ShowGoldCostDisplay()
     {
-        // Food không còn là chi phí xây dựng; ẩn cả text lẫn icon con của mục này.
-        if (foodCostTMP != null) foodCostTMP.gameObject.SetActive(false);
+        if (goldCostTMP != null) goldCostTMP.gameObject.SetActive(true);
     }
 
     private void Start()
@@ -210,7 +210,7 @@ public class BuildingShopUI : MonoBehaviour
 
         if (woodCostTMP != null) woodCostTMP.text = "0";
         if (stoneCostTMP != null) stoneCostTMP.text = "0";
-        if (foodCostTMP != null) foodCostTMP.text = "0";
+        if (goldCostTMP != null) goldCostTMP.text = "Vàng: 0";
 
         if (constructBtn != null) constructBtn.interactable = false;
     }
@@ -288,24 +288,24 @@ public class BuildingShopUI : MonoBehaviour
     {
         if (type == BuildingType.None) return;
 
-        int woodCost = 0, stoneCost = 0, foodCost = 0;
+        int goldCost = 0, woodCost = 0, stoneCost = 0;
         if (ConstructionManager.Ins != null)
         {
             var costData = ConstructionManager.Ins.GetBuildingCost(type);
+            goldCost = costData.goldCost;
             woodCost = costData.woodCost;
             stoneCost = costData.stoneCost;
-            foodCost = costData.foodCost;
         }
 
-        bool hasEnoughWood = true, hasEnoughStone = true, hasEnoughFood = true;
+        bool hasEnoughGold = true, hasEnoughWood = true, hasEnoughStone = true;
         bool canAfford = true;
 
         if (JsonDataManager.Ins != null)
         {
+            hasEnoughGold = JsonDataManager.Ins.gold >= goldCost;
             hasEnoughWood = JsonDataManager.Ins.wood >= woodCost;
             hasEnoughStone = JsonDataManager.Ins.stone >= stoneCost;
-            hasEnoughFood = JsonDataManager.Ins.food >= foodCost;
-            canAfford = JsonDataManager.Ins.HasEnoughResources(woodCost, stoneCost, foodCost);
+            canAfford = JsonDataManager.Ins.HasEnoughResources(woodCost, stoneCost, 0, goldCost);
         }
 
         // Đổi màu chữ giá
@@ -321,10 +321,10 @@ public class BuildingShopUI : MonoBehaviour
             stoneCostTMP.color = hasEnoughStone ? affordableColor : unaffordableColor;
         }
 
-        if (foodCostTMP != null)
+        if (goldCostTMP != null)
         {
-            foodCostTMP.text = foodCost.ToString();
-            foodCostTMP.color = hasEnoughFood ? affordableColor : unaffordableColor;
+            goldCostTMP.text = $"Vàng: {goldCost}";
+            goldCostTMP.color = hasEnoughGold ? affordableColor : unaffordableColor;
         }
 
         // Kiểm tra xem công trình có được mở khóa toàn cục từ Vùng Đất Giải Phóng chưa

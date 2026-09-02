@@ -7,6 +7,7 @@ public class UpgradeableBuilding : MonoBehaviour
     [System.Serializable]
     public struct UpgradeCost
     {
+        public int goldCost;
         public int woodCost;
         public int stoneCost;
         public int foodCost;
@@ -337,14 +338,34 @@ public class UpgradeableBuilding : MonoBehaviour
 
     public UpgradeCost GetNextUpgradeCost()
     {
+        int duration = 1;
+        if (upgradeCosts != null && CurrentLevel < upgradeCosts.Length)
+        {
+            duration = Mathf.Max(1, upgradeCosts[CurrentLevel].upgradeDuration);
+        }
+
+        if (ConstructionManager.Ins != null && ConstructionManager.Ins.DemaciaPricing != null &&
+            ConstructionManager.Ins.DemaciaPricing.TryGetUpgradeCost(buildingType, CurrentLevel + 2, out DemaciaConstructionPricing.ResourceCost demaciaCost))
+        {
+            return new UpgradeCost
+            {
+                goldCost = demaciaCost.goldCost,
+                woodCost = demaciaCost.woodCost,
+                stoneCost = demaciaCost.stoneCost,
+                foodCost = 0,
+                upgradeDuration = duration
+            };
+        }
+
         if (upgradeCosts != null && CurrentLevel < upgradeCosts.Length)
         {
             UpgradeCost cost = upgradeCosts[CurrentLevel];
             // Lương thực chỉ dùng để giới hạn huấn luyện lính, không phải chi phí nâng cấp.
+            cost.goldCost = 0;
             cost.foodCost = 0;
             return cost;
         }
-        return new UpgradeCost { woodCost = 0, stoneCost = 0, foodCost = 0, upgradeDuration = 1 };
+        return new UpgradeCost { goldCost = 0, woodCost = 0, stoneCost = 0, foodCost = 0, upgradeDuration = 1 };
     }
 
     public void StartInitialBuildProcess()
@@ -665,9 +686,20 @@ public class UpgradeableBuilding : MonoBehaviour
         }
     }
 
-    public void Upgrade()
+    public bool Upgrade()
     {
+        if (IsUpgrading || CurrentLevel >= MaxLevel - 1) return false;
+
+        UpgradeCost cost = GetNextUpgradeCost();
+        if (JsonDataManager.Ins != null && !JsonDataManager.Ins.TrySpendCombined(cost.woodCost, cost.stoneCost, 0, cost.goldCost))
+        {
+            UIManager.Ins?.ShowWarning("Không đủ Vàng, Gỗ hoặc Đá để nâng cấp công trình này!");
+            return false;
+        }
+
         StartUpgradeProcess();
+        JsonDataManager.Ins?.BroadcastAllResources();
+        return true;
     }
 
     [ContextMenu("⚡ Nâng cấp Tháp này")]

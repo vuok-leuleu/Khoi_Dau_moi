@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.Serialization;
 
 /*
  * BuildingUpgradeSidePanelUI.cs
@@ -31,7 +32,7 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI buildDurationTMP;    // VD: "2" (icon ⏳)
     [SerializeField] private TextMeshProUGUI woodCostTMP;
     [SerializeField] private TextMeshProUGUI stoneCostTMP;
-    [SerializeField] private TextMeshProUGUI foodCostTMP;
+    [SerializeField, FormerlySerializedAs("foodCostTMP")] private TextMeshProUGUI goldCostTMP;
 
     [Header("=== CÁC NÚT THAO TÁC ===")]
     [SerializeField] private Button upgradeBtn;  // Nút 🔨 UPGRADE
@@ -62,7 +63,7 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
         if (Ins == null) Ins = this;
         else Destroy(gameObject);
 
-        HideFoodCostDisplay();
+        ShowGoldCostDisplay();
     }
 
     private void OnDestroy()
@@ -70,10 +71,9 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
         if (Ins == this) Ins = null;
     }
 
-    private void HideFoodCostDisplay()
+    private void ShowGoldCostDisplay()
     {
-        // Food không còn là chi phí nâng cấp/lập vùng; ẩn cả text lẫn icon con.
-        if (foodCostTMP != null) foodCostTMP.gameObject.SetActive(false);
+        if (goldCostTMP != null) goldCostTMP.gameObject.SetActive(true);
     }
 
     private void OnDisable()
@@ -206,30 +206,30 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
         bool isRuined = targetBuilding.IsRuined;
         bool isUpgrading = targetBuilding.IsUpgrading;
 
-        int woodCost = 0, stoneCost = 0, foodCost = 0;
+        int goldCost = 0, woodCost = 0, stoneCost = 0;
         int duration = 1;
 
         if (isRuined)
         {
             woodCost = targetBuilding.RepairWoodCost;
             stoneCost = targetBuilding.RepairStoneCost;
-            foodCost = 0;
             duration = Mathf.RoundToInt(targetBuilding.RepairDuration);
         }
         else
         {
             var nextCost = targetBuilding.GetNextUpgradeCost();
+            goldCost = nextCost.goldCost;
             woodCost = nextCost.woodCost;
             stoneCost = nextCost.stoneCost;
-            foodCost = nextCost.foodCost;
             duration = nextCost.upgradeDuration > 0 ? nextCost.upgradeDuration : 1;
 
-            if (woodCost == 0 && stoneCost == 0 && foodCost == 0 && ConstructionManager.Ins != null)
+            bool usesCentralPrices = ConstructionManager.Ins != null && ConstructionManager.Ins.DemaciaPricing != null && ConstructionManager.Ins.DemaciaPricing.UseDemaciaPricing;
+            if (goldCost == 0 && woodCost == 0 && stoneCost == 0 && !usesCentralPrices && ConstructionManager.Ins != null)
             {
                 var costData = ConstructionManager.Ins.GetBuildingCost(targetBuilding.buildingType);
+                goldCost = Mathf.RoundToInt(costData.goldCost * 1.5f);
                 woodCost = Mathf.RoundToInt(costData.woodCost * 1.5f);
                 stoneCost = Mathf.RoundToInt(costData.stoneCost * 1.5f);
-                foodCost = Mathf.RoundToInt(costData.foodCost * 1.5f);
             }
         }
 
@@ -245,15 +245,15 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
         // Cần Cấp Thủ Đô > Cấp hiện tại của công trình (Trừ chính Nhà Chính)
         bool settlementLevelOk = isTownHall || (targetBuilding.CurrentLevel < settlementLevel);
 
-        bool hasEnoughWood = true, hasEnoughStone = true, hasEnoughFood = true;
+        bool hasEnoughGold = true, hasEnoughWood = true, hasEnoughStone = true;
         bool canAfford = true;
 
         if (JsonDataManager.Ins != null)
         {
+            hasEnoughGold = JsonDataManager.Ins.gold >= goldCost;
             hasEnoughWood = JsonDataManager.Ins.wood >= woodCost;
             hasEnoughStone = JsonDataManager.Ins.stone >= stoneCost;
-            hasEnoughFood = JsonDataManager.Ins.food >= foodCost;
-            canAfford = JsonDataManager.Ins.HasEnoughResources(woodCost, stoneCost, foodCost);
+            canAfford = JsonDataManager.Ins.HasEnoughResources(woodCost, stoneCost, 0, goldCost);
         }
 
         if (warningNoticeTMP != null)
@@ -297,10 +297,10 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
             stoneCostTMP.color = hasEnoughStone ? affordableColor : unaffordableColor;
         }
 
-        if (foodCostTMP != null)
+        if (goldCostTMP != null)
         {
-            foodCostTMP.text = foodCost.ToString();
-            foodCostTMP.color = hasEnoughFood ? affordableColor : unaffordableColor;
+            goldCostTMP.text = $"Vàng: {goldCost}";
+            goldCostTMP.color = hasEnoughGold ? affordableColor : unaffordableColor;
         }
 
         if (buildDurationTMP != null)
@@ -348,19 +348,29 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
         if (currentLevelStatTMP != null) currentLevelStatTMP.text = "Chưa có Nhà Chính";
         if (nextLevelStatTMP != null) nextLevelStatTMP.text = $"Mở khóa và kích hoạt lãnh thổ {targetEstablishZone.settlementName}";
 
-        int woodCost = targetEstablishZone.establishWoodCost;
-        int stoneCost = targetEstablishZone.establishStoneCost;
-        int foodCost = 0;
+        ConstructionManager.BuildingCost establishCost = ConstructionManager.Ins != null
+            ? ConstructionManager.Ins.GetSettlementEstablishCost(targetEstablishZone)
+            : new ConstructionManager.BuildingCost
+            {
+                buildingType = BuildingType.House,
+                goldCost = 0,
+                woodCost = targetEstablishZone.establishWoodCost,
+                stoneCost = targetEstablishZone.establishStoneCost,
+                foodCost = 0
+            };
+        int goldCost = establishCost.goldCost;
+        int woodCost = establishCost.woodCost;
+        int stoneCost = establishCost.stoneCost;
 
-        bool hasEnoughWood = true, hasEnoughStone = true, hasEnoughFood = true;
+        bool hasEnoughGold = true, hasEnoughWood = true, hasEnoughStone = true;
         bool canAfford = true;
 
         if (JsonDataManager.Ins != null)
         {
+            hasEnoughGold = JsonDataManager.Ins.gold >= goldCost;
             hasEnoughWood = JsonDataManager.Ins.wood >= woodCost;
             hasEnoughStone = JsonDataManager.Ins.stone >= stoneCost;
-            hasEnoughFood = JsonDataManager.Ins.food >= foodCost;
-            canAfford = JsonDataManager.Ins.HasEnoughResources(woodCost, stoneCost, foodCost);
+            canAfford = JsonDataManager.Ins.HasEnoughResources(woodCost, stoneCost, 0, goldCost);
         }
 
         if (warningNoticeTMP != null)
@@ -388,10 +398,10 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
             stoneCostTMP.color = hasEnoughStone ? affordableColor : unaffordableColor;
         }
 
-        if (foodCostTMP != null)
+        if (goldCostTMP != null)
         {
-            foodCostTMP.text = foodCost.ToString();
-            foodCostTMP.color = hasEnoughFood ? affordableColor : unaffordableColor;
+            goldCostTMP.text = $"Vàng: {goldCost}";
+            goldCostTMP.color = hasEnoughGold ? affordableColor : unaffordableColor;
         }
 
         if (buildDurationTMP != null)
