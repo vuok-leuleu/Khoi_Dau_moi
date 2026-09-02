@@ -17,11 +17,6 @@ public class TroopTrainingSlotData
     public BuildingType troopType = BuildingType.BarracksMelee;
     public int remainingWaves = 1;
     public bool isCompleted;
-    // Prologue requires one Shield troop before its research node unlocks.
-    // Store that one-time exception with the queue so it survives scene/state
-    // changes until the trained units have actually spawned.
-    public bool allowResearchBypass;
-
     // Chỉ dùng khi hiển thị quân đồn trú ở các thành không có Trại Lính.
     // Dữ liệu này được tính lại từ UnitController, không lưu vào hàng đợi huấn luyện.
     public int stationedSoldierCount;
@@ -877,26 +872,9 @@ public class TroopTrainingManager : MonoBehaviour
     {
         if (zone == null || slotIndex < 0 || slotIndex >= MAX_TRAINING_SLOTS) return false;
 
-        // Hộ Vệ là yêu cầu bắt buộc của Prologue nhưng node nghiên cứu của nó
-        // chưa mở ở một ván mới. Chỉ bypass research trong lúc tutorial còn
-        // chưa hoàn tất; sau đó vẫn phải tuân thủ cả research lẫn tiến độ map.
-        bool isTutorialShieldBypass = troopType == BuildingType.BarracksSpear &&
-                                      CampaignTutorialManager.Ins != null &&
-                                      !CampaignTutorialManager.Ins.IsTutorialCompleted();
-
-        if (!SpawnSoldier.IsTroopTrainingUnlocked(troopType) && !isTutorialShieldBypass)
+        if (!SpawnSoldier.IsTroopTrainingUnlocked(troopType))
         {
             string warning = $"🔒 {GetTrainingTroopName(troopType)} chưa được mở khóa trong Viện Binh.";
-            UIManager.Ins?.ShowWarning(warning);
-            Debug.LogWarning($"[TroopTrainingManager] {warning}");
-            return false;
-        }
-
-        if (troopType == BuildingType.BarracksSpear &&
-            !isTutorialShieldBypass &&
-            !CampaignTutorialManager.IsShieldTroopTrainingUnlocked())
-        {
-            const string warning = "🔒 Khiên Binh chưa mở khóa. Hãy chinh phục EVENMOOR và xây Mỏ Đá trước trận Rồng!";
             UIManager.Ins?.ShowWarning(warning);
             Debug.LogWarning($"[TroopTrainingManager] {warning}");
             return false;
@@ -943,7 +921,6 @@ public class TroopTrainingManager : MonoBehaviour
         slot.troopType = troopType;
         slot.remainingWaves = 1; // 1 Wave / Ngày
         slot.isCompleted = false;
-        slot.allowResearchBypass = isTutorialShieldBypass;
 
         SaveZoneTrainingData(zone.settlementName);
         if (CampaignTutorialManager.Ins != null) CampaignTutorialManager.Ins.OnTroopTrainingStarted(troopType);
@@ -1023,7 +1000,7 @@ public class TroopTrainingManager : MonoBehaviour
             if (building == null) building = spawner.GetComponentInParent<UpgradeableBuilding>();
 
             if (building != null && building.buildingType == slot.troopType &&
-                spawner.CanSpawnTrainedSoldier(slot.troopType, slot.allowResearchBypass))
+                spawner.CanSpawnTrainedSoldier(slot.troopType))
             {
                 targetSpawner = spawner;
                 break;
@@ -1035,7 +1012,7 @@ public class TroopTrainingManager : MonoBehaviour
             foreach (SpawnSoldier spawner in spawners)
             {
                 if (spawner != null && spawner.gameObject.activeInHierarchy &&
-                    spawner.CanSpawnTrainedSoldier(slot.troopType, slot.allowResearchBypass))
+                    spawner.CanSpawnTrainedSoldier(slot.troopType))
                 {
                     targetSpawner = spawner;
                     break;
@@ -1053,8 +1030,7 @@ public class TroopTrainingManager : MonoBehaviour
             slot.troopType,
             count,
             slot.slotIndex,
-            ownerZone.settlementName,
-            slot.allowResearchBypass);
+            ownerZone.settlementName);
     }
 
     /// <summary>
@@ -1131,7 +1107,6 @@ public class TroopTrainingManager : MonoBehaviour
             PlayerPrefs.SetInt($"Training_{zoneName}_Slot_{i}_TroopType", (int)slots[i].troopType);
             PlayerPrefs.SetInt($"Training_{zoneName}_Slot_{i}_Remaining", slots[i].remainingWaves);
             PlayerPrefs.SetInt($"Training_{zoneName}_Slot_{i}_Completed", slots[i].isCompleted ? 1 : 0);
-            PlayerPrefs.SetInt($"Training_{zoneName}_Slot_{i}_AllowResearchBypass", slots[i].allowResearchBypass ? 1 : 0);
         }
         PlayerPrefs.Save();
     }
@@ -1148,7 +1123,6 @@ public class TroopTrainingManager : MonoBehaviour
                 slots[i].troopType = (BuildingType)PlayerPrefs.GetInt($"Training_{zoneName}_Slot_{i}_TroopType", (int)BuildingType.BarracksMelee);
                 slots[i].remainingWaves = PlayerPrefs.GetInt($"Training_{zoneName}_Slot_{i}_Remaining", 1);
                 slots[i].isCompleted = PlayerPrefs.GetInt($"Training_{zoneName}_Slot_{i}_Completed", 0) == 1;
-                slots[i].allowResearchBypass = PlayerPrefs.GetInt($"Training_{zoneName}_Slot_{i}_AllowResearchBypass", 0) == 1;
             }
         }
         return slots;

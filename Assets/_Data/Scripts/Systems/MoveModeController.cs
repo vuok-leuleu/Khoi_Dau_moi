@@ -289,6 +289,7 @@ public class MoveModeController : MonoBehaviour
         isSelectingDestination = false;
         SettlementZone selectedZone = destination;
         UnitController routeLeader = null;
+        List<UnitController> dispatchedSoldiers = new List<UnitController>();
         for (int i = 0; i < dispatchGroups.Count; i++)
         {
             TroopDispatchGroup group = dispatchGroups[i];
@@ -298,6 +299,13 @@ public class MoveModeController : MonoBehaviour
                 group.soldiers,
                 destinationSlotIndices[i]);
             if (routeLeader == null) routeLeader = groupLeader;
+            foreach (UnitController soldier in group.soldiers)
+            {
+                if (soldier != null && !dispatchedSoldiers.Contains(soldier))
+                {
+                    dispatchedSoldiers.Add(soldier);
+                }
+            }
         }
 
         List<int> sourceSlotIndices = new List<int>();
@@ -329,6 +337,18 @@ public class MoveModeController : MonoBehaviour
             previewDestination = null;
         });
         SettlementSidePanelUI.Ins?.SetMoveButtonLabel("ĐIỀU QUÂN");
+
+        // Theo dõi đoàn quân ngay lúc người chơi xác nhận điều quân tới căn
+        // cứ địch. Nút Tấn Công chỉ được tạo khi toàn bộ đoàn thật sự đến nơi.
+        Transform enemyTarget = destination.hasEnemyOutpost
+            ? destination.GetConquestTargetTransform()
+            : null;
+        if (enemyTarget != null && dispatchedSoldiers.Count > 0)
+        {
+            GameObject runner = new GameObject("ExpeditionBattleTriggerRunner");
+            ExpeditionBattleTrigger trigger = runner.AddComponent<ExpeditionBattleTrigger>();
+            trigger.StartMonitoring(dispatchedSoldiers, enemyTarget, "SceneBattle");
+        }
     }
 
     private static Transform GetRouteAnchor(SettlementZone zone)

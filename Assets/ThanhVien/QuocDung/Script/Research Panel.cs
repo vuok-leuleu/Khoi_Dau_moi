@@ -299,12 +299,36 @@ public class ResearchPanel : MonoBehaviour
 
     private bool PrerequisitesMet(ResearchNode node)
     {
-        if (node.requiredNodeIds == null) return true;
-        foreach (string requiredId in node.requiredNodeIds)
+        if (node == null) return false;
+
+        // `requiredNodeIds` giữ các yêu cầu gameplay được cấu hình riêng trong
+        // Inspector. Ngoài ra, mỗi đường nối đi vào node trong cây cũng là một
+        // điều kiện bắt buộc: chưa nâng node ở trước thì không thể nâng node ở
+        // sau. Nhờ vậy cây nghiên cứu không thể bị bỏ qua chỉ vì một node trước
+        // đó chưa được thêm thủ công vào requiredNodeIds.
+        HashSet<string> requiredIds = new HashSet<string>();
+        if (node.requiredNodeIds != null)
         {
-            if (string.IsNullOrWhiteSpace(requiredId)) continue;
-            if (!nodeById.TryGetValue(requiredId, out ResearchNode required) || !required.unlocked) return false;
+            foreach (string requiredId in node.requiredNodeIds)
+            {
+                if (!string.IsNullOrWhiteSpace(requiredId)) requiredIds.Add(requiredId);
+            }
         }
+
+        foreach (ResearchConnection connection in connections)
+        {
+            if (connection == null || connection.toNodeId != node.id ||
+                string.IsNullOrWhiteSpace(connection.fromNodeId)) continue;
+
+            requiredIds.Add(connection.fromNodeId);
+        }
+
+        foreach (string requiredId in requiredIds)
+        {
+            if (!nodeById.TryGetValue(requiredId, out ResearchNode required) || !required.unlocked)
+                return false;
+        }
+
         return true;
     }
 
@@ -461,10 +485,31 @@ public class ResearchPanel : MonoBehaviour
 
     private string FormatRequirements(ResearchNode node)
     {
-        if (node.requiredNodeIds == null || node.requiredNodeIds.Length == 0) return "Yêu cầu: Không có";
+        if (node == null) return "Yêu cầu: Không có";
+
+        // Hiển thị đúng các điều kiện đang được TryUnlock kiểm tra, bao gồm cả
+        // node đi vào từ đường nối trên ResearchCanvas.
+        HashSet<string> requiredIds = new HashSet<string>();
+        if (node.requiredNodeIds != null)
+        {
+            foreach (string requiredId in node.requiredNodeIds)
+            {
+                if (!string.IsNullOrWhiteSpace(requiredId)) requiredIds.Add(requiredId);
+            }
+        }
+
+        foreach (ResearchConnection connection in connections)
+        {
+            if (connection == null || connection.toNodeId != node.id ||
+                string.IsNullOrWhiteSpace(connection.fromNodeId)) continue;
+
+            requiredIds.Add(connection.fromNodeId);
+        }
+
+        if (requiredIds.Count == 0) return "Yêu cầu: Không có";
 
         List<string> names = new List<string>();
-        foreach (string requiredId in node.requiredNodeIds)
+        foreach (string requiredId in requiredIds)
         {
             if (nodeById.TryGetValue(requiredId, out ResearchNode required)) names.Add(required.displayName);
             else names.Add(requiredId);

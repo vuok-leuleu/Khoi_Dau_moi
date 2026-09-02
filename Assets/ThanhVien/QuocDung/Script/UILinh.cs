@@ -204,6 +204,15 @@ public class UILinh : MonoBehaviour
     /// </summary>
     public void ResetGame()
     {
+        ResetActiveGame();
+    }
+
+    /// <summary>
+    /// Reset dùng chung cho phím tắt, kể cả ở những scene không nạp UI chứa
+    /// component UILinh (ví dụ BuildMapTest).
+    /// </summary>
+    public static void ResetActiveGame()
+    {
         try
         {
             // 1. Xóa toàn bộ file save JSON trong persistentDataPath

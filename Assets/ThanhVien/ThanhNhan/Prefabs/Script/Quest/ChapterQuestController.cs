@@ -139,7 +139,7 @@ public class ChapterQuestController : MonoBehaviour
             {
                 new QuestObjective { title = "Bấm vào Zeffira để mở giao diện Thành Phố", isCompleted = false, rewardGold = 0, rewardWood = 10, rewardStone = 0 },
                 new QuestObjective { title = "Xây dựng Xưởng Gỗ tại Zeffira", isCompleted = false, rewardGold = 0, rewardWood = 20, rewardStone = 0 },
-                new QuestObjective { title = "Huấn luyện 1 Hộ Vệ tại Zeffira", isCompleted = false, rewardGold = 20, rewardWood = 0, rewardStone = 0 },
+                new QuestObjective { title = "Huấn luyện 1 Kiếm Sĩ tại Zeffira", isCompleted = false, rewardGold = 20, rewardWood = 0, rewardStone = 0 },
                 new QuestObjective { title = "Di chuyển quân đến lãnh thổ địch phía Đông Zeffira", isCompleted = false, rewardGold = 30, rewardWood = 0, rewardStone = 0 },
                 new QuestObjective { title = "Chuẩn bị và giành chiến thắng trong trận đánh đầu", isCompleted = false, rewardGold = 50, rewardWood = 20, rewardStone = 0 },
                 new QuestObjective { title = "Xây dựng Vaskasia trên vùng đất trống", isCompleted = false, rewardGold = 0, rewardWood = 30, rewardStone = 20 }

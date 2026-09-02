@@ -7,6 +7,7 @@ public class UpgradeableBuilding : MonoBehaviour
     [System.Serializable]
     public struct UpgradeCost
     {
+        public int goldCost;
         public int woodCost;
         public int stoneCost;
         public int foodCost;
@@ -347,7 +348,28 @@ public class UpgradeableBuilding : MonoBehaviour
             cost = new UpgradeCost { woodCost = 0, stoneCost = 0, foodCost = 0, upgradeDuration = 1 };
         }
 
+        int duration = Mathf.Max(1, cost.upgradeDuration);
+
+        // Bảng giá Demacia là nguồn giá nâng cấp ưu tiên. Để CurrentLevel = 0
+        // tương ứng nâng từ cấp 1 lên cấp 2, target level cần cộng 2.
+        if (ConstructionManager.Ins != null && ConstructionManager.Ins.DemaciaPricing != null &&
+            ConstructionManager.Ins.DemaciaPricing.TryGetUpgradeCost(
+                buildingType,
+                CurrentLevel + 2,
+                out DemaciaConstructionPricing.ResourceCost demaciaCost))
+        {
+            return new UpgradeCost
+            {
+                goldCost = demaciaCost.goldCost,
+                woodCost = demaciaCost.woodCost,
+                stoneCost = demaciaCost.stoneCost,
+                foodCost = 0,
+                upgradeDuration = duration
+            };
+        }
+
         // Lương thực chỉ dùng để giới hạn huấn luyện lính, không phải chi phí nâng cấp.
+        cost.goldCost = 0;
         cost.foodCost = 0;
 
         // Một số prefab cũ chưa có mảng chi phí nâng cấp. UI vốn đã hiển thị
@@ -356,11 +378,13 @@ public class UpgradeableBuilding : MonoBehaviour
         if (cost.woodCost == 0 && cost.stoneCost == 0 && cost.foodCost == 0 && ConstructionManager.Ins != null)
         {
             ConstructionManager.BuildingCost baseCost = ConstructionManager.Ins.GetBuildingCost(buildingType);
+            cost.goldCost = 0;
             cost.woodCost = Mathf.RoundToInt(baseCost.woodCost * 1.5f);
             cost.stoneCost = Mathf.RoundToInt(baseCost.stoneCost * 1.5f);
             cost.foodCost = 0;
         }
 
+        cost.upgradeDuration = duration;
         return cost;
     }
 
@@ -478,11 +502,14 @@ public class UpgradeableBuilding : MonoBehaviour
             !JsonDataManager.Ins.TrySpendCombined(
                 woodCost: nextCost.woodCost,
                 stoneCost: nextCost.stoneCost,
-                foodCost: nextCost.foodCost))
+                foodCost: nextCost.foodCost,
+                goldCost: nextCost.goldCost))
         {
-            UIManager.Ins?.ShowWarning("Không đủ tài nguyên nâng cấp!");
+            UIManager.Ins?.ShowWarning("Không đủ Vàng, Gỗ hoặc Đá để nâng cấp công trình này!");
             return false;
         }
+
+        JsonDataManager.Ins.BroadcastAllResources();
 
         int duration = nextCost.upgradeDuration;
 
