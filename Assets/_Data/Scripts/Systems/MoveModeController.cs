@@ -451,7 +451,7 @@ public class MoveModeController : MonoBehaviour
         {
             if (soldier == null || alreadySelected.Contains(soldier) ||
                 soldier.stationedTroopSlotIndex != slot.MoveSlotIndex ||
-                ToBuildingType(soldier.AttackMode) != slot.MoveTroopType) continue;
+                TroopTrainingManager.GetTroopType(soldier) != slot.MoveTroopType) continue;
             selected.Add(soldier);
             if (selected.Count >= targetCount) break;
         }
@@ -464,7 +464,7 @@ public class MoveModeController : MonoBehaviour
             {
                 if (soldier == null || alreadySelected.Contains(soldier) ||
                     soldier.stationedTroopSlotIndex >= 0 ||
-                    ToBuildingType(soldier.AttackMode) != slot.MoveTroopType) continue;
+                    TroopTrainingManager.GetTroopType(soldier) != slot.MoveTroopType) continue;
                 soldier.stationedTroopSlotIndex = slot.MoveSlotIndex;
                 selected.Add(soldier);
                 if (selected.Count >= targetCount) break;
@@ -474,15 +474,6 @@ public class MoveModeController : MonoBehaviour
         return selected;
     }
 
-    private static BuildingType ToBuildingType(AttackMode attackMode)
-    {
-        switch (attackMode)
-        {
-            case AttackMode.Ranged: return BuildingType.BarracksArcher;
-            case AttackMode.Tank: return BuildingType.BarracksSpear;
-            default: return BuildingType.BarracksMelee;
-        }
-    }
     private SettlementZone FindInitialDestination()
     {
         SettlementZone[] settlements = SettlementManager.Ins != null && SettlementManager.Ins.AllSettlements.Count > 0

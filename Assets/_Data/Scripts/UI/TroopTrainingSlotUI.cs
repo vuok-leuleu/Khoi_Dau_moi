@@ -422,6 +422,8 @@ public class TroopTrainingSlotUI : MonoBehaviour, IPointerEnterHandler, IPointer
             case BuildingType.BarracksMelee: return "Kiếm Sĩ";
             case BuildingType.BarracksArcher: return "Cung Thủ";
             case BuildingType.BarracksSpear: return "Hộ Vệ";
+            case BuildingType.TroopCrossbow: return "Lính Nỏ";
+            case BuildingType.TroopCannon: return "Lính Pháo";
             default: return "Binh Lính";
         }
     }

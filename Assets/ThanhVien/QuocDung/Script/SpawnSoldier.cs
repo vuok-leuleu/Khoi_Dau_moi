@@ -98,6 +98,10 @@ public class SpawnSoldier : MonoBehaviour
                 return ResearchUpgradeEffects.ArcherUnlocked;
             case BuildingType.BarracksSpear:
                 return ResearchUpgradeEffects.ShieldUnlocked;
+            case BuildingType.TroopCrossbow:
+                return ResearchUpgradeEffects.CrossbowTowerUnlocked;
+            case BuildingType.TroopCannon:
+                return ResearchUpgradeEffects.CannonTowerUnlocked;
             default:
                 return true;
         }
@@ -122,41 +126,64 @@ public class SpawnSoldier : MonoBehaviour
 
         UnitController unit = prefab.GetComponent<UnitController>();
         if (unit == null) unit = prefab.GetComponentInChildren<UnitController>();
-        return unit == null || IsResearchUnlockedForAttackMode(unit.AttackMode);
+        if (unit == null) return true;
+
+        // AttackMode chỉ phân biệt cận chiến/tầm xa/đỡ đòn. Các đơn vị tầm xa
+        // như nỏ và pháo cần dùng đúng mốc nghiên cứu của từng loại.
+        switch (unit.ResearchType)
+        {
+            case SoldierResearchType.Bow:
+                return ResearchUpgradeEffects.ArcherUnlocked;
+            case SoldierResearchType.Shield:
+                return ResearchUpgradeEffects.ShieldUnlocked;
+            case SoldierResearchType.Crossbow:
+                return ResearchUpgradeEffects.CrossbowTowerUnlocked;
+            case SoldierResearchType.Cannon:
+                return ResearchUpgradeEffects.CannonTowerUnlocked;
+            default:
+                return true;
+        }
     }
 
     private GameObject GetTrainedSoldierPrefab(BuildingType troopType)
     {
         if (!IsTroopTrainingUnlocked(troopType)) return null;
 
-        AttackMode expectedAttackMode;
-        switch (troopType)
-        {
-            case BuildingType.BarracksMelee:
-                expectedAttackMode = AttackMode.Melee;
-                break;
-            case BuildingType.BarracksArcher:
-                expectedAttackMode = AttackMode.Ranged;
-                break;
-            case BuildingType.BarracksSpear:
-                expectedAttackMode = AttackMode.Tank;
-                break;
-            default:
-                return null;
-        }
-
         foreach (GameObject prefab in GetConfiguredSoldierPrefabs())
         {
             UnitController unit = prefab.GetComponent<UnitController>();
             if (unit == null) unit = prefab.GetComponentInChildren<UnitController>();
 
-            if (unit != null && unit.AttackMode == expectedAttackMode)
+            if (MatchesTroopType(unit, troopType))
             {
                 return prefab;
             }
         }
 
         return null;
+    }
+
+    private static bool MatchesTroopType(UnitController unit, BuildingType troopType)
+    {
+        if (unit == null) return false;
+
+        switch (troopType)
+        {
+            case BuildingType.BarracksMelee:
+                return unit.AttackMode == AttackMode.Melee;
+            case BuildingType.BarracksArcher:
+                return unit.AttackMode == AttackMode.Ranged &&
+                       unit.ResearchType != SoldierResearchType.Crossbow &&
+                       unit.ResearchType != SoldierResearchType.Cannon;
+            case BuildingType.BarracksSpear:
+                return unit.AttackMode == AttackMode.Tank;
+            case BuildingType.TroopCrossbow:
+                return unit.ResearchType == SoldierResearchType.Crossbow;
+            case BuildingType.TroopCannon:
+                return unit.ResearchType == SoldierResearchType.Cannon;
+            default:
+                return false;
+        }
     }
 
     public bool CanSpawnTrainedSoldier(BuildingType troopType)

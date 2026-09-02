@@ -794,6 +794,38 @@ public class BattleManager : MonoBehaviour
         return null;
     }
 
+    /// <summary>
+    /// Dùng prefab gốc của đơn vị khi có thể. AttackMode chỉ là thông tin chiến
+    /// đấu chung, không đủ để phân biệt Cung thủ với lính có model Tháp Cung/
+    /// Tháp Pháo vốn cũng đánh tầm xa.
+    /// </summary>
+    private GameObject GetSoldierPrefabForBattleUnit(
+        AttackMode mode,
+        string prefabName,
+        bool ignoreResearchRequirements = false)
+    {
+        if (!string.IsNullOrEmpty(prefabName))
+        {
+            if (MatchesPrefabName(archerTowerPrefab, prefabName)) return archerTowerPrefab;
+            if (MatchesPrefabName(cannonPrefab, prefabName)) return cannonPrefab;
+        }
+
+        return GetSoldierPrefabForAttackMode(mode, ignoreResearchRequirements);
+    }
+
+    private static bool MatchesPrefabName(GameObject prefab, string prefabName)
+    {
+        if (prefab == null || string.IsNullOrEmpty(prefabName)) return false;
+        return NormalizePrefabName(prefab.name) == prefabName;
+    }
+
+    private static string NormalizePrefabName(string objectName)
+    {
+        return string.IsNullOrEmpty(objectName)
+            ? string.Empty
+            : objectName.Replace("(Clone)", string.Empty).Trim();
+    }
+
     private GameObject GetSoldierPrefabForBuildingType(BuildingType buildingType)
     {
         switch (buildingType)
@@ -840,27 +872,26 @@ public class BattleManager : MonoBehaviour
         // 1. Trường hợp Xuất chinh / Chinh phạt: Sinh đúng danh sách và loại lính đã cử đi
         if (BattleData.IsAttackingExpedition)
         {
-            List<AttackMode> expeditionSoldierModes = new List<AttackMode>();
+            List<BattleData.SoldierMarchInfo> expeditionSoldiers = new List<BattleData.SoldierMarchInfo>();
             foreach (var march in BattleData.SavedSoldierMarches)
             {
                 if (march != null && march.hasReachedExpeditionDestination &&
                     march.marchDestinationZoneName == BattleData.TargetedSettlementZoneName)
                 {
-                    expeditionSoldierModes.Add(march.attackMode);
+                    expeditionSoldiers.Add(march);
                 }
             }
 
             // Nếu số lượng lính trong danh sách march chưa đủ TotalSoldiersInBase thì bổ sung
-            while (expeditionSoldierModes.Count < BattleData.TotalSoldiersInBase)
+            while (expeditionSoldiers.Count < BattleData.TotalSoldiersInBase)
             {
-                expeditionSoldierModes.Add(AttackMode.Melee);
+                expeditionSoldiers.Add(new BattleData.SoldierMarchInfo());
             }
 
-            AddFormationReinforcements(expeditionSoldierModes);
-
-            for (int i = 0; i < expeditionSoldierModes.Count; i++)
+            for (int i = 0; i < expeditionSoldiers.Count; i++)
             {
-                GameObject prefab = GetSoldierPrefabForAttackMode(expeditionSoldierModes[i], true);
+                BattleData.SoldierMarchInfo soldier = expeditionSoldiers[i];
+                GameObject prefab = GetSoldierPrefabForBattleUnit(soldier.attackMode, soldier.prefabName, true);
                 if (prefab != null)
                 {
                     int row = soldierTotalSpawned / unitsPerRow;
@@ -871,7 +902,7 @@ public class BattleManager : MonoBehaviour
                     Quaternion soldierRot = Quaternion.Euler(0, 90, 0);
 
                     GameObject spawnedSoldier = Instantiate(prefab, soldierPos, soldierRot);
-                    spawnedSoldier.name = $"Player_Soldier_{soldierTotalSpawned + 1}_{expeditionSoldierModes[i]}";
+                    spawnedSoldier.name = $"Player_Soldier_{soldierTotalSpawned + 1}_{NormalizePrefabName(prefab.name)}";
                     spawnedPlayerObjects.Add(spawnedSoldier);
                     RegisterSpawnedPlayerUnit(spawnedSoldier);
                 }
@@ -884,12 +915,12 @@ public class BattleManager : MonoBehaviour
             // đang đóng tại vùng bị địch đánh. Cache SpawnSoldier có thể thiếu
             // lính được tạo qua tutorial/save, dẫn đến Cung thủ bị thay thành
             // Kiếm Sĩ trong SceneBattle.
-            List<AttackMode> defendingSoldierModes = new List<AttackMode>();
+            List<BattleData.DefendingSoldierInfo> defendingSoldiers = new List<BattleData.DefendingSoldierInfo>();
             if (BattleData.DefendingSoldiers != null && BattleData.DefendingSoldiers.Count > 0)
             {
                 foreach (BattleData.DefendingSoldierInfo soldier in BattleData.DefendingSoldiers)
                 {
-                    if (soldier != null) defendingSoldierModes.Add(soldier.attackMode);
+                    if (soldier != null) defendingSoldiers.Add(soldier);
                 }
             }
             else
@@ -899,17 +930,21 @@ public class BattleManager : MonoBehaviour
                 {
                     int countToSpawn = GetBattleSquadSize(buildingInfo.soldierCount);
                     AttackMode mode = GetAttackModeForBuildingType(buildingInfo.buildingType);
-                    for (int i = 0; i < countToSpawn; i++) defendingSoldierModes.Add(mode);
+                    for (int i = 0; i < countToSpawn; i++)
+                    {
+                        defendingSoldiers.Add(new BattleData.DefendingSoldierInfo { attackMode = mode });
+                    }
                 }
             }
 
             // Fallback chỉ dành cho save cũ không xác định được unit thực tế.
-            while (defendingSoldierModes.Count < BattleData.TotalSoldiersInBase)
-                defendingSoldierModes.Add(AttackMode.Melee);
+            while (defendingSoldiers.Count < BattleData.TotalSoldiersInBase)
+                defendingSoldiers.Add(new BattleData.DefendingSoldierInfo());
 
-            for (int i = 0; i < defendingSoldierModes.Count; i++)
+            for (int i = 0; i < defendingSoldiers.Count; i++)
             {
-                GameObject prefab = GetSoldierPrefabForAttackMode(defendingSoldierModes[i], true);
+                BattleData.DefendingSoldierInfo soldier = defendingSoldiers[i];
+                GameObject prefab = GetSoldierPrefabForBattleUnit(soldier.attackMode, soldier.prefabName, true);
                 if (prefab != null)
                 {
                     int row = soldierTotalSpawned / unitsPerRow;
@@ -920,7 +955,7 @@ public class BattleManager : MonoBehaviour
                     Quaternion soldierRot = Quaternion.Euler(0, 90, 0);
 
                     GameObject spawnedSoldier = Instantiate(prefab, soldierPos, soldierRot);
-                    spawnedSoldier.name = $"Player_Soldier_{soldierTotalSpawned + 1}_{defendingSoldierModes[i]}";
+                    spawnedSoldier.name = $"Player_Soldier_{soldierTotalSpawned + 1}_{NormalizePrefabName(prefab.name)}";
                     spawnedPlayerObjects.Add(spawnedSoldier);
                     RegisterSpawnedPlayerUnit(spawnedSoldier);
                 }

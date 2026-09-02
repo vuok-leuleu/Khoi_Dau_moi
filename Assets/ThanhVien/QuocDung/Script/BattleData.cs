@@ -52,6 +52,8 @@ public static class BattleData
     public class DefendingSoldierInfo
     {
         public AttackMode attackMode = AttackMode.Melee;
+        // Giữ prefab gốc vì nhiều đơn vị có cùng AttackMode.Ranged nhưng khác model.
+        public string prefabName;
     }
 
     public static bool HasData = false;
@@ -346,7 +348,8 @@ public static class BattleData
                         battleSoldierCount++;
                         DefendingSoldiers.Add(new DefendingSoldierInfo
                         {
-                            attackMode = u.AttackMode
+                            attackMode = u.AttackMode,
+                            prefabName = NormalizePrefabName(u.gameObject.name)
                         });
                     }
                 }

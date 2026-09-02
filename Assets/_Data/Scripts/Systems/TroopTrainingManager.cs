@@ -161,7 +161,7 @@ public class TroopTrainingManager : MonoBehaviour
             TroopTrainingSlotData groupSlot = new TroopTrainingSlotData
             {
                 slotIndex = group.Key,
-                troopType = ToBuildingType(group.Value[0].AttackMode),
+                troopType = GetTroopType(group.Value[0]),
                 isCompleted = true
             };
 
@@ -510,7 +510,7 @@ public class TroopTrainingManager : MonoBehaviour
             List<UnitController> stationedInSlot = GetStationedUnitsForSlot(zone, i);
             if (stationedInSlot.Count > 0)
             {
-                currentSlots[i].troopType = ToBuildingType(stationedInSlot[0].AttackMode);
+                currentSlots[i].troopType = GetTroopType(stationedInSlot[0]);
                 currentSlots[i].isTraining = false;
                 currentSlots[i].isCompleted = true;
                 currentSlots[i].remainingWaves = 0;
@@ -666,7 +666,7 @@ public class TroopTrainingManager : MonoBehaviour
             // thái khóa cho đến khi nâng Trại Lính ở ZEFFIRA.
             slots[slotIndex].isUnlocked = true;
             slots[slotIndex].isGarrisonSlot = true;
-            slots[slotIndex].troopType = ToBuildingType(group.Value[0].AttackMode);
+            slots[slotIndex].troopType = GetTroopType(group.Value[0]);
             slots[slotIndex].stationedSoldierCount = group.Value.Count;
             slots[slotIndex].isCompleted = true;
         }
@@ -700,7 +700,7 @@ public class TroopTrainingManager : MonoBehaviour
             }
             else
             {
-                BuildingType type = ToBuildingType(unit.AttackMode);
+                BuildingType type = GetTroopType(unit);
                 if (!legacyByType.ContainsKey(type)) legacyByType[type] = new List<UnitController>();
                 legacyByType[type].Add(unit);
             }
@@ -747,7 +747,7 @@ public class TroopTrainingManager : MonoBehaviour
             if (unit == null || unit.isDead || unit.isExpeditionMarching ||
                 unit.stationedTroopSlotIndex >= 0 || !IsStationedInZone(unit, zone)) continue;
 
-            BuildingType troopType = ToBuildingType(unit.AttackMode);
+            BuildingType troopType = GetTroopType(unit);
             int slotIndex = -1;
 
             // Ưu tiên khôi phục vào đúng ô đã hoàn thành cùng loại từ save cũ.
@@ -828,7 +828,7 @@ public class TroopTrainingManager : MonoBehaviour
                 ? soldier.stationedSettlementZoneName == zone.settlementName
                 : soldier.GetComponentInParent<SettlementZone>() == zone;
 
-            if (isStationedHere && (troopType == BuildingType.None || ToBuildingType(soldier.AttackMode) == troopType))
+            if (isStationedHere && (troopType == BuildingType.None || GetTroopType(soldier) == troopType))
             {
                 total++;
             }
@@ -837,9 +837,23 @@ public class TroopTrainingManager : MonoBehaviour
         return total;
     }
 
-    private static BuildingType ToBuildingType(AttackMode attackMode)
+    public static BuildingType GetTroopType(UnitController unit)
     {
-        switch (attackMode)
+        if (unit == null) return BuildingType.BarracksMelee;
+
+        switch (unit.ResearchType)
+        {
+            case SoldierResearchType.Crossbow:
+                return BuildingType.TroopCrossbow;
+            case SoldierResearchType.Cannon:
+                return BuildingType.TroopCannon;
+            case SoldierResearchType.Bow:
+                return BuildingType.BarracksArcher;
+            case SoldierResearchType.Shield:
+                return BuildingType.BarracksSpear;
+        }
+
+        switch (unit.AttackMode)
         {
             case AttackMode.Ranged: return BuildingType.BarracksArcher;
             case AttackMode.Tank: return BuildingType.BarracksSpear;
@@ -946,12 +960,15 @@ public class TroopTrainingManager : MonoBehaviour
         return 3;
     }
 
-    private static string GetTrainingTroopName(BuildingType troopType)
+    public static string GetTrainingTroopName(BuildingType troopType)
     {
         switch (troopType)
         {
+            case BuildingType.BarracksMelee: return "Kiếm Sĩ";
             case BuildingType.BarracksArcher: return "Cung Thủ";
             case BuildingType.BarracksSpear: return "Hộ Vệ";
+            case BuildingType.TroopCrossbow: return "Lính Nỏ";
+            case BuildingType.TroopCannon: return "Lính Pháo";
             default: return "Lính này";
         }
     }
@@ -1084,7 +1101,7 @@ public class TroopTrainingManager : MonoBehaviour
             for (int i = unassignedUnits.Count - 1; i >= 0 && missingLegacyUnits > 0; i--)
             {
                 UnitController unit = unassignedUnits[i];
-                if (unit == null || ToBuildingType(unit.AttackMode) != slot.troopType) continue;
+                if (unit == null || GetTroopType(unit) != slot.troopType) continue;
 
                 unit.stationedSettlementZoneName = zone.settlementName;
                 unit.stationedTroopSlotIndex = slot.slotIndex;

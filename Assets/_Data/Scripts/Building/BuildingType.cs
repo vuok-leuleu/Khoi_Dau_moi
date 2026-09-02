@@ -44,4 +44,10 @@ public enum BuildingType
     Wood,
     Rice,
     Stone,
+
+    // ── QUÂN SỰ (LOẠI HUẤN LUYỆN) ─────────────
+    // Các giá trị này chỉ dùng cho hàng đợi/ô huấn luyện, không phải công trình.
+    // Thêm ở cuối để giữ nguyên giá trị đã lưu của các loại cũ.
+    TroopCrossbow,      // Lính Nỏ
+    TroopCannon,        // Lính Pháo
 }

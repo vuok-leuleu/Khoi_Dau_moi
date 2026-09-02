@@ -2,11 +2,11 @@
   <Project Path="Unity.VisualEffectGraph.Editor.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Unity.Polybrush.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="BroAudio.csproj" />
   <Project Path="BroAudioEditor.csproj" />
   <Project Path="Unity.VisualEffectGraph.Runtime.csproj" />
   <Project Path="Unity.Polybrush.Editor.csproj" />
-  <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Assembly-CSharp-firstpass.csproj" />
   <Project Path="OccaSoftware.Buto.Editor.csproj" />
   <Project Path="OccaSoftware.Buto.Runtime.csproj" />

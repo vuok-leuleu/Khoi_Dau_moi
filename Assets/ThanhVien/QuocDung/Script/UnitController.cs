@@ -614,7 +614,10 @@ public class UnitController : MonoBehaviour
         }
         else if (attackMode == AttackMode.Ranged)
         {
-            PlayAnimationTrigger(shootBoolParam);
+            // Một số đơn vị tầm xa (như nỏ/pháo) dùng chung tham số IsAttack
+            // thay vì IsShoot. Nếu không có tham số bắn riêng, dùng tham số đánh
+            // để vẫn phát hoạt ảnh mà không yêu cầu Animator phải có IsShoot.
+            PlayAnimationTrigger(string.IsNullOrWhiteSpace(shootBoolParam) ? attackBoolParam : shootBoolParam);
             StartCoroutine(SpawnRangedProjectileAfterDelay(projectileSpawnDelay));
         }
         else if (attackMode == AttackMode.Tank)
@@ -697,11 +700,19 @@ public class UnitController : MonoBehaviour
             GameObject proj = Instantiate(projectilePrefab, spawnPos, spawnRot);
             
             Arrow arrowComp = proj.GetComponent<Arrow>();
+            Canon cannonComp = proj.GetComponent<Canon>();
             if (arrowComp != null)
             {
                 arrowComp.SetLauncher(gameObject);
                 arrowComp.SetDamage(attackDamage);
                 arrowComp.SetTarget(target, projectileSpeed);
+            }
+            else if (cannonComp != null)
+            {
+                cannonComp.SetLauncher(gameObject);
+                cannonComp.SetDamage(attackDamage);
+                cannonComp.SetLevel(1);
+                LaunchCannonProjectile(proj, spawnPos, target.position);
             }
             else
             {
@@ -711,6 +722,50 @@ public class UnitController : MonoBehaviour
                     rb.linearVelocity = aimDir * projectileSpeed;
                 }
             }
+        }
+    }
+
+    private void LaunchCannonProjectile(GameObject projectile, Vector3 spawnPosition, Vector3 targetPosition)
+    {
+        Rigidbody rb = projectile.GetComponent<Rigidbody>();
+        if (rb == null) return;
+
+        rb.isKinematic = false;
+        rb.useGravity = true;
+
+        Vector3 toTarget = targetPosition - spawnPosition;
+        Vector3 horizontal = new Vector3(toTarget.x, 0f, toTarget.z);
+        float horizontalDistance = horizontal.magnitude;
+        float speed = Mathf.Max(0.01f, projectileSpeed);
+
+        if (horizontalDistance < 0.01f)
+        {
+            rb.linearVelocity = Vector3.up * speed;
+            return;
+        }
+
+        float gravity = Mathf.Abs(Physics.gravity.y);
+        float speedSquared = speed * speed;
+        float discriminant = speedSquared * speedSquared - gravity *
+            (gravity * horizontalDistance * horizontalDistance + 2f * toTarget.y * speedSquared);
+
+        Vector3 velocity;
+        if (discriminant < 0f)
+        {
+            velocity = toTarget.normalized * speed;
+        }
+        else
+        {
+            float launchAngle = Mathf.Atan((speedSquared - Mathf.Sqrt(discriminant)) /
+                                           (gravity * horizontalDistance));
+            velocity = horizontal.normalized * (speed * Mathf.Cos(launchAngle)) +
+                       Vector3.up * (speed * Mathf.Sin(launchAngle));
+        }
+
+        rb.linearVelocity = velocity;
+        if (velocity.sqrMagnitude > 0.001f)
+        {
+            projectile.transform.rotation = Quaternion.LookRotation(velocity.normalized);
         }
     }
 
@@ -815,7 +870,11 @@ public class UnitController : MonoBehaviour
             isMoving = false;
         }
 
-        animator.SetBool(moveBoolParam, isMoving);
+        if (!string.IsNullOrWhiteSpace(moveBoolParam) &&
+            HasAnimatorParameter(animator, moveBoolParam, AnimatorControllerParameterType.Bool))
+        {
+            animator.SetBool(moveBoolParam, isMoving);
+        }
 
         if (!string.IsNullOrWhiteSpace(shootBoolParam))
         {
