@@ -27,7 +27,8 @@ public class BattleManager : MonoBehaviour
 
     [Header("Dragon Spawn Settings")]
     [SerializeField] private bool spawnDragonAtBattleStart = true;
-    [SerializeField] private GameObject dragonPrefab;
+    [Tooltip("Chấp nhận GameObject hoặc component Dragon để tránh lỗi cast từ prefab cũ.")]
+    [SerializeField] private UnityEngine.Object dragonPrefab;
 
     [Header("Player Soldier Prefabs")]
     [SerializeField] private GameObject soldierPrefab;
@@ -125,6 +126,10 @@ public class BattleManager : MonoBehaviour
 
     private void Start()
     {
+        // SceneBattle có thể được mở trực tiếp trong Editor, vì vậy luôn xóa
+        // dữ liệu đội hình của trận trước trước khi sinh lính cho trận mới.
+        BattleData.BeginNewBattle();
+
         // 1. Kiểm tra vị trí Spawn mặc định nếu chưa gán trong Inspector
         EnsureSpawnPoints();
 
@@ -676,6 +681,7 @@ public class BattleManager : MonoBehaviour
     private void SetupFallbackTestData()
     {
         BattleData.ClearConquestEnemyComposition();
+        BattleData.ClearRaidEnemyComposition();
         BattleData.SpawnDragonInCurrentBattle = false;
         BattleData.EnemyWaveCount = Mathf.Max(1, testEnemyWaveCount);
         BattleData.PlayerBuildings.Clear();
@@ -684,9 +690,10 @@ public class BattleManager : MonoBehaviour
         for (int i = 0; i < testBarracksCount; i++)
         {
             int lvl = Mathf.Clamp(testBarracksLevel, 1, 3);
-            // Battle scene owns troop spawning. A unit starts at 3 soldiers;
-            // Research Formation I/II/III is applied below while spawning.
-            int soldiers = 3;
+            // The map owns troop spawning. Formation research has already been
+            // applied by TroopTrainingManager before this data is captured.
+            // Standalone battle-test data has no map squad to serialize.
+            int soldiers = 3 + ResearchUpgradeEffects.FormationBonus;
 
             BattleData.PlayerBuildings.Add(new BattleData.BuildingInfo
             {
@@ -758,7 +765,8 @@ public class BattleManager : MonoBehaviour
                 if (archerSoldierPrefab != null) return archerSoldierPrefab;
                 break;
             case AttackMode.Tank:
-                if (!ResearchUpgradeEffects.ShieldUnlocked) return null;
+                if (!ResearchUpgradeEffects.ShieldUnlocked &&
+                    !BattleData.AllowTutorialShieldTroopsInCurrentBattle) return null;
                 if (tankSoldierPrefab != null) return tankSoldierPrefab;
                 break;
             case AttackMode.Melee:
@@ -802,28 +810,20 @@ public class BattleManager : MonoBehaviour
     }
 
     /// <summary>
-    /// BattleData contains the base squad size from the main scene. Formation
-    /// research adds one soldier to every squad at the moment it is spawned in
-    /// SceneBattle: 3 → 4 → 5 → 6. SpawnSoldier is deliberately not involved.
+    /// BattleData contains the actual squad size currently on the strategic
+    /// map. Formation research is applied there, so adding it again here would
+    /// duplicate reinforcements in SceneBattle.
     /// </summary>
     private static int GetBattleSquadSize(int baseSoldierCount)
     {
-        return Mathf.Max(0, baseSoldierCount) + ResearchUpgradeEffects.FormationBonus;
+        return Mathf.Max(0, baseSoldierCount);
     }
 
     private static void AddFormationReinforcements(List<AttackMode> soldierModes)
     {
-        int bonusPerUnit = ResearchUpgradeEffects.FormationBonus;
-        if (bonusPerUnit <= 0 || soldierModes == null || soldierModes.Count == 0) return;
-
-        // A formation upgrade gives the same +1 to every troop type that was
-        // actually sent to the expedition, rather than creating a new type.
-        List<AttackMode> deployedTypes = new List<AttackMode>();
-        foreach (AttackMode mode in soldierModes)
-            if (!deployedTypes.Contains(mode)) deployedTypes.Add(mode);
-
-        foreach (AttackMode mode in deployedTypes)
-            for (int i = 0; i < bonusPerUnit; i++) soldierModes.Add(mode);
+        // The list is serialized from the actual units selected on the map.
+        // It already includes formation reinforcements; retain this method so
+        // older call sites remain explicit no-ops rather than double-spawning.
     }
 
     /// <summary>
@@ -874,6 +874,7 @@ public class BattleManager : MonoBehaviour
                     GameObject spawnedSoldier = Instantiate(prefab, soldierPos, soldierRot);
                     spawnedSoldier.name = $"Player_Soldier_{soldierTotalSpawned + 1}_{expeditionSoldierModes[i]}";
                     spawnedPlayerObjects.Add(spawnedSoldier);
+                    RegisterSpawnedPlayerUnit(spawnedSoldier);
                 }
                 soldierTotalSpawned++;
             }
@@ -900,6 +901,7 @@ public class BattleManager : MonoBehaviour
                         GameObject spawnedSoldier = Instantiate(prefab, soldierPos, soldierRot);
                         spawnedSoldier.name = $"Player_Soldier_{soldierTotalSpawned + 1}";
                         spawnedPlayerObjects.Add(spawnedSoldier);
+                        RegisterSpawnedPlayerUnit(spawnedSoldier);
                     }
                     soldierTotalSpawned++;
                 }
@@ -925,9 +927,27 @@ public class BattleManager : MonoBehaviour
                         GameObject spawnedSoldier = Instantiate(prefab, soldierPos, soldierRot);
                         spawnedSoldier.name = $"Player_Soldier_{idx + 1}";
                         spawnedPlayerObjects.Add(spawnedSoldier);
+                        RegisterSpawnedPlayerUnit(spawnedSoldier);
                     }
                 }
             }
+        }
+    }
+
+    private static void RegisterSpawnedPlayerUnit(GameObject spawnedSoldier)
+    {
+        if (spawnedSoldier == null) return;
+
+        UnitController unit = spawnedSoldier.GetComponent<UnitController>();
+        if (unit == null) unit = spawnedSoldier.GetComponentInChildren<UnitController>();
+
+        if (unit != null)
+        {
+            BattleData.RegisterBattleParticipant(unit.AttackMode);
+        }
+        else
+        {
+            Debug.LogWarning($"[BattleManager] Không xác định được loại lính của '{spawnedSoldier.name}' để hiển thị kết quả.");
         }
     }
 
@@ -943,13 +963,20 @@ public class BattleManager : MonoBehaviour
         }
 
         bool useConquestComposition = BattleData.HasExplicitConquestEnemyComposition &&
-                                      BattleData.ConquestEnemyPrefabs != null &&
-                                      BattleData.ConquestEnemyPrefabs.Count > 0;
+                                       BattleData.ConquestEnemyPrefabs != null &&
+                                       BattleData.ConquestEnemyPrefabs.Count > 0;
+        bool useRaidComposition = !BattleData.IsAttackingExpedition &&
+                                  BattleData.HasExplicitRaidEnemyComposition &&
+                                  BattleData.RaidEnemyPrefabs != null &&
+                                  BattleData.RaidEnemyPrefabs.Count > 0;
+        bool useExplicitComposition = useConquestComposition || useRaidComposition;
         int count = useConquestComposition
             ? BattleData.ConquestEnemyPrefabs.Count
+            : useRaidComposition
+                ? BattleData.RaidEnemyPrefabs.Count
             : Mathf.Max(1, BattleData.EnemyWaveCount);
 
-        if (useConquestComposition || enemyPrefab != null)
+        if (useExplicitComposition || enemyPrefab != null)
         {
             Vector3 originRight = rightSpawnPoint.position;
 
@@ -957,6 +984,8 @@ public class BattleManager : MonoBehaviour
             {
                 GameObject prefabToSpawn = useConquestComposition
                     ? BattleData.ConquestEnemyPrefabs[i]
+                    : useRaidComposition
+                        ? BattleData.RaidEnemyPrefabs[i]
                     : enemyPrefab;
                 if (prefabToSpawn == null) continue;
 
@@ -988,7 +1017,24 @@ public class BattleManager : MonoBehaviour
     /// </summary>
     private void SpawnDragon()
     {
-        if (!spawnDragonAtBattleStart || dragonPrefab == null || dragonHighSpawnPoint == null) return;
+        if (!spawnDragonAtBattleStart)
+        {
+            Debug.LogWarning("[BattleManager] Raid Rồng đã được đánh dấu, nhưng Spawn Dragon At Battle Start đang tắt.");
+            return;
+        }
+
+        GameObject dragonPrefabObject = ResolvePrefabGameObject(dragonPrefab);
+        if (dragonPrefabObject == null)
+        {
+            Debug.LogError("[BattleManager] Raid Rồng đã được đánh dấu, nhưng Dragon Prefab không phải GameObject/Dragon hợp lệ.");
+            return;
+        }
+
+        if (dragonHighSpawnPoint == null)
+        {
+            Debug.LogError("[BattleManager] Raid Rồng đã được đánh dấu, nhưng không tìm thấy DragonHighSpawnPoint.");
+            return;
+        }
 
         // Make the model face into the battlefield instead of relying on a
         // world-axis direction. In the current scene this resolves to Y = -90.
@@ -999,7 +1045,7 @@ public class BattleManager : MonoBehaviour
         Quaternion dragonRotation = battleDirection.sqrMagnitude > 0.001f
             ? Quaternion.LookRotation(battleDirection.normalized)
             : Quaternion.Euler(0f, -90f, 0f);
-        GameObject spawnedDragon = Instantiate(dragonPrefab, dragonHighSpawnPoint.position, dragonRotation);
+        GameObject spawnedDragon = Instantiate(dragonPrefabObject, dragonHighSpawnPoint.position, dragonRotation);
 
         // Bảo đảm vẫn nhìn thấy được nếu prefab được lưu ở trạng thái inactive.
         spawnedDragon.SetActive(true);
@@ -1014,6 +1060,13 @@ public class BattleManager : MonoBehaviour
         }
 
         spawnedEnemyObjects.Add(spawnedDragon);
+    }
+
+    private static GameObject ResolvePrefabGameObject(UnityEngine.Object prefabReference)
+    {
+        if (prefabReference is GameObject gameObject) return gameObject;
+        if (prefabReference is Component component) return component.gameObject;
+        return null;
     }
 
     private GameObject FindBuildingPrefabByType(BuildingType type)

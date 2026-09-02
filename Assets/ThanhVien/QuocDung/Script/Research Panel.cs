@@ -12,6 +12,8 @@ using UnityEngine.UI;
 /// </summary>
 public class ResearchPanel : MonoBehaviour
 {
+    private const string SaveKeyPrefix = "ResearchNode_";
+
     /// <summary>Raised whenever the set of researched nodes changes.</summary>
     public event Action ResearchStateChanged;
 
@@ -69,10 +71,10 @@ public class ResearchPanel : MonoBehaviour
     [SerializeField] private TMP_Text detailStatusText;
 
     [Header("Visual state")]
-    [SerializeField] private Color lockedColor = new Color(0.35f, 0.35f, 0.35f, 1f);
-    [SerializeField] private Color availableColor = Color.white;
-    [SerializeField] private Color unlockedColor = new Color(1f, 0.85f, 0.25f, 1f);
-    [SerializeField] private Color inactiveConnectionColor = new Color(0.25f, 0.20f, 0.12f, 0.8f);
+    [SerializeField] private Color lockedColor = new Color(0.25f, 0.20f, 0.12f, 1f);
+    [SerializeField] private Color availableColor = new Color(0.25f, 0.20f, 0.12f, 1f);
+    [SerializeField] private Color unlockedColor = new Color(0.95f, 0.65f, 0.15f, 1f);
+    [SerializeField] private Color inactiveConnectionColor = new Color(0.25f, 0.20f, 0.12f, 1f);
     [SerializeField] private Color activeConnectionColor = new Color(0.95f, 0.65f, 0.15f, 1f);
 
     private readonly Dictionary<string, ResearchNode> nodeById = new Dictionary<string, ResearchNode>();
@@ -129,6 +131,7 @@ public class ResearchPanel : MonoBehaviour
         if (initialized) return;
 
         nodeById.Clear();
+        bool isFirstRuntimeInitialization = !hasRuntimeState;
         bool resetRuntimeState = !keepProgressBetweenEnable || !hasRuntimeState;
         foreach (ResearchNode node in nodes)
         {
@@ -141,7 +144,15 @@ public class ResearchPanel : MonoBehaviour
                 continue;
             }
 
-            if (resetRuntimeState) node.unlocked = node.unlockedAtStart;
+            // Tiến trình nghiên cứu là dữ liệu gameplay, không phải trạng thái
+            // hiển thị của Canvas. Khi scene/map được nạp lại, panel có thể bị
+            // tắt lúc khởi động nên cần khôi phục từ PlayerPrefs ngay lần đầu
+            // nó được tạo trong runtime này.
+            if (resetRuntimeState)
+            {
+                node.unlocked = node.unlockedAtStart ||
+                                (isFirstRuntimeInitialization && IsNodeSavedAsUnlocked(node.id));
+            }
             nodeById.Add(node.id, node);
         }
 
@@ -243,7 +254,13 @@ public class ResearchPanel : MonoBehaviour
         }
 
         node.unlocked = true;
+        SaveNodeUnlockState(node.id, true);
         node.onUnlocked?.Invoke();
+
+        // Không phụ thuộc vào ResearchUpgradeEffects đang enabled hay không:
+        // ResearchPanel thường bị SetActive(false) khi đóng UI, nhưng nâng cấp
+        // vừa mua vẫn phải lập tức áp dụng cho lính đang có trên bản đồ.
+        ResearchUpgradeEffects.ApplyResearchState(this);
         // Nghiên cứu thành công thì đóng thẻ chi tiết. Bấm một node khác sẽ gọi
         // SelectNode và mở lại DetailPanel như bình thường.
         HideDetails();
@@ -255,10 +272,16 @@ public class ResearchPanel : MonoBehaviour
     public void ResetTree()
     {
         foreach (ResearchNode node in nodes)
-            if (node != null) node.unlocked = node.unlockedAtStart;
+        {
+            if (node == null) continue;
+            node.unlocked = node.unlockedAtStart;
+            SaveNodeUnlockState(node.id, node.unlockedAtStart);
+        }
+        PlayerPrefs.Save();
         selectedNodeId = null;
         HideDetails();
         RefreshVisuals();
+        ResearchUpgradeEffects.ApplyResearchState(this);
         ResearchStateChanged?.Invoke();
     }
 
@@ -293,6 +316,24 @@ public class ResearchPanel : MonoBehaviour
                && node.unlocked;
     }
 
+    /// <summary>
+    /// Đọc tiến trình khi ResearchCanvas chưa được bật. Gameplay dùng hàm này
+    /// để không bị phụ thuộc vào UI đang hiển thị hay bị ẩn.
+    /// </summary>
+    public static bool IsNodeSavedAsUnlocked(string nodeId)
+    {
+        return !string.IsNullOrWhiteSpace(nodeId) &&
+               PlayerPrefs.GetInt(SaveKeyPrefix + nodeId, 0) == 1;
+    }
+
+    private static void SaveNodeUnlockState(string nodeId, bool unlocked)
+    {
+        if (string.IsNullOrWhiteSpace(nodeId)) return;
+
+        PlayerPrefs.SetInt(SaveKeyPrefix + nodeId, unlocked ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
     // The visual cards already contain a TMP label. Keep it synchronized with
     // the serialized node content so the card and detail panel cannot diverge.
     private static void SetNodeLabel(ResearchNode node)
@@ -302,32 +343,33 @@ public class ResearchPanel : MonoBehaviour
         if (label != null) label.text = node.displayName;
     }
 
-    // Preserve the authored connector artwork while pointing it to the new
-    // node ids. The visual paths form branches; gameplay prerequisites remain
-    // the authoritative requirements shown in the detail card.
+    // Keep the connection records aligned with the authored connector artwork.
+    // The visual paths form branches; gameplay prerequisites remain the
+    // authoritative requirements shown in the detail card.
     private void ConfigureDemaciaConnections()
     {
-        if (connections.Count < 17 || !nodeById.ContainsKey("command_1")) return;
+        if (connections.Count < 18 || !nodeById.ContainsKey("command_1")) return;
 
         string[,] pairs =
         {
             { "command_1", "formation_1" },
-            { "formation_1", "formation_2" },
-            { "formation_2", "formation_3" },
-            { "command_1", "sword_damage_1" },
-            { "command_1", "shield_damage_1" },
-            { "command_1", "bow_damage_1" },
-            { "command_1", "unlock_crossbow_tower_1" },
-            { "unlock_crossbow_tower_1", "crossbow_damage_1" },
+            { "shield_damage_1", "formation_3" },
+            { "formation_2", "sword_defense_1" },
+            { "formation_1", "sword_damage_1" },
+            { "formation_1", "shield_damage_1" },
+            { "sword_damage_1", "bow_damage_1" },
+            { "formation_3", "cannon_defense_1" },
+            { "shield_defense_1", "crossbow_damage_1" },
             { "sword_damage_1", "sword_defense_1" },
-            { "shield_damage_1", "shield_defense_1" },
-            { "bow_damage_1", "bow_defense_1" },
+            { "sword_defense_1", "shield_defense_1" },
+            { "bow_damage_1", "crossbow_damage_1" },
             { "crossbow_damage_1", "crossbow_defense_1" },
-            { "command_1", "unlock_cannon_tower_1" },
+            { "crossbow_damage_1", "bow_defense_1" },
+            { "bow_defense_1", "unlock_cannon_tower_1" },
             { "unlock_cannon_tower_1", "cannon_damage_1" },
             { "cannon_damage_1", "cannon_defense_1" },
             { "crossbow_defense_1", "army_doctrine_1" },
-            { "formation_3", "army_doctrine_1" }
+            { "cannon_defense_1", "army_doctrine_1" }
         };
 
         for (int i = 0; i < pairs.GetLength(0); i++)
@@ -349,13 +391,11 @@ public class ResearchPanel : MonoBehaviour
         {
             if (node == null || string.IsNullOrWhiteSpace(node.id)) continue;
             bool prerequisitesMet = PrerequisitesMet(node);
-            bool canAfford = HasEnoughResources(node);
-            bool available = !node.unlocked && prerequisitesMet && canAfford;
-
             // Không khóa Button: cả node chưa đủ điều kiện vẫn phải mở được panel thông tin.
             if (node.button != null) node.button.interactable = true;
             if (node.lockedOverlay != null) node.lockedOverlay.SetActive(!node.unlocked && !prerequisitesMet);
-            if (node.icon != null) node.icon.color = node.unlocked ? unlockedColor : (available ? availableColor : lockedColor);
+            // Tất cả node chưa nâng cấp dùng cùng màu tối; node đã nâng cấp dùng vàng.
+            if (node.icon != null) node.icon.color = node.unlocked ? unlockedColor : lockedColor;
         }
 
         foreach (ResearchConnection connection in connections)

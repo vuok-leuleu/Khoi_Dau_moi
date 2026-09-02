@@ -337,14 +337,31 @@ public class UpgradeableBuilding : MonoBehaviour
 
     public UpgradeCost GetNextUpgradeCost()
     {
+        UpgradeCost cost;
         if (upgradeCosts != null && CurrentLevel < upgradeCosts.Length)
         {
-            UpgradeCost cost = upgradeCosts[CurrentLevel];
-            // Lương thực chỉ dùng để giới hạn huấn luyện lính, không phải chi phí nâng cấp.
-            cost.foodCost = 0;
-            return cost;
+            cost = upgradeCosts[CurrentLevel];
         }
-        return new UpgradeCost { woodCost = 0, stoneCost = 0, foodCost = 0, upgradeDuration = 1 };
+        else
+        {
+            cost = new UpgradeCost { woodCost = 0, stoneCost = 0, foodCost = 0, upgradeDuration = 1 };
+        }
+
+        // Lương thực chỉ dùng để giới hạn huấn luyện lính, không phải chi phí nâng cấp.
+        cost.foodCost = 0;
+
+        // Một số prefab cũ chưa có mảng chi phí nâng cấp. UI vốn đã hiển thị
+        // 150% chi phí xây mới trong trường hợp đó; đưa quy tắc này về model để
+        // giá hiển thị và giá bị trừ luôn là một nguồn dữ liệu duy nhất.
+        if (cost.woodCost == 0 && cost.stoneCost == 0 && cost.foodCost == 0 && ConstructionManager.Ins != null)
+        {
+            ConstructionManager.BuildingCost baseCost = ConstructionManager.Ins.GetBuildingCost(buildingType);
+            cost.woodCost = Mathf.RoundToInt(baseCost.woodCost * 1.5f);
+            cost.stoneCost = Mathf.RoundToInt(baseCost.stoneCost * 1.5f);
+            cost.foodCost = 0;
+        }
+
+        return cost;
     }
 
     public void StartInitialBuildProcess()
@@ -447,13 +464,26 @@ public class UpgradeableBuilding : MonoBehaviour
         BuildingSystem.Ins?.SaveBuildingsToSlot(1);
     }
 
-    public void StartUpgradeProcess()
+    public bool StartUpgradeProcess()
     {
-        if (IsUpgrading || CurrentLevel >= MaxLevel - 1) return;
+        if (IsUpgrading || CurrentLevel >= MaxLevel - 1) return false;
 
         isInitialBuildNeeded = false;
 
         UpgradeCost nextCost = GetNextUpgradeCost();
+
+        // Kiểm tra/trừ ở đây thay vì chỉ ở UI. Điều này bảo vệ cả lời gọi từ
+        // code khác và tránh lỗi nâng cấp miễn phí khi UI chỉ mới kiểm tra giá.
+        if (JsonDataManager.Ins == null ||
+            !JsonDataManager.Ins.TrySpendCombined(
+                woodCost: nextCost.woodCost,
+                stoneCost: nextCost.stoneCost,
+                foodCost: nextCost.foodCost))
+        {
+            UIManager.Ins?.ShowWarning("Không đủ tài nguyên nâng cấp!");
+            return false;
+        }
+
         int duration = nextCost.upgradeDuration;
 
         if (buildingType == BuildingType.BarracksMelee || 
@@ -466,6 +496,7 @@ public class UpgradeableBuilding : MonoBehaviour
 
         if (currentProcessCoroutine != null) StopCoroutine(currentProcessCoroutine);
         currentProcessCoroutine = StartCoroutine(UpgradeRoutine(duration));
+        return true;
     }
 
     private IEnumerator UpgradeRoutine(int durationWaves, int startWavesPassed = 0)
@@ -665,9 +696,9 @@ public class UpgradeableBuilding : MonoBehaviour
         }
     }
 
-    public void Upgrade()
+    public bool Upgrade()
     {
-        StartUpgradeProcess();
+        return StartUpgradeProcess();
     }
 
     [ContextMenu("⚡ Nâng cấp Tháp này")]

@@ -88,9 +88,9 @@ public class SpawnSoldier : MonoBehaviour
     }
 
     /// <summary>
-    /// Uses the same research gates as BattleManager. This is deliberately kept
-    /// here as well because training completes in the main scene and must not
-    /// be able to bypass the BattleScene spawn rules.
+    /// Uses the same research gates as BattleManager. Tutorial exceptions are
+    /// carried by the individual training slot, rather than inferred from the
+    /// global tutorial state when the queue finishes.
     /// </summary>
     public static bool IsTroopTrainingUnlocked(BuildingType troopType)
     {
@@ -127,9 +127,9 @@ public class SpawnSoldier : MonoBehaviour
         return unit == null || IsResearchUnlockedForAttackMode(unit.AttackMode);
     }
 
-    private GameObject GetTrainedSoldierPrefab(BuildingType troopType)
+    private GameObject GetTrainedSoldierPrefab(BuildingType troopType, bool allowResearchBypass = false)
     {
-        if (!IsTroopTrainingUnlocked(troopType)) return null;
+        if (!allowResearchBypass && !IsTroopTrainingUnlocked(troopType)) return null;
 
         AttackMode expectedAttackMode;
         switch (troopType)
@@ -161,9 +161,10 @@ public class SpawnSoldier : MonoBehaviour
         return null;
     }
 
-    public bool CanSpawnTrainedSoldier(BuildingType troopType)
+    public bool CanSpawnTrainedSoldier(BuildingType troopType, bool allowResearchBypass = false)
     {
-        return IsTroopTrainingUnlocked(troopType) && GetTrainedSoldierPrefab(troopType) != null;
+        return (allowResearchBypass || IsTroopTrainingUnlocked(troopType)) &&
+               GetTrainedSoldierPrefab(troopType, allowResearchBypass) != null;
     }
 
     public List<UnitController> GetActiveSoldierControllers()
@@ -322,10 +323,10 @@ public class SpawnSoldier : MonoBehaviour
     /// <summary>
     /// Sinh 1 lính đã hoàn tất huấn luyện tại Doanh Trại này
     /// </summary>
-    public GameObject SpawnOneTrainedSoldier(GameObject customPrefab = null)
+    public GameObject SpawnOneTrainedSoldier(GameObject customPrefab = null, bool allowResearchBypass = false)
     {
         GameObject prefabToUse = customPrefab != null ? customPrefab : GetRandomSoldierPrefab();
-        if (prefabToUse == null || !IsResearchUnlockedForPrefab(prefabToUse))
+        if (prefabToUse == null || (!allowResearchBypass && !IsResearchUnlockedForPrefab(prefabToUse)))
         {
             Debug.LogWarning($"[SpawnSoldier] ⚠️ Lính chưa được mở khóa nghiên cứu hoặc chưa gán prefab cho {gameObject.name}!");
             return null;
@@ -367,15 +368,20 @@ public class SpawnSoldier : MonoBehaviour
     /// <summary>
     /// Sinh một đơn vị huấn luyện với các lính cùng loại tương ứng với doanh trại.
     /// </summary>
-    public int SpawnTrainedSoldiers(BuildingType troopType, int count, int troopSlotIndex = -1)
+    public int SpawnTrainedSoldiers(
+        BuildingType troopType,
+        int count,
+        int troopSlotIndex = -1,
+        string stationedSettlementZoneName = null,
+        bool allowResearchBypass = false)
     {
-        if (!IsTroopTrainingUnlocked(troopType))
+        if (!allowResearchBypass && !IsTroopTrainingUnlocked(troopType))
         {
             Debug.LogWarning($"[SpawnSoldier] {troopType} chưa được mở khóa nghiên cứu, không thể spawn tại {gameObject.name}.");
             return 0;
         }
 
-        GameObject prefabToUse = GetTrainedSoldierPrefab(troopType);
+        GameObject prefabToUse = GetTrainedSoldierPrefab(troopType, allowResearchBypass);
         if (prefabToUse == null)
         {
             Debug.LogWarning($"[SpawnSoldier] Không tìm thấy prefab phù hợp cho {troopType} trên {gameObject.name}.");
@@ -385,12 +391,19 @@ public class SpawnSoldier : MonoBehaviour
         int spawnedCount = 0;
         for (int i = 0; i < count; i++)
         {
-            GameObject spawned = SpawnOneTrainedSoldier(prefabToUse);
+            GameObject spawned = SpawnOneTrainedSoldier(prefabToUse, allowResearchBypass);
             if (spawned != null)
             {
                 UnitController unit = spawned.GetComponent<UnitController>();
                 if (unit == null) unit = spawned.GetComponentInChildren<UnitController>();
-                if (unit != null) unit.stationedTroopSlotIndex = troopSlotIndex;
+                if (unit != null)
+                {
+                    unit.stationedTroopSlotIndex = troopSlotIndex;
+                    if (!string.IsNullOrEmpty(stationedSettlementZoneName))
+                    {
+                        unit.stationedSettlementZoneName = stationedSettlementZoneName;
+                    }
+                }
                 spawnedCount++;
             }
         }

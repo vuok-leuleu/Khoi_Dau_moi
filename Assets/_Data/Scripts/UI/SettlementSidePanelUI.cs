@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -51,9 +52,11 @@ public class SettlementSidePanelUI : MonoBehaviour
     private List<SettlementSlotItemUI> activeSlotUIItems = new List<SettlementSlotItemUI>();
     private List<TroopTrainingSlotUI> activeTrainingSlotUIItems = new List<TroopTrainingSlotUI>();
     private bool movePanelHidden;
+    private Coroutine deferredInitialRefreshRoutine;
 
     private void OnDestroy()
     {
+        StopDeferredInitialRefresh();
         if (Ins == this) Ins = null;
     }
 
@@ -76,6 +79,7 @@ public class SettlementSidePanelUI : MonoBehaviour
 
         UpdateHeaderVisual();
         RefreshPanel();
+        QueueDeferredInitialRefresh();
     }
 
     private void OnEnable()
@@ -89,6 +93,45 @@ public class SettlementSidePanelUI : MonoBehaviour
         ConfigureMoveButton();
         UpdateHeaderVisual();
         RefreshPanel();
+        QueueDeferredInitialRefresh();
+    }
+
+    private void OnDisable()
+    {
+        StopDeferredInitialRefresh();
+    }
+
+    /// <summary>
+    /// SettlementSidePanel có thể chạy Start trước khi SettlementZone kịp sinh
+    /// các công trình có sẵn. Làm mới lại ở frame kế tiếp để icon của những
+    /// công trình đó được gán ngay từ lần hiển thị đầu tiên.
+    /// </summary>
+    private void QueueDeferredInitialRefresh()
+    {
+        StopDeferredInitialRefresh();
+        deferredInitialRefreshRoutine = StartCoroutine(RefreshAfterInitialSceneSetup());
+    }
+
+    private void StopDeferredInitialRefresh()
+    {
+        if (deferredInitialRefreshRoutine == null) return;
+
+        StopCoroutine(deferredInitialRefreshRoutine);
+        deferredInitialRefreshRoutine = null;
+    }
+
+    private IEnumerator RefreshAfterInitialSceneSetup()
+    {
+        // Đợi toàn bộ Start() của scene chạy xong, bao gồm
+        // SettlementZone.InstantiatePrebuiltBuildings().
+        yield return null;
+
+        if (isActiveAndEnabled)
+        {
+            RefreshPanel();
+        }
+
+        deferredInitialRefreshRoutine = null;
     }
 
 #if UNITY_EDITOR

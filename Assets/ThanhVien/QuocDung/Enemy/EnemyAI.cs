@@ -500,7 +500,24 @@ public class EnemyAI : MonoBehaviour
     {
         if (CloudSceneTransition.IsTransitioning) return;
         Time.timeScale = 1f;
-        int waveCount = (squadEnemies != null && squadEnemies.Count > 0) ? squadEnemies.Count : 1;
+
+        // Chuyển cả prefab nguồn của từng Enemy còn sống, không chỉ truyền số
+        // lượng. Nhờ vậy BattleManager sinh lại đúng đội hình random trên map.
+        List<EnemyAI> activeSquad = new List<EnemyAI>();
+        if (squadEnemies != null)
+        {
+            foreach (EnemyAI squadEnemy in squadEnemies)
+            {
+                if (squadEnemy != null && squadEnemy.gameObject.activeInHierarchy)
+                {
+                    activeSquad.Add(squadEnemy);
+                }
+            }
+        }
+        if (activeSquad.Count == 0 && gameObject.activeInHierarchy) activeSquad.Add(this);
+
+        List<GameObject> raidEnemyPrefabs = EnemySpawn.GetSpawnedEnemyPrefabs(activeSquad);
+        int waveCount = raidEnemyPrefabs.Count > 0 ? raidEnemyPrefabs.Count : Mathf.Max(1, activeSquad.Count);
 
         // Preserve the settlement being attacked so BattleData can select only its
         // garrison.  Previously an enemy battle had no target-zone context.
@@ -509,6 +526,15 @@ public class EnemyAI : MonoBehaviour
         if (targetZone != null) BattleData.TargetedSettlementZoneName = targetZone.settlementName;
         BattleData.IsAttackingExpedition = false;
         BattleData.ClearConquestEnemyComposition();
+        if (raidEnemyPrefabs.Count > 0)
+        {
+            BattleData.SetRaidEnemyComposition(raidEnemyPrefabs);
+        }
+        else
+        {
+            BattleData.ClearRaidEnemyComposition();
+            Debug.LogWarning("[EnemyAI] Không tìm được prefab nguồn của wave; BattleManager sẽ dùng Enemy Prefab dự phòng.");
+        }
         BattleData.SpawnDragonInCurrentBattle = EnemyInvasionManager.Ins != null &&
                                                EnemyInvasionManager.Ins.CurrentRaidSpawnsDragon;
         BattleData.RecordCurrentSceneState(waveCount);

@@ -66,8 +66,8 @@ public class EnemyInvasionManager : MonoBehaviour
     [Header("Dragon Raid Spawn Point")]
     [Tooltip("Kéo một EnemySpawnManager riêng cho trận Rồng vào đây. Điểm này không thuộc 4 hướng Bắc/Đông/Nam/Tây, phải tắt Is Raid Spawn Point, và chỉ hiện khi trận Rồng thật sự bắt đầu.")]
     [SerializeField] private EnemySpawn dragonRaidSpawnPoint;
-    [Tooltip("Trận Rồng đã xuất phát sẽ mất đúng số Wave này để áp sát thành. Nhãn trên đường sẽ hiện số này.")]
-    [SerializeField, Min(1)] private int dragonWavesToReachTarget = 10;
+    [Tooltip("Raid lớn có Rồng sẽ mất đúng số Wave này để áp sát thành. Nhãn trên đường sẽ hiện số này.")]
+    [SerializeField, Min(1)] private int dragonWavesToReachTarget = 5;
     private string dragonRaidSpawnPointName;
 
     [HideInInspector] public EnemySpawn currentRaidSpawnPoint;
@@ -89,29 +89,27 @@ public class EnemyInvasionManager : MonoBehaviour
     private int warningWavesRemaining;
     private int nextRaidEligibleWave;
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    private static void EnsureRuntimeInstance()
-    {
-        if (Ins != null) return;
-
-        EnemyInvasionManager existing = Object.FindFirstObjectByType<EnemyInvasionManager>();
-        if (existing != null) return;
-
-        GameObject managerObject = new GameObject("EnemyInvasionManager");
-        managerObject.AddComponent<EnemyInvasionManager>();
-    }
-
     private void Awake()
     {
-        if (Ins == null)
-        {
-            Ins = this;
-            DontDestroyOnLoad(gameObject);
-            CacheDragonSpawnPointName();
-        }
-        else
+        // Manager này phụ thuộc vào các EnemySpawn được đặt trong BuildMapTest,
+        // vì vậy không được sống qua scene. Nếu chạy từ Menu, một instance rỗng
+        // từng được tạo và giữ lại bằng DontDestroyOnLoad; nó làm instance trong
+        // prefab BuildMapTest tự hủy và toàn bộ điểm spawn biến mất.
+        if (Ins != null && Ins != this)
         {
             Destroy(gameObject);
+            return;
+        }
+
+        Ins = this;
+        CacheDragonSpawnPointName();
+    }
+
+    private void OnDestroy()
+    {
+        if (Ins == this)
+        {
+            Ins = null;
         }
     }
 
@@ -330,12 +328,12 @@ public class EnemyInvasionManager : MonoBehaviour
             ? targetZone.townHallBuilding.transform
             : (targetZone.townHallPoint != null ? targetZone.townHallPoint : targetZone.transform);
         spawnPoint.SetAttackTarget(target);
-        // Không tạo lại một hành trình 10 Wave. Raid đã đi được bao xa thì chỉ
+        // Không tạo lại toàn bộ hành trình của Rồng. Raid đã đi được bao xa thì chỉ
         // tạo phần đường còn lại, kể cả khi Wave của map vừa bị khởi tạo lại.
         int waveArrivalOverride = snapshot.remainingTravelWaves >= 0
             ? Mathf.Max(1, snapshot.remainingTravelWaves)
             : (currentRaidSpawnsDragon ? dragonWavesToReachTarget : -1);
-        spawnPoint.SpawnEnemy(waveArrivalOverride);
+        spawnPoint.SpawnEnemy(waveArrivalOverride, currentRaidSpawnsDragon);
 
         List<EnemyAI> restoredEnemies = spawnPoint.GetActiveWaveEnemies();
         int restoreCount = Mathf.Min(restoredEnemies.Count, snapshot.enemies.Count);
@@ -673,7 +671,7 @@ public class EnemyInvasionManager : MonoBehaviour
 
         currentRaidSpawnPoint.SetAttackTarget(target);
         int waveArrivalOverride = currentRaidSpawnsDragon ? dragonWavesToReachTarget : -1;
-        currentRaidSpawnPoint.SpawnEnemy(waveArrivalOverride);
+        currentRaidSpawnPoint.SpawnEnemy(waveArrivalOverride, currentRaidSpawnsDragon);
         currentRaidHasSpawned = true;
         Debug.Log($"[EnemyInvasionManager] Raid xuất phát từ {currentRaidSpawnPoint.Direction} tới {currentTargetedZone.settlementName}.");
         return true;

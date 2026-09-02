@@ -17,7 +17,7 @@ public class UISceneBattle : MonoBehaviour
     [System.Serializable]
     public class UnitDisplayInfo
     {
-        public string unitName = "Binh Lính";
+        public string unitName = "Binh lính";
         public Sprite unitIcon;
         public int count = 1;
         public int maxCount = 1;
@@ -107,7 +107,7 @@ public class UISceneBattle : MonoBehaviour
     public string tankSoldierName = "Khiên Binh";
     public Sprite defaultSoldierIcon;
 
-    [Header("=== 2. VICTORY & DEFEAT RESULT PANELS ===")]
+    [Header("=== 2. KHUNG KẾT QUẢ CHIẾN THẮNG & THẤT BẠI ===")]
     [Tooltip("Panel khung Victory (Chiến thắng)")]
     public GameObject victoryPanel;
     [Tooltip("Image nền của Panel Victory")]
@@ -118,13 +118,13 @@ public class UISceneBattle : MonoBehaviour
     [Tooltip("Image nền của Panel Defeat")]
     public Image defeatBackgroundImage;
 
-    [Header("--- Return Buttons ---")]
+    [Header("--- Nút về bản đồ ---")]
     public Button victoryReturnButton;
     public Button defeatReturnButton;
-    [Tooltip("Tên Scene chuyển về khi bấm Return (Mặc định: MainScene)")]
+    [Tooltip("Tên scene chuyển về khi bấm nút về bản đồ (mặc định: MainScene)")]
     public string returnSceneName = "MainScene";
 
-    [Header("--- Battle Speed Button ---")]
+    [Header("--- Nút tốc độ trận đấu ---")]
     [Tooltip("Nút đổi tốc độ trận đấu giữa 1x và 3x")]
     public Button battleSpeedButton;
     [Tooltip("Text hiển thị tốc độ hiện tại trên nút")]
@@ -134,21 +134,27 @@ public class UISceneBattle : MonoBehaviour
     [Tooltip("Hệ số tốc độ nhanh của trận đấu")]
     [Min(0.01f)] public float fastBattleSpeed = 3f;
 
-    [Header("--- Victory Elements ---")]
+    [Header("--- Thành phần khung chiến thắng ---")]
     [Tooltip("Container chứa danh sách phần thưởng (Horizontal Layout Group)")]
     public Transform victoryRewardContainer;
-    [Tooltip("Container chứa danh sách lính tử trận màn Victory")]
+    [Tooltip("Container chỉ hiển thị các loại lính thật sự tham gia trận đánh")]
     public Transform victoryUnitsLostContainer;
     [Tooltip("Màu chữ số lượng phần thưởng")]
     public Color rewardTextColor = new Color(0.24f, 0.15f, 0.09f, 1f);
 
-    [Header("--- Defeat Elements ---")]
-    [Tooltip("Container chứa danh sách lính tử trận màn Defeat")]
+    [Header("--- Phần Thưởng Chiến Thắng ---")]
+    [Min(0)] public int victoryWoodReward = 125;
+    [Min(0)] public int victoryGoldReward = 5;
+    public Sprite victoryWoodIcon;
+    public Sprite victoryGoldIcon;
+
+    [Header("--- Thành phần khung thất bại ---")]
+    [Tooltip("Container chỉ hiển thị các loại lính thật sự tham gia trận đánh")]
     public Transform defeatUnitsLostContainer;
     [Tooltip("Text hiển thị mẹo / câu nói khi thất bại")]
     public TextMeshProUGUI defeatTipText;
     [TextArea(2, 4)]
-    public string defaultDefeatTip = "Drakehounds are quick and hunt in packs.";
+    public string defaultDefeatTip = "Kẻ địch di chuyển rất nhanh và thường tấn công theo bầy.";
 
     [Header("--- Prefabs Tùy Chọn ---")]
     [Tooltip("Prefab hiển thị 1 phần thưởng (Image icon và Text amount)")]
@@ -156,7 +162,7 @@ public class UISceneBattle : MonoBehaviour
     [Tooltip("Prefab hiển thị 1 lính bị mất")]
     public GameObject unitLostItemPrefab;
 
-    [Header("--- Sample Demo Data (Test trong Inspector) ---")]
+    [Header("--- Dữ liệu mẫu (kiểm tra trong Inspector) ---")]
     public List<UnitDisplayInfo> sampleArmyUnits = new List<UnitDisplayInfo>();
     public List<RewardItem> sampleRewards = new List<RewardItem>();
     public List<UnitLostItem> sampleUnitsLost = new List<UnitLostItem>();
@@ -164,7 +170,7 @@ public class UISceneBattle : MonoBehaviour
     [Header("--- Settings & Debug Keys ---")]
     [Tooltip("Tự động kiểm tra kết quả trong BattleData khi Start")]
     public bool checkBattleDataOnStart = true;
-    [Tooltip("Bật phím tắt test: U (Bật/Tắt Army Roster), V (Victory), F (Defeat), H (Hide All)")]
+    [Tooltip("Bật phím tắt kiểm tra: U (ẩn/hiện đội hình), V (chiến thắng), F (thất bại), H (ẩn toàn bộ)")]
     public bool enableDebugKeys = true;
 
     [Header("--- Sound & Audio Effects ---")]
@@ -183,6 +189,7 @@ public class UISceneBattle : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+        BattleData.ConfigureVictoryRewards(victoryWoodReward, victoryGoldReward);
 
         if (audioSource == null)
             audioSource = GetComponent<AudioSource>();
@@ -210,6 +217,7 @@ public class UISceneBattle : MonoBehaviour
 
     private void Start()
     {
+        ResolveArmyRosterReferences();
         cachedCards.Clear();
         lastVisibleCardCount = -1;
 
@@ -217,7 +225,6 @@ public class UISceneBattle : MonoBehaviour
         SetupReturnButtons();
         SetupBattleSpeedButton();
         SetBattleSpeed(false);
-        CheckAndShowBattleDataResult();
 
         if (armyRosterPanel != null)
         {
@@ -227,6 +234,41 @@ public class UISceneBattle : MonoBehaviour
         SetupContainerLayout();
         CollectPreExistingCards();
         RefreshArmyUnitsRoster();
+        CheckAndShowBattleDataResult();
+    }
+
+    /// <summary>
+    /// SceneBattle có một thanh đội hình nằm ngoài prefab UI kết quả. Khi UI
+    /// được dùng dưới dạng prefab instance, hai reference này sẽ trống; tự tìm
+    /// theo tên để icon lính vẫn được hiển thị trên thanh phía dưới màn hình.
+    /// </summary>
+    private void ResolveArmyRosterReferences()
+    {
+        if (armyRosterPanel == null)
+        {
+            GameObject roster = GameObject.Find("ArmyRosterPanel");
+            if (roster != null) armyRosterPanel = roster;
+        }
+
+        if (armyUnitContainer == null && armyRosterPanel != null)
+        {
+            armyUnitContainer = FindChildByName(armyRosterPanel.transform, "ArmyUnitContainer");
+        }
+    }
+
+    private static Transform FindChildByName(Transform parent, string childName)
+    {
+        if (parent == null) return null;
+
+        foreach (Transform child in parent)
+        {
+            if (child.name == childName) return child;
+
+            Transform descendant = FindChildByName(child, childName);
+            if (descendant != null) return descendant;
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -285,6 +327,7 @@ public class UISceneBattle : MonoBehaviour
             layout = target.gameObject.AddComponent<HorizontalLayoutGroup>();
         }
 
+        layout.enabled = true;
         layout.childAlignment = TextAnchor.MiddleCenter;
         layout.spacing = cardSpacing;
         layout.padding = new RectOffset((int)paddingHorizontal, (int)paddingHorizontal, (int)paddingVertical, (int)paddingVertical);
@@ -391,7 +434,7 @@ public class UISceneBattle : MonoBehaviour
         }
         else if (Input.GetKeyDown(KeyCode.V))
         {
-            ShowVictory(sampleRewards, sampleUnitsLost);
+            ShowVictory(BuildVictoryRewards(), GetBattleParticipantItems());
         }
         else if (Input.GetKeyDown(KeyCode.F))
         {
@@ -727,7 +770,7 @@ public class UISceneBattle : MonoBehaviour
         }
         if (otherCount > 0)
         {
-            result.Add(new UnitDisplayInfo("Binh Lính", defaultSoldierIcon, otherCount));
+            result.Add(new UnitDisplayInfo("Binh lính", defaultSoldierIcon, otherCount));
         }
 
         if (result.Count == 0 && BattleData.TotalSoldiersInBase > 0)
@@ -749,11 +792,11 @@ public class UISceneBattle : MonoBehaviour
             hasShownResultUI = true;
             if (BattleData.IsPlayerVictory)
             {
-                ShowVictory(sampleRewards, sampleUnitsLost);
+                ShowVictory(BuildVictoryRewards(), GetBattleParticipantItems());
             }
             else
             {
-                ShowDefeat(sampleUnitsLost);
+                ShowDefeat(GetBattleParticipantItems());
             }
         }
     }
@@ -762,21 +805,21 @@ public class UISceneBattle : MonoBehaviour
     {
         hasShownResultUI = true;
         isReturning = false;
-        if (armyRosterPanel != null) armyRosterPanel.SetActive(false);
+        ShowBattleParticipantRoster();
         if (defeatPanel != null) defeatPanel.SetActive(false);
         if (victoryPanel != null) victoryPanel.SetActive(true);
 
         SetupReturnButtons();
 
-        PopulateRewards(rewards ?? sampleRewards);
-        PopulateUnitsLost(victoryUnitsLostContainer, unitsLost ?? sampleUnitsLost);
+        PopulateRewards(rewards ?? BuildVictoryRewards());
+        PopulateUnitsLost(victoryUnitsLostContainer, unitsLost ?? GetBattleParticipantItems());
     }
 
     public void ShowDefeat(List<UnitLostItem> unitsLost = null, string tipMessage = "")
     {
         hasShownResultUI = true;
         isReturning = false;
-        if (armyRosterPanel != null) armyRosterPanel.SetActive(false);
+        ShowBattleParticipantRoster();
         if (victoryPanel != null) victoryPanel.SetActive(false);
         if (defeatPanel != null) defeatPanel.SetActive(true);
 
@@ -787,7 +830,7 @@ public class UISceneBattle : MonoBehaviour
             defeatTipText.text = string.IsNullOrEmpty(tipMessage) ? defaultDefeatTip : tipMessage;
         }
 
-        PopulateUnitsLost(defeatUnitsLostContainer, unitsLost ?? sampleUnitsLost);
+        PopulateUnitsLost(defeatUnitsLostContainer, unitsLost ?? GetBattleParticipantItems());
     }
 
     public void HideAll()
@@ -845,6 +888,99 @@ public class UISceneBattle : MonoBehaviour
     #endregion
 
     #region Helper Methods
+
+    private List<RewardItem> BuildVictoryRewards()
+    {
+        List<RewardItem> rewards = new List<RewardItem>();
+        Sprite woodIcon = victoryWoodIcon;
+        Sprite goldIcon = victoryGoldIcon;
+
+        // Giữ tương thích với prefab cũ: nếu chưa kéo icon mới vào Inspector,
+        // dùng icon đã có trong Sample Rewards.
+        if (woodIcon == null && sampleRewards.Count > 0) woodIcon = sampleRewards[0].icon;
+        if (goldIcon == null && sampleRewards.Count > 1) goldIcon = sampleRewards[1].icon;
+
+        if (victoryWoodReward > 0) rewards.Add(new RewardItem(woodIcon, victoryWoodReward.ToString()));
+        if (victoryGoldReward > 0) rewards.Add(new RewardItem(goldIcon, victoryGoldReward.ToString()));
+        return rewards;
+    }
+
+    private List<UnitLostItem> GetBattleParticipantItems()
+    {
+        List<UnitLostItem> participants = new List<UnitLostItem>();
+
+        foreach (BattleData.BattleParticipantInfo participant in BattleData.BattleParticipants)
+        {
+            if (participant == null || participant.count <= 0) continue;
+
+            Sprite icon;
+            string unitName;
+            switch (participant.attackMode)
+            {
+                case AttackMode.Ranged:
+                    icon = archerSoldierIcon != null ? archerSoldierIcon : defaultSoldierIcon;
+                    unitName = archerSoldierName;
+                    break;
+                case AttackMode.Tank:
+                    icon = tankSoldierIcon != null ? tankSoldierIcon : defaultSoldierIcon;
+                    unitName = tankSoldierName;
+                    break;
+                case AttackMode.Melee:
+                default:
+                    icon = meleeSoldierIcon != null ? meleeSoldierIcon : defaultSoldierIcon;
+                    unitName = meleeSoldierName;
+                    break;
+            }
+
+            participants.Add(new UnitLostItem(icon, unitName, participant.count));
+        }
+
+        return participants;
+    }
+
+    private void ShowBattleParticipantRoster()
+    {
+        ResolveArmyRosterReferences();
+        if (armyRosterPanel == null) return;
+
+        armyRosterPanel.SetActive(true);
+        DisplayArmyUnits(GetBattleParticipantRoster());
+    }
+
+    private List<UnitDisplayInfo> GetBattleParticipantRoster()
+    {
+        List<UnitDisplayInfo> participants = new List<UnitDisplayInfo>();
+
+        foreach (BattleData.BattleParticipantInfo participant in BattleData.BattleParticipants)
+        {
+            if (participant == null || participant.count <= 0) continue;
+
+            switch (participant.attackMode)
+            {
+                case AttackMode.Ranged:
+                    participants.Add(new UnitDisplayInfo(
+                        archerSoldierName,
+                        archerSoldierIcon != null ? archerSoldierIcon : defaultSoldierIcon,
+                        participant.count));
+                    break;
+                case AttackMode.Tank:
+                    participants.Add(new UnitDisplayInfo(
+                        tankSoldierName,
+                        tankSoldierIcon != null ? tankSoldierIcon : defaultSoldierIcon,
+                        participant.count));
+                    break;
+                case AttackMode.Melee:
+                default:
+                    participants.Add(new UnitDisplayInfo(
+                        meleeSoldierName,
+                        meleeSoldierIcon != null ? meleeSoldierIcon : defaultSoldierIcon,
+                        participant.count));
+                    break;
+            }
+        }
+
+        return participants;
+    }
 
     private void PopulateRewards(List<RewardItem> rewards)
     {
@@ -909,30 +1045,30 @@ public class UISceneBattle : MonoBehaviour
 
         foreach (var unit in unitsLost)
         {
-            int countToSpawn = Mathf.Max(1, unit.count);
-            for (int i = 0; i < countToSpawn; i++)
-            {
-                if (unitLostItemPrefab != null)
-                {
-                    GameObject obj = Instantiate(unitLostItemPrefab, container);
-                    Image img = obj.GetComponentInChildren<Image>();
-                    TextMeshProUGUI txt = obj.GetComponentInChildren<TextMeshProUGUI>();
+            // Một icon đại diện cho một loại lính; các loại không tham gia
+            // (count = 0) hoàn toàn không được tạo icon.
+            if (unit == null || unit.count <= 0) continue;
 
-                    if (img != null && unit.icon != null) img.sprite = unit.icon;
-                    if (txt != null)
-                    {
-                        txt.text = unit.count > 1 ? $"x{unit.count}" : "";
-                    }
-                }
-                else
+            if (unitLostItemPrefab != null)
+            {
+                GameObject obj = Instantiate(unitLostItemPrefab, container);
+                Image img = obj.GetComponentInChildren<Image>();
+                TextMeshProUGUI txt = obj.GetComponentInChildren<TextMeshProUGUI>();
+
+                if (img != null && unit.icon != null) img.sprite = unit.icon;
+                if (txt != null)
                 {
-                    GameObject imgObj = new GameObject("UnitLostItem", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-                    imgObj.transform.SetParent(container, false);
-                    RectTransform imgRect = imgObj.GetComponent<RectTransform>();
-                    imgRect.sizeDelta = new Vector2(52, 52);
-                    Image img = imgObj.GetComponent<Image>();
-                    if (unit.icon != null) img.sprite = unit.icon;
+                    txt.text = unit.count > 1 ? $"x{unit.count}" : "";
                 }
+            }
+            else
+            {
+                GameObject imgObj = new GameObject("BattleParticipantItem", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                imgObj.transform.SetParent(container, false);
+                RectTransform imgRect = imgObj.GetComponent<RectTransform>();
+                imgRect.sizeDelta = new Vector2(52, 52);
+                Image img = imgObj.GetComponent<Image>();
+                if (unit.icon != null) img.sprite = unit.icon;
             }
         }
     }

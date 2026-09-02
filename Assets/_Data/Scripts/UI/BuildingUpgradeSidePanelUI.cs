@@ -155,39 +155,8 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
         if (levelBadgeTMP != null) levelBadgeTMP.text = $"Lv. {currentLevel}";
         if (buildingNameTMP != null) buildingNameTMP.text = targetBuilding.buildingName;
 
-        // 2. Ảnh Art Preview (nếu có Sprite)
-        if (artworkImage != null)
-        {
-            Sprite sp = null;
-            if (targetBuilding.BuildingIcons != null && targetBuilding.BuildingIcons.Length > 0)
-            {
-                int idx = Mathf.Clamp(targetBuilding.CurrentLevel, 0, targetBuilding.BuildingIcons.Length - 1);
-                sp = targetBuilding.BuildingIcons[idx];
-            }
-
-            if (sp == null && BuildingShopUI.Ins != null)
-            {
-                var shopItem = BuildingShopUI.Ins.GetShopItem(targetBuilding.buildingType);
-                if (shopItem != null) sp = shopItem.artworkSprite;
-            }
-
-            if (sp == null)
-            {
-                var rend = targetBuilding.GetComponentInChildren<SpriteRenderer>();
-                if (rend != null) sp = rend.sprite;
-            }
-
-            if (sp != null)
-            {
-                artworkImage.sprite = sp;
-                artworkImage.color = Color.white;
-                artworkImage.gameObject.SetActive(true);
-            }
-            else
-            {
-                artworkImage.gameObject.SetActive(false); // 🔒 Tắt hình vuông trắng khi không có sprite
-            }
-        }
+        // 2. Ảnh Art Preview
+        ApplyArtwork(ResolveArtwork(targetBuilding, targetBuilding.buildingType));
 
         // 3. So sánh Chỉ số Cấp hiện tại & Cấp tiếp theo (Lấy dữ liệu thực từ công trình)
         GetBuildingRealStats(targetBuilding, out string curStatText, out string nextStatText);
@@ -224,13 +193,9 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
             foodCost = nextCost.foodCost;
             duration = nextCost.upgradeDuration > 0 ? nextCost.upgradeDuration : 1;
 
-            if (woodCost == 0 && stoneCost == 0 && foodCost == 0 && ConstructionManager.Ins != null)
-            {
-                var costData = ConstructionManager.Ins.GetBuildingCost(targetBuilding.buildingType);
-                woodCost = Mathf.RoundToInt(costData.woodCost * 1.5f);
-                stoneCost = Mathf.RoundToInt(costData.stoneCost * 1.5f);
-                foodCost = Mathf.RoundToInt(costData.foodCost * 1.5f);
-            }
+            // Giá fallback cho prefab cũ được chuẩn hóa trong
+            // UpgradeableBuilding.GetNextUpgradeCost(), để UI và luồng thanh
+            // toán không thể lệch nhau.
         }
 
         // 5. Kiểm tra Cấp Thủ Đô & Tài nguyên
@@ -345,6 +310,18 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
         if (levelBadgeTMP != null) levelBadgeTMP.text = "Lv. 0";
         if (buildingNameTMP != null) buildingNameTMP.text = "Nhà Chính (Town Hall)";
 
+        // Khi chưa có Nhà Chính, targetBuilding vẫn là null. Lấy ảnh từ prefab
+        // Nhà Chính để UpgradePanel không còn trống ở lần mở đầu tiên.
+        GameObject townHallPrefab = targetEstablishZone.townHallPrefab;
+        if (townHallPrefab == null && ConstructionManager.Ins != null)
+        {
+            townHallPrefab = ConstructionManager.Ins.housePrefab;
+        }
+        UpgradeableBuilding townHallTemplate = townHallPrefab != null
+            ? townHallPrefab.GetComponentInChildren<UpgradeableBuilding>(true)
+            : null;
+        ApplyArtwork(ResolveArtwork(townHallTemplate, BuildingType.House));
+
         if (currentLevelStatTMP != null) currentLevelStatTMP.text = "Chưa có Nhà Chính";
         if (nextLevelStatTMP != null) nextLevelStatTMP.text = $"Mở khóa và kích hoạt lãnh thổ {targetEstablishZone.settlementName}";
 
@@ -416,6 +393,39 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
         {
             demolishBtn.gameObject.SetActive(false);
         }
+    }
+
+    private Sprite ResolveArtwork(UpgradeableBuilding building, BuildingType fallbackType)
+    {
+        Sprite sprite = null;
+        if (building != null && building.BuildingIcons != null && building.BuildingIcons.Length > 0)
+        {
+            int index = Mathf.Clamp(building.CurrentLevel, 0, building.BuildingIcons.Length - 1);
+            sprite = building.BuildingIcons[index];
+        }
+
+        if (sprite == null)
+        {
+            BuildingType buildingType = building != null ? building.buildingType : fallbackType;
+            sprite = BuildingShopUI.GetArtworkSprite(buildingType);
+        }
+
+        if (sprite == null && building != null)
+        {
+            SpriteRenderer spriteRenderer = building.GetComponentInChildren<SpriteRenderer>();
+            if (spriteRenderer != null) sprite = spriteRenderer.sprite;
+        }
+
+        return sprite;
+    }
+
+    private void ApplyArtwork(Sprite sprite)
+    {
+        if (artworkImage == null) return;
+
+        artworkImage.sprite = sprite;
+        artworkImage.color = Color.white;
+        artworkImage.gameObject.SetActive(sprite != null);
     }
 
     private void OnClickUpgrade()

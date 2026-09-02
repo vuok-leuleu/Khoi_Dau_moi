@@ -7,47 +7,37 @@ using UnityEngine;
 [RequireComponent(typeof(ResearchPanel))]
 public class ResearchUpgradeEffects : MonoBehaviour
 {
-    private static float damageMultiplier = 1f;
-    private static float defenseMultiplier = 1f;
-    private static int formationBonus;
-    private static float bowDamageMultiplier = 1f;
-    private static float crossbowDamageMultiplier = 1f;
-    private static float cannonDamageMultiplier = 1f;
-    private static float swordDefenseMultiplier = 1f;
-    private static float bowDefenseMultiplier = 1f;
-    private static float shieldDefenseMultiplier = 1f;
-    private static float crossbowDefenseMultiplier = 1f;
-    private static float cannonDefenseMultiplier = 1f;
-
-    public static int FormationBonus => formationBonus;
-    public static bool ArcherUnlocked { get; private set; }
-    public static bool ShieldUnlocked { get; private set; }
-    public static bool CrossbowTowerUnlocked { get; private set; }
-    public static bool CannonTowerUnlocked { get; private set; }
-    public static bool IsResearchTreeAvailable { get; private set; }
+    // ResearchCanvas là UI có thể đóng, còn PlayerPrefs là nguồn dữ liệu
+    // gameplay. Đọc trực tiếp từ save giúp load game/chơi mới không phụ thuộc
+    // vào việc người chơi đã từng mở panel nghiên cứu hay chưa.
+    public static int FormationBonus => CountSavedUnlocked("formation_1", "formation_2", "formation_3");
+    public static bool ArcherUnlocked => IsNodeUnlocked("sword_damage_1");
+    public static bool ShieldUnlocked => IsNodeUnlocked("shield_damage_1");
+    public static bool CrossbowTowerUnlocked => IsNodeUnlocked("unlock_crossbow_tower_1");
+    public static bool CannonTowerUnlocked => IsNodeUnlocked("unlock_cannon_tower_1");
     public static float GetDefenseMultiplier(SoldierResearchType troopType)
     {
+        float doctrineMultiplier = IsNodeUnlocked("army_doctrine_1") ? 1.10f : 1f;
         switch (troopType)
         {
-            case SoldierResearchType.Sword: return defenseMultiplier * swordDefenseMultiplier;
-            case SoldierResearchType.Bow: return defenseMultiplier * bowDefenseMultiplier;
-            case SoldierResearchType.Shield: return defenseMultiplier * shieldDefenseMultiplier;
-            case SoldierResearchType.Crossbow: return defenseMultiplier * crossbowDefenseMultiplier;
-            case SoldierResearchType.Cannon: return defenseMultiplier * cannonDefenseMultiplier;
-            default: return defenseMultiplier;
+            case SoldierResearchType.Sword: return doctrineMultiplier * NodeMultiplier("sword_defense_1");
+            case SoldierResearchType.Bow: return doctrineMultiplier * NodeMultiplier("bow_defense_1");
+            case SoldierResearchType.Shield: return doctrineMultiplier * NodeMultiplier("shield_defense_1");
+            case SoldierResearchType.Crossbow: return doctrineMultiplier * NodeMultiplier("crossbow_defense_1");
+            case SoldierResearchType.Cannon: return doctrineMultiplier * NodeMultiplier("cannon_defense_1");
+            default: return doctrineMultiplier;
         }
     }
 
     public static float GetDamageMultiplier(SoldierResearchType troopType)
     {
+        float doctrineMultiplier = IsNodeUnlocked("army_doctrine_1") ? 1.10f : 1f;
         switch (troopType)
         {
-            case SoldierResearchType.Sword: return damageMultiplier;
-            case SoldierResearchType.Bow: return damageMultiplier * bowDamageMultiplier;
-            case SoldierResearchType.Shield: return damageMultiplier;
-            case SoldierResearchType.Crossbow: return damageMultiplier * crossbowDamageMultiplier;
-            case SoldierResearchType.Cannon: return damageMultiplier * cannonDamageMultiplier;
-            default: return damageMultiplier;
+            case SoldierResearchType.Bow: return doctrineMultiplier * NodeMultiplier("bow_damage_1");
+            case SoldierResearchType.Crossbow: return doctrineMultiplier * NodeMultiplier("crossbow_damage_1");
+            case SoldierResearchType.Cannon: return doctrineMultiplier * NodeMultiplier("cannon_damage_1");
+            default: return doctrineMultiplier;
         }
     }
 
@@ -55,7 +45,6 @@ public class ResearchUpgradeEffects : MonoBehaviour
 
     private void OnEnable()
     {
-        IsResearchTreeAvailable = true;
         researchPanel = GetComponent<ResearchPanel>();
         if (researchPanel != null) researchPanel.ResearchStateChanged += RefreshEffects;
         RefreshEffects();
@@ -68,43 +57,37 @@ public class ResearchUpgradeEffects : MonoBehaviour
 
     private void RefreshEffects()
     {
-        if (researchPanel == null) return;
+        ApplyResearchState(researchPanel);
+    }
 
-        formationBonus = CountUnlocked("formation_1", "formation_2", "formation_3");
-        // The player-authored "Huấn luyện cung thủ" node unlocks ranged
-        // soldiers instead of increasing sword damage.
-        ArcherUnlocked = researchPanel.IsUnlocked("sword_damage_1");
-        bowDamageMultiplier = MultiplierFor("bow_damage_1");
-        // The player-authored shield node unlocks tank/shield soldiers instead
-        // of increasing their damage.
-        ShieldUnlocked = researchPanel.IsUnlocked("shield_damage_1");
-        CrossbowTowerUnlocked = researchPanel.IsUnlocked("unlock_crossbow_tower_1");
-        CannonTowerUnlocked = researchPanel.IsUnlocked("unlock_cannon_tower_1");
-        crossbowDamageMultiplier = MultiplierFor("crossbow_damage_1");
-        cannonDamageMultiplier = MultiplierFor("cannon_damage_1");
-        swordDefenseMultiplier = MultiplierFor("sword_defense_1");
-        bowDefenseMultiplier = MultiplierFor("bow_defense_1");
-        shieldDefenseMultiplier = MultiplierFor("shield_defense_1");
-        crossbowDefenseMultiplier = MultiplierFor("crossbow_defense_1");
-        cannonDefenseMultiplier = MultiplierFor("cannon_defense_1");
-
-        // The final doctrine adds a shared armour bonus on top of the
-        // type-specific defence upgrades.
-        defenseMultiplier = researchPanel.IsUnlocked("army_doctrine_1") ? 1.10f : 1f;
-        damageMultiplier = researchPanel.IsUnlocked("army_doctrine_1") ? 1.10f : 1f;
+    /// <summary>
+    /// Áp dụng trạng thái của ResearchPanel ngay khi mua nâng cấp. Hàm static
+    /// giúp gameplay vẫn nhận hiệu ứng khi component UI đang bị tắt/không kịp
+    /// đăng ký event OnEnable.
+    /// </summary>
+    public static void ApplyResearchState(ResearchPanel panel)
+    {
+        if (panel == null) return;
 
         foreach (UnitController soldier in FindObjectsByType<UnitController>(FindObjectsSortMode.None))
             if (soldier != null) soldier.RefreshResearchDamage();
 
+        // Formation research must affect the strategic-map squads too.  They
+        // were previously always created as 3 soldiers by TroopTrainingManager
+        // and only received this bonus after entering SceneBattle.
+        TroopTrainingManager.Ins?.ApplyFormationBonusToTrainedUnits();
+
     }
 
-    private float MultiplierFor(string nodeId) => researchPanel.IsUnlocked(nodeId) ? 1.15f : 1f;
+    private static bool IsNodeUnlocked(string nodeId) => ResearchPanel.IsNodeSavedAsUnlocked(nodeId);
 
-    private int CountUnlocked(params string[] nodeIds)
+    private static float NodeMultiplier(string nodeId) => IsNodeUnlocked(nodeId) ? 1.15f : 1f;
+
+    private static int CountSavedUnlocked(params string[] nodeIds)
     {
         int count = 0;
         foreach (string nodeId in nodeIds)
-            if (researchPanel.IsUnlocked(nodeId)) count++;
+            if (ResearchPanel.IsNodeSavedAsUnlocked(nodeId)) count++;
         return count;
     }
 }

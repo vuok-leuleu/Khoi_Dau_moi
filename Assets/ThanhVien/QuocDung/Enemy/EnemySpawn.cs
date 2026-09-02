@@ -34,8 +34,14 @@ public class EnemySpawn : MonoBehaviour
     [SerializeField] private GameObject enemyPrefab;
     [SerializeField, Min(1)] private int defaultEnemySpawnWeight = 1;
 
+    [Header("Dragon Raid Configuration")]
+    [Tooltip("Prefab Rồng chỉ được tạo khi EnemyInvasionManager phát động StartScriptedDragonRaid. Không đưa Rồng vào Enemy Prefab hoặc Multiple Enemy Types.")]
+    [SerializeField] private UnityEngine.Object dragonPrefab;
+    [Tooltip("Độ cao lúc Rồng xuất hiện trên Main Map trước khi đáp xuống điểm spawn.")]
+    [SerializeField, Min(0f)] private float dragonSpawnHeight = 8f;
+
     [Header("Multiple Enemy Types")]
-    [Tooltip("Kéo thêm các prefab Enemy vào đây. Mỗi vị trí spawn sẽ chọn ngẫu nhiên theo Spawn Weight. Để trống thì chỉ spawn Enemy Prefab mặc định.")]
+    [Tooltip("Kéo thêm các prefab Enemy thường vào đây. Mỗi vị trí spawn sẽ chọn ngẫu nhiên theo Spawn Weight. Rồng/Boss không được chọn từ danh sách này; chúng chỉ xuất hiện trong raid lớn.")]
     [SerializeField] private List<EnemyType> additionalEnemyTypes = new List<EnemyType>();
     [SerializeField] private bool spawnOnStart = true;
     [SerializeField] private Transform[] spawnPoints;
@@ -137,6 +143,9 @@ public class EnemySpawn : MonoBehaviour
     private Coroutine waveSpawnCoroutine;
     private EnemyRouteWarningUI activeRouteWarning;
     private readonly List<GameObject> activeWaveEnemies = new List<GameObject>();
+    // Instance Enemy sẽ bị hủy khi đổi scene; giữ prefab nguồn để BattleManager
+    // có thể tạo lại chính xác cùng đội hình trong SceneBattle.
+    private static readonly Dictionary<EnemyAI, GameObject> spawnedEnemyPrefabs = new Dictionary<EnemyAI, GameObject>();
     private int nextSpawnWave = -1;
 
     /// <summary>
@@ -153,6 +162,66 @@ public class EnemySpawn : MonoBehaviour
             if (enemyAI != null) enemies.Add(enemyAI);
         }
         return enemies;
+    }
+
+    /// <summary>
+    /// Trả về đúng prefab nguồn của Enemy còn sống trong một đội, theo thứ tự
+    /// đã spawn. Danh sách này là dữ liệu chuyển sang SceneBattle.
+    /// </summary>
+    public static List<GameObject> GetSpawnedEnemyPrefabs(IEnumerable<EnemyAI> enemies)
+    {
+        CleanupDestroyedEnemyPrefabEntries();
+
+        List<GameObject> prefabs = new List<GameObject>();
+        if (enemies == null) return prefabs;
+
+        foreach (EnemyAI enemy in enemies)
+        {
+            if (enemy != null && enemy.gameObject.activeInHierarchy &&
+                spawnedEnemyPrefabs.TryGetValue(enemy, out GameObject prefab) && prefab != null)
+            {
+                prefabs.Add(prefab);
+            }
+        }
+
+        return prefabs;
+    }
+
+    /// <summary>
+    /// Cho UI và BattleManager lấy đúng prefab nguồn của một Enemy đã spawn.
+    /// </summary>
+    public static bool TryGetSpawnedEnemyPrefab(EnemyAI enemy, out GameObject prefab)
+    {
+        prefab = null;
+        if (enemy == null || !enemy.gameObject.activeInHierarchy) return false;
+
+        CleanupDestroyedEnemyPrefabEntries();
+        return spawnedEnemyPrefabs.TryGetValue(enemy, out prefab) && prefab != null;
+    }
+
+    private static void RegisterSpawnedEnemyPrefab(EnemyAI enemy, GameObject prefab)
+    {
+        if (enemy == null || prefab == null) return;
+        CleanupDestroyedEnemyPrefabEntries();
+        spawnedEnemyPrefabs[enemy] = prefab;
+    }
+
+    private static void CleanupDestroyedEnemyPrefabEntries()
+    {
+        if (spawnedEnemyPrefabs.Count == 0) return;
+
+        List<EnemyAI> removedEnemies = null;
+        foreach (KeyValuePair<EnemyAI, GameObject> entry in spawnedEnemyPrefabs)
+        {
+            if (entry.Key == null || entry.Value == null)
+            {
+                if (removedEnemies == null) removedEnemies = new List<EnemyAI>();
+                removedEnemies.Add(entry.Key);
+            }
+        }
+
+        if (removedEnemies == null) return;
+        foreach (EnemyAI enemy in removedEnemies) spawnedEnemyPrefabs.Remove(enemy);
     }
 
     public void SetAttackTarget(Transform target)
@@ -284,7 +353,12 @@ public class EnemySpawn : MonoBehaviour
         }
     }
 
-    public void SpawnEnemy(int waveArrivalOverride = -1)
+    /// <summary>
+    /// Tạo đội raid thường. Với raid Rồng, vẫn tạo đội EnemyAI làm đội hành quân
+    /// và nút vào SceneBattle, đồng thời tạo đúng một Rồng để thể hiện raid lớn
+    /// trên Main Map. Rồng trong SceneBattle vẫn do BattleManager tạo riêng.
+    /// </summary>
+    public void SpawnEnemy(int waveArrivalOverride = -1, bool spawnDragon = false)
     {
         if (!HasSpawnableEnemyPrefab())
         {
@@ -305,8 +379,17 @@ public class EnemySpawn : MonoBehaviour
             sources.Add(transform);
         }
 
+        // Dragon không có EnemyAI và không hành quân theo đội hình wave. Vì vậy
+        // chỉ tạo một instance trình bày ở điểm raid riêng; đội EnemyAI bên dưới
+        // vẫn giữ route, countdown và luồng mở SceneBattle như các raid khác.
+        if (spawnDragon)
+        {
+            SpawnDragonAtPosition(sources[0]);
+        }
+
         List<EnemyAI> squadList = new List<EnemyAI>();
         List<GameObject> spawnedWaveEnemies = new List<GameObject>();
+        List<GameObject> spawnedWaveEnemyPrefabs = new List<GameObject>();
 
         foreach (Transform source in sources)
         {
@@ -314,11 +397,11 @@ public class EnemySpawn : MonoBehaviour
 
             if (useGridSpawn)
             {
-                SpawnGridAt(source.position, source.rotation, squadList, spawnedWaveEnemies, waveArrivalOverride);
+                SpawnGridAt(source.position, source.rotation, squadList, spawnedWaveEnemies, spawnedWaveEnemyPrefabs, waveArrivalOverride);
             }
             else
             {
-                SpawnAtPosition(source.position, source.rotation, squadList, spawnedWaveEnemies, waveArrivalOverride);
+                SpawnAtPosition(source.position, source.rotation, squadList, spawnedWaveEnemies, spawnedWaveEnemyPrefabs, waveArrivalOverride);
             }
         }
 
@@ -354,7 +437,7 @@ public class EnemySpawn : MonoBehaviour
                 if (activeRouteWarning != null)
                 {
                     Transform routeTarget = attackTarget != null ? attackTarget : GetOrFindAttackTarget();
-                    activeRouteWarning.Setup(routeStart, routeTarget, leadEnemy, routeWarningHeightOffset);
+                    activeRouteWarning.Setup(routeStart, routeTarget, leadEnemy, routeWarningHeightOffset, spawnedWaveEnemyPrefabs);
                 }
             }
         }
@@ -421,7 +504,9 @@ public class EnemySpawn : MonoBehaviour
         return bestEnemy != null ? bestEnemy : enemies[0];
     }
 
-    private void SpawnGridAt(Vector3 center, Quaternion rotation, List<EnemyAI> squadList, List<GameObject> spawnedWaveEnemies = null, int waveArrivalOverride = -1)
+    private void SpawnGridAt(Vector3 center, Quaternion rotation, List<EnemyAI> squadList,
+        List<GameObject> spawnedWaveEnemies = null, List<GameObject> spawnedWaveEnemyPrefabs = null,
+        int waveArrivalOverride = -1)
     {
         Vector3 forward = rotation * Vector3.forward;
         Vector3 right = rotation * Vector3.right;
@@ -434,7 +519,7 @@ public class EnemySpawn : MonoBehaviour
                 float offsetZ = (r - (rows - 1) * 0.5f) * spacingZ;
 
                 Vector3 spawnPos = center + right * offsetX + forward * offsetZ;
-                SpawnAtPosition(spawnPos, rotation, squadList, spawnedWaveEnemies, waveArrivalOverride);
+                SpawnAtPosition(spawnPos, rotation, squadList, spawnedWaveEnemies, spawnedWaveEnemyPrefabs, waveArrivalOverride);
             }
         }
     }
@@ -486,7 +571,9 @@ public class EnemySpawn : MonoBehaviour
         return null;
     }
 
-    private GameObject SpawnAtPosition(Vector3 position, Quaternion rotation, List<EnemyAI> squadList, List<GameObject> spawnedWaveEnemies = null, int waveArrivalOverride = -1)
+    private GameObject SpawnAtPosition(Vector3 position, Quaternion rotation, List<EnemyAI> squadList,
+        List<GameObject> spawnedWaveEnemies = null, List<GameObject> spawnedWaveEnemyPrefabs = null,
+        int waveArrivalOverride = -1)
     {
         GameObject prefabToSpawn = SelectEnemyPrefab();
         if (prefabToSpawn == null)
@@ -516,6 +603,7 @@ public class EnemySpawn : MonoBehaviour
         Debug.Log($"[EnemySpawn] Spawning enemy at position: {finalSpawnPos}");
         GameObject enemy = Instantiate(prefabToSpawn, finalSpawnPos, finalSpawnRot);
         if (spawnedWaveEnemies != null) spawnedWaveEnemies.Add(enemy);
+        if (spawnedWaveEnemyPrefabs != null) spawnedWaveEnemyPrefabs.Add(prefabToSpawn);
 
         // 4. Bỏ qua va chạm vật lý giữa Quái và Căn cứ/Spawner để không bao giờ bị kẹt
         Collider[] spawnerColliders = GetComponentsInChildren<Collider>();
@@ -535,6 +623,7 @@ public class EnemySpawn : MonoBehaviour
         EnemyAI enemyAI = enemy.GetComponent<EnemyAI>();
         if (enemyAI != null)
         {
+            RegisterSpawnedEnemyPrefab(enemyAI, prefabToSpawn);
             enemyAI.exitPlayModeWhenNoBuildings = exitPlayModeWhenNoBuildings;
 
             int curWave = (DayNightManager.HasInstance && DayNightManager.Ins != null) ? DayNightManager.Ins.CurrentWave : 1;
@@ -567,28 +656,75 @@ public class EnemySpawn : MonoBehaviour
         return enemy;
     }
 
+    private void SpawnDragonAtPosition(Transform source)
+    {
+        if (source == null) return;
+
+        GameObject dragonPrefabObject = ResolvePrefabGameObject(dragonPrefab);
+        if (!IsDragonPrefab(dragonPrefabObject))
+        {
+            Debug.LogError("[EnemySpawn] Raid Rồng được yêu cầu nhưng Dragon Prefab chưa được gán hoặc không có component Dragon.", this);
+            return;
+        }
+
+        Transform target = GetOrFindAttackTarget();
+        Vector3 spawnDirection = target != null
+            ? target.position - source.position
+            : source.rotation * Vector3.forward;
+        spawnDirection.y = 0f;
+        if (spawnDirection.sqrMagnitude < 0.001f) spawnDirection = source.rotation * Vector3.forward;
+        spawnDirection.Normalize();
+
+        Vector3 landingPosition = source.position + spawnDirection * spawnForwardOffset;
+        if (UnityEngine.AI.NavMesh.SamplePosition(landingPosition, out UnityEngine.AI.NavMeshHit hit, 5f, UnityEngine.AI.NavMesh.AllAreas))
+        {
+            landingPosition = hit.position;
+        }
+
+        Quaternion spawnRotation = Quaternion.LookRotation(spawnDirection);
+        Vector3 highSpawnPosition = landingPosition + Vector3.up * dragonSpawnHeight;
+        GameObject dragonObject;
+        try
+        {
+            dragonObject = Instantiate(dragonPrefabObject, highSpawnPosition, spawnRotation);
+        }
+        catch (MissingReferenceException)
+        {
+            Debug.LogError("[EnemySpawn] Dragon Prefab đang là Missing reference. Hãy gán lại Dragon.prefab trên EnemySpawnManager.", this);
+            return;
+        }
+
+        dragonObject.SetActive(true);
+        dragonObject.name = "Raid_Dragon";
+
+        Dragon dragon = dragonObject.GetComponent<Dragon>() ?? dragonObject.GetComponentInChildren<Dragon>(true);
+        dragon?.SetLandingGroundPosition(landingPosition);
+        Debug.Log($"[EnemySpawn] Đã tạo Rồng cho raid lớn tại {landingPosition}.", this);
+    }
+
     private bool HasSpawnableEnemyPrefab()
     {
-        if (enemyPrefab != null) return true;
+        if (IsRandomEnemyPrefab(enemyPrefab)) return true;
 
         if (additionalEnemyTypes == null) return false;
 
         foreach (EnemyType enemyType in additionalEnemyTypes)
         {
-            if (enemyType != null && enemyType.prefab != null) return true;
+            if (enemyType != null && IsRandomEnemyPrefab(enemyType.prefab)) return true;
         }
 
         return false;
     }
 
     /// <summary>
-    /// Chọn một prefab từ Enemy mặc định và các loại thêm vào theo Spawn Weight.
+    /// Chọn một Enemy thường từ prefab mặc định và các loại thêm vào theo Spawn
+    /// Weight. Rồng/Boss bị loại khỏi roll ngẫu nhiên để chỉ xuất hiện trong raid lớn.
     /// </summary>
     private GameObject SelectEnemyPrefab()
     {
         int totalWeight = 0;
 
-        if (enemyPrefab != null)
+        if (IsRandomEnemyPrefab(enemyPrefab))
         {
             totalWeight += Mathf.Max(1, defaultEnemySpawnWeight);
         }
@@ -597,7 +733,7 @@ public class EnemySpawn : MonoBehaviour
         {
             foreach (EnemyType enemyType in additionalEnemyTypes)
             {
-                if (enemyType != null && enemyType.prefab != null)
+                if (enemyType != null && IsRandomEnemyPrefab(enemyType.prefab))
                 {
                     totalWeight += Mathf.Max(1, enemyType.spawnWeight);
                 }
@@ -607,7 +743,7 @@ public class EnemySpawn : MonoBehaviour
         if (totalWeight <= 0) return null;
 
         int randomWeight = Random.Range(0, totalWeight);
-        if (enemyPrefab != null)
+        if (IsRandomEnemyPrefab(enemyPrefab))
         {
             int defaultWeight = Mathf.Max(1, defaultEnemySpawnWeight);
             if (randomWeight < defaultWeight) return enemyPrefab;
@@ -618,7 +754,7 @@ public class EnemySpawn : MonoBehaviour
         {
             foreach (EnemyType enemyType in additionalEnemyTypes)
             {
-                if (enemyType == null || enemyType.prefab == null) continue;
+                if (enemyType == null || !IsRandomEnemyPrefab(enemyType.prefab)) continue;
 
                 int enemyWeight = Mathf.Max(1, enemyType.spawnWeight);
                 if (randomWeight < enemyWeight) return enemyType.prefab;
@@ -626,7 +762,39 @@ public class EnemySpawn : MonoBehaviour
             }
         }
 
-        // Defensive fallback for a malformed Inspector list.
-        return enemyPrefab;
+        // Defensive fallback for a malformed Inspector list: chỉ trả về Enemy
+        // thường, tuyệt đối không để Rồng lọt vào đợt random.
+        return IsRandomEnemyPrefab(enemyPrefab) ? enemyPrefab : null;
+    }
+
+    private static bool IsRandomEnemyPrefab(GameObject prefab)
+    {
+        if (prefab == null) return false;
+
+        // Dragon là Boss của cuộc tấn công lớn. Không cho nó lọt vào bảng
+        // Spawn Weight, kể cả khi prefab bị kéo nhầm vào Inspector.
+        return !IsDragonPrefab(prefab);
+    }
+
+    private static bool IsDragonPrefab(GameObject prefab)
+    {
+        if (prefab == null) return false;
+
+        try
+        {
+            return prefab.GetComponent<Dragon>() != null ||
+                   prefab.GetComponentInChildren<Dragon>(true) != null;
+        }
+        catch (MissingReferenceException)
+        {
+            return false;
+        }
+    }
+
+    private static GameObject ResolvePrefabGameObject(UnityEngine.Object prefabReference)
+    {
+        if (prefabReference is GameObject gameObject) return gameObject;
+        if (prefabReference is Component component) return component.gameObject;
+        return null;
     }
 }
