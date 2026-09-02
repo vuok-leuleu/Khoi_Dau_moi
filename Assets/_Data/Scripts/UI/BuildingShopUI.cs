@@ -231,6 +231,44 @@ public class BuildingShopUI : MonoBehaviour
     }
 
     /// <summary>
+    /// Lấy ảnh minh họa mà không yêu cầu cửa sổ Shop phải được mở trước.
+    /// Settlement và UpgradePanel cần dùng hàm này ngay cả khi BuildCanvas
+    /// đang inactive ở lần người chơi chọn vùng đất đầu tiên.
+    /// </summary>
+    public static Sprite GetArtworkSprite(BuildingType type)
+    {
+        BuildingShopUI shop = Ins;
+        if (shop == null)
+        {
+            shop = Object.FindFirstObjectByType<BuildingShopUI>(FindObjectsInactive.Include);
+        }
+
+        return shop != null ? shop.FindArtworkSprite(type) : null;
+    }
+
+    private Sprite FindArtworkSprite(BuildingType type)
+    {
+        BuildingShopItemUI item = GetShopItem(type);
+        if (item != null && item.artworkSprite != null)
+        {
+            return item.artworkSprite;
+        }
+
+        // shopItemsList chỉ được lấp khi Shop được mở. Quét trực tiếp các
+        // object inactive để icon có sẵn từ lần click đầu tiên.
+        BuildingShopItemUI[] allItems = GetComponentsInChildren<BuildingShopItemUI>(true);
+        foreach (BuildingShopItemUI shopItem in allItems)
+        {
+            if (shopItem != null && shopItem.buildingType == type && shopItem.artworkSprite != null)
+            {
+                return shopItem.artworkSprite;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Chọn 1 công trình từ danh sách cột trái và hiển thị chi tiết sang cột phải
     /// </summary>
     public void SelectBuildingItem(BuildingShopItemUI item)

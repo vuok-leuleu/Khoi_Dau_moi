@@ -76,7 +76,7 @@ MonoBehaviour:
   tutorialEnemyCount: 2
   enablePresentationBattleSequence: 1
   evenmoorZone: {fileID: 0}
-  wavesBeforeDragonDefense: 10
+  wavesBeforeDragonDefense: 5
   warningWavesBeforeFirstDefense: 1
   presentationBattlePhase: 0
   dragonCountdownDialogues: []

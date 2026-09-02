@@ -49,6 +49,10 @@ public static class BattleData
     // từ SettlementZone nên không phụ thuộc EnemySpawn hay EnemySpawnManager.prefab.
     public static List<GameObject> ConquestEnemyPrefabs = new List<GameObject>();
     public static bool HasExplicitConquestEnemyComposition = false;
+    // Đội raid thật sự được EnemySpawn tạo trên map. Danh sách lưu prefab nguồn
+    // của từng Enemy instance để SceneBattle tạo lại đúng loại lẫn số lượng.
+    public static List<GameObject> RaidEnemyPrefabs = new List<GameObject>();
+    public static bool HasExplicitRaidEnemyComposition = false;
     // Rồng chỉ được bật cho trận phòng thủ lớn do EnemyInvasionManager đánh dấu.
     public static bool SpawnDragonInCurrentBattle = false;
     public static List<BuildingInfo> PlayerBuildings = new List<BuildingInfo>();
@@ -62,12 +66,38 @@ public static class BattleData
     public static bool SavedIsWaveActive = false;
     public static List<EnemyMarchInfo> SavedEnemyMarches = new List<EnemyMarchInfo>();
     public static List<SoldierMarchInfo> SavedSoldierMarches = new List<SoldierMarchInfo>();
+    // Prologue bắt buộc dùng Hộ Vệ trước khi node research Khiên mở. Cờ này
+    // chỉ tồn tại cho đúng trận tutorial đang chuyển cảnh.
+    public static bool AllowTutorialShieldTroopsInCurrentBattle = false;
 
     // Kết quả trận đấu
     public static bool HasResult = false;
     public static bool IsPlayerVictory = false;
     public static bool LastBattleWasVictory = false;
     public static int SurvivingSoldiersCount = 0;
+
+    [System.Serializable]
+    public class BattleParticipantInfo
+    {
+        public AttackMode attackMode;
+        public int count;
+
+        public BattleParticipantInfo(AttackMode attackMode, int count = 1)
+        {
+            this.attackMode = attackMode;
+            this.count = count;
+        }
+    }
+
+    // Chỉ các loại lính thật sự được BattleManager sinh ra mới được đưa vào
+    // danh sách này. UI kết quả dùng nó thay cho dữ liệu mẫu trong prefab.
+    public static List<BattleParticipantInfo> BattleParticipants = new List<BattleParticipantInfo>();
+
+    // Giá trị mặc định đồng bộ với UISceneBattle.prefab. UISceneBattle sẽ cấu
+    // hình lại các giá trị này theo Inspector ngay khi SceneBattle được mở.
+    public static int VictoryWoodReward = 125;
+    public static int VictoryGoldReward = 5;
+    private static bool victoryRewardGranted;
 
     /// <summary>
     /// Bật cờ này trước khi Reload Scene để ngăn BattleData tự động Load lại file Save.
@@ -77,6 +107,7 @@ public static class BattleData
 
     public static void SetConquestEnemyComposition(SettlementZone zone)
     {
+        ClearRaidEnemyComposition();
         ConquestEnemyPrefabs.Clear();
         HasExplicitConquestEnemyComposition = false;
 
@@ -94,6 +125,65 @@ public static class BattleData
     {
         ConquestEnemyPrefabs.Clear();
         HasExplicitConquestEnemyComposition = false;
+    }
+
+    public static void SetRaidEnemyComposition(IEnumerable<GameObject> prefabs)
+    {
+        RaidEnemyPrefabs.Clear();
+        HasExplicitRaidEnemyComposition = false;
+
+        if (prefabs == null) return;
+        foreach (GameObject prefab in prefabs)
+        {
+            if (prefab != null) RaidEnemyPrefabs.Add(prefab);
+        }
+
+        if (RaidEnemyPrefabs.Count == 0) return;
+
+        // Một trận chỉ dùng một nguồn đội hình Enemy rõ ràng.
+        ClearConquestEnemyComposition();
+        HasExplicitRaidEnemyComposition = true;
+        EnemyWaveCount = RaidEnemyPrefabs.Count;
+    }
+
+    public static void ClearRaidEnemyComposition()
+    {
+        RaidEnemyPrefabs.Clear();
+        HasExplicitRaidEnemyComposition = false;
+    }
+
+    public static void ClearBattleParticipants()
+    {
+        BattleParticipants.Clear();
+    }
+
+    public static void BeginNewBattle()
+    {
+        ClearBattleParticipants();
+        HasResult = false;
+        IsPlayerVictory = false;
+        SurvivingSoldiersCount = 0;
+        victoryRewardGranted = false;
+    }
+
+    public static void RegisterBattleParticipant(AttackMode attackMode)
+    {
+        foreach (BattleParticipantInfo participant in BattleParticipants)
+        {
+            if (participant.attackMode == attackMode)
+            {
+                participant.count++;
+                return;
+            }
+        }
+
+        BattleParticipants.Add(new BattleParticipantInfo(attackMode));
+    }
+
+    public static void ConfigureVictoryRewards(int woodReward, int goldReward)
+    {
+        VictoryWoodReward = Mathf.Max(0, woodReward);
+        VictoryGoldReward = Mathf.Max(0, goldReward);
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -126,6 +216,8 @@ public static class BattleData
     /// <param name="waveEnemyCount">Số lượng Enemy thuộc Wave chuẩn bị giao tranh</param>
     public static void RecordCurrentSceneState(int waveEnemyCount)
     {
+        BeginNewBattle();
+
         Scene currentScene = SceneManager.GetActiveScene();
         if (currentScene.name != "SceneBattle")
         {
@@ -479,9 +571,14 @@ public static class BattleData
         HasResult = false;
         LastBattleWasVictory = false;
         SpawnDragonInCurrentBattle = false;
+        ClearConquestEnemyComposition();
+        ClearRaidEnemyComposition();
         SavedCurrentWave = 0;
         SavedEnemyMarches.Clear();
         SavedSoldierMarches.Clear();
+        AllowTutorialShieldTroopsInCurrentBattle = false;
+        ClearBattleParticipants();
+        victoryRewardGranted = false;
         EnemyInvasionManager.ClearPendingRaidRestore();
     }
 
@@ -496,6 +593,11 @@ public static class BattleData
 
         LastBattleWasVictory = IsPlayerVictory;
         Debug.Log($"[BattleData] 🔥 Áp dụng kết quả trận đấu: IsAttackingExpedition = {IsAttackingExpedition}, Victory = {IsPlayerVictory}");
+
+        if (IsPlayerVictory)
+        {
+            GrantVictoryRewards();
+        }
 
         if (IsAttackingExpedition)
         {
@@ -526,6 +628,8 @@ public static class BattleData
         HasResult = false;
         IsAttackingExpedition = false;
         SpawnDragonInCurrentBattle = false;
+        AllowTutorialShieldTroopsInCurrentBattle = false;
+        ClearRaidEnemyComposition();
 
         // Lưu lại trạng thái công trình sau trận đấu vào Save Slot 1
         BuildingSystem buildingSys = BuildingSystem.Ins != null ? BuildingSystem.Ins : Object.FindFirstObjectByType<BuildingSystem>();
@@ -533,6 +637,33 @@ public static class BattleData
         {
             buildingSys.SaveBuildingsToSlot(1);
         }
+    }
+
+    /// <summary>
+    /// Cộng phần thưởng chiến thắng vào đúng kho tài nguyên của Scene chính.
+    /// Hàm chỉ được phép thành công một lần cho mỗi trận để không nhân đôi tiền
+    /// khi scene bị tải lại hoặc luồng khôi phục chạy lại.
+    /// </summary>
+    private static void GrantVictoryRewards()
+    {
+        if (victoryRewardGranted) return;
+
+        JsonDataManager dataManager = JsonDataManager.Ins != null
+            ? JsonDataManager.Ins
+            : Object.FindFirstObjectByType<JsonDataManager>();
+
+        if (dataManager == null)
+        {
+            Debug.LogWarning("[BattleData] Chưa tìm thấy JsonDataManager nên chưa thể cộng phần thưởng chiến thắng.");
+            return;
+        }
+
+        if (VictoryWoodReward > 0) dataManager.AddWood(VictoryWoodReward);
+        if (VictoryGoldReward > 0) dataManager.AddGold(VictoryGoldReward);
+        dataManager.BroadcastAllResources();
+
+        victoryRewardGranted = true;
+        Debug.Log($"[BattleData] 🏆 Đã nhận phần thưởng chiến thắng: +{VictoryWoodReward} Gỗ, +{VictoryGoldReward} Vàng.");
     }
 
     /// <summary>

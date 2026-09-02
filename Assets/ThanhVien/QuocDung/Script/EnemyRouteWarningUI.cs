@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 /// <summary>
 /// Controls a manually authored World Space Canvas for an enemy route.
@@ -14,6 +15,8 @@ public class EnemyRouteWarningUI : MonoBehaviour
     [SerializeField] private RectTransform arrowHead;
     [SerializeField] private RectTransform waveLabel;
     [SerializeField] private TextMeshProUGUI waveText;
+    [Tooltip("Text trong prefab hiển thị từng loại Enemy và số lượng của wave.")]
+    [SerializeField] private TextMeshProUGUI compositionText;
     [SerializeField] private float arrowWidth = 1f;
     [SerializeField] private float arrowHeightAtOneMeter = 1f;
     [SerializeField] private float labelHeight = 2.2f;
@@ -33,6 +36,7 @@ public class EnemyRouteWarningUI : MonoBehaviour
     private Transform targetPoint;
     private Transform waveSource;
     private float groundOffset;
+    private readonly List<GameObject> enemyComposition = new List<GameObject>();
     private MeshFilter generatedArrowHead;
     private static Sprite solidSprite;
 
@@ -42,13 +46,35 @@ public class EnemyRouteWarningUI : MonoBehaviour
 
     public void Setup(Transform start, Transform target, Transform waveEnemy, float heightOffset)
     {
+        Setup(start, target, waveEnemy, heightOffset, null);
+    }
+
+    /// <summary>
+    /// Hiển thị đường đi cùng đúng thành phần Enemy đã được EnemySpawn sinh ra.
+    /// Danh sách này cũng là danh sách được chuyển vào trận đấu.
+    /// </summary>
+    public void Setup(Transform start, Transform target, Transform waveEnemy, float heightOffset,
+        IEnumerable<GameObject> spawnedEnemyPrefabs)
+    {
         startPoint = start;
         targetPoint = target;
         waveSource = waveEnemy;
         groundOffset = heightOffset;
+        SetEnemyComposition(spawnedEnemyPrefabs);
         gameObject.SetActive(true);
         EnsureWorldRouteVisual();
         UpdateRoute();
+    }
+
+    private void SetEnemyComposition(IEnumerable<GameObject> spawnedEnemyPrefabs)
+    {
+        enemyComposition.Clear();
+        if (spawnedEnemyPrefabs == null) return;
+
+        foreach (GameObject prefab in spawnedEnemyPrefabs)
+        {
+            if (prefab != null) enemyComposition.Add(prefab);
+        }
     }
 
     private void LateUpdate()
@@ -195,7 +221,7 @@ public class EnemyRouteWarningUI : MonoBehaviour
             // Label height is authored in canvas pixels; convert it through the World Space Canvas scale.
             float canvasScale = Mathf.Max(0.001f, Mathf.Abs(transform.lossyScale.y));
             waveLabel.gameObject.SetActive(true);
-            waveLabel.sizeDelta = new Vector2(waveLabelWidth, waveLabelHeight);
+            waveLabel.sizeDelta = new Vector2(waveLabelWidth, GetRequiredLabelHeight());
             StretchWaveLabelChildren();
             waveLabel.position = start + Vector3.up * (labelHeight * canvasScale);
             Camera cameraToFace = Camera.main != null ? Camera.main : Object.FindFirstObjectByType<Camera>();
@@ -210,8 +236,8 @@ public class EnemyRouteWarningUI : MonoBehaviour
             waveText.gameObject.SetActive(true);
             waveText.enabled = true;
             waveText.raycastTarget = false;
-            waveText.fontSize = waveFontSize;
-            waveText.rectTransform.sizeDelta = new Vector2(waveLabelWidth - 20f, waveLabelHeight - 10f);
+            waveText.fontSize = enemyComposition.Count > 0 ? waveFontSize * 0.7f : waveFontSize;
+            ConfigureWaveTextLayout();
             waveText.alignment = TextAlignmentOptions.Center;
             waveText.transform.SetAsLastSibling();
             int currentWave = DayNightManager.HasInstance && DayNightManager.Ins != null
@@ -223,6 +249,80 @@ public class EnemyRouteWarningUI : MonoBehaviour
                 : SoldierPoint.CalculateWaveCount(distance);
             waveText.text = remaining > 0 ? $"Còn {remaining} Wave" : "Đã đến thành!";
         }
+
+        UpdateCompositionText();
+    }
+
+    private float GetRequiredLabelHeight()
+    {
+        if (enemyComposition.Count == 0) return waveLabelHeight;
+
+        HashSet<GameObject> enemyTypes = new HashSet<GameObject>(enemyComposition);
+        return Mathf.Max(waveLabelHeight, 82f + enemyTypes.Count * 32f);
+    }
+
+    private void ConfigureWaveTextLayout()
+    {
+        if (waveText == null) return;
+
+        RectTransform textRect = waveText.rectTransform;
+        if (enemyComposition.Count == 0)
+        {
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(10f, 5f);
+            textRect.offsetMax = new Vector2(-10f, -5f);
+            return;
+        }
+
+        textRect.anchorMin = new Vector2(0f, 0.68f);
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = new Vector2(10f, 0f);
+        textRect.offsetMax = new Vector2(-10f, -4f);
+    }
+
+    private void UpdateCompositionText()
+    {
+        if (compositionText == null) return;
+
+        if (enemyComposition.Count == 0)
+        {
+            compositionText.gameObject.SetActive(false);
+            return;
+        }
+
+        List<GameObject> typesInOrder = new List<GameObject>();
+        Dictionary<GameObject, int> counts = new Dictionary<GameObject, int>();
+        foreach (GameObject prefab in enemyComposition)
+        {
+            if (!counts.ContainsKey(prefab))
+            {
+                counts.Add(prefab, 0);
+                typesInOrder.Add(prefab);
+            }
+            counts[prefab]++;
+        }
+
+        List<string> lines = new List<string>();
+        foreach (GameObject prefab in typesInOrder)
+        {
+            string enemyName = prefab.name.Replace("(Clone)", string.Empty).Trim();
+            lines.Add($"{enemyName} x{counts[prefab]}");
+        }
+
+        compositionText.gameObject.SetActive(true);
+        compositionText.enabled = true;
+        compositionText.raycastTarget = false;
+        compositionText.fontSize = Mathf.Max(20f, waveFontSize * 0.46f);
+        compositionText.alignment = TextAlignmentOptions.Center;
+        compositionText.text = string.Join("\n", lines);
+
+        RectTransform compositionRect = compositionText.rectTransform;
+        compositionRect.anchorMin = Vector2.zero;
+        compositionRect.anchorMax = new Vector2(1f, 0.7f);
+        compositionRect.offsetMin = new Vector2(10f, 6f);
+        compositionRect.offsetMax = new Vector2(-10f, 0f);
+        compositionText.transform.SetAsLastSibling();
     }
 
     private Vector3 GetTargetPosition(Transform target)
@@ -257,7 +357,7 @@ public class EnemyRouteWarningUI : MonoBehaviour
             }
         }
 
-        if (waveText != null)
+        if (waveText != null && enemyComposition.Count == 0)
         {
             RectTransform textRect = waveText.rectTransform;
             textRect.anchorMin = Vector2.zero;

@@ -184,10 +184,9 @@ public class SettlementSlotItemUI : MonoBehaviour, IPointerClickHandler, IPointe
                     sp = building.BuildingIcons[idx];
                 }
 
-                if (sp == null && BuildingShopUI.Ins != null)
+                if (sp == null)
                 {
-                    var shopItem = BuildingShopUI.Ins.GetShopItem(building.buildingType);
-                    if (shopItem != null) sp = shopItem.artworkSprite;
+                    sp = BuildingShopUI.GetArtworkSprite(building.buildingType);
                 }
 
                 if (sp != null)

@@ -59,7 +59,7 @@ MonoBehaviour:
   warningWavesBeforeSpawn: 10
   cooldownWavesAfterRaid: 4
   dragonRaidSpawnPoint: {fileID: 4559724927577403687}
-  dragonWavesToReachTarget: 10
+  dragonWavesToReachTarget: 5
   currentRaidSpawnPoint: {fileID: 0}
   currentTargetedZone: {fileID: 0}
   isInvasionActive: 0
@@ -401,6 +401,18 @@ PrefabInstance:
     - target: {fileID: 5604620364914663613, guid: 579bc620d8991b4499911079d1f4ce62, type: 3}
       propertyPath: isRaidSpawnPoint
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5604620364914663613, guid: 579bc620d8991b4499911079d1f4ce62, type: 3}
+      propertyPath: additionalEnemyTypes.Array.size
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 5604620364914663613, guid: 579bc620d8991b4499911079d1f4ce62, type: 3}
+      propertyPath: additionalEnemyTypes.Array.data[2].prefab
+      value: 
+      objectReference: {fileID: 4118137334638840365, guid: 2e6e2341390240e46b5904a0c63be547, type: 3}
+    - target: {fileID: 5604620364914663613, guid: 579bc620d8991b4499911079d1f4ce62, type: 3}
+      propertyPath: additionalEnemyTypes.Array.data[2].spawnWeight
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 6904818074612623944, guid: 579bc620d8991b4499911079d1f4ce62, type: 3}
       propertyPath: m_LocalPosition.x

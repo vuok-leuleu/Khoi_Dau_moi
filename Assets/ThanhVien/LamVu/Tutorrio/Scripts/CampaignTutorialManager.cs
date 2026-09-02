@@ -75,10 +75,10 @@ public class CampaignTutorialManager : MonoBehaviour
     [SerializeField] private int tutorialEnemyCount = 3;    
 
     [Header("=== KỊCH BẢN 3 TRẬN THUYẾT TRÌNH ===")]
-    [Tooltip("Sau Prologue: phòng thủ nhỏ tại Vaskasia, cảnh báo 10 Wave phải chiếm EVENMOOR, rồi phòng thủ lớn có Rồng đúng một lần.")]
+    [Tooltip("Sau Prologue: phòng thủ nhỏ tại Vaskasia, cảnh báo 5 Wave phải chiếm EVENMOOR, rồi phòng thủ lớn có Rồng đúng một lần.")]
     [SerializeField] private bool enablePresentationBattleSequence = true;
     [SerializeField] private SettlementZone evenmoorZone;
-    [SerializeField, Min(1)] private int wavesBeforeDragonDefense = 10;
+    [SerializeField, Min(1)] private int wavesBeforeDragonDefense = 5;
     [SerializeField, Min(0)] private int warningWavesBeforeFirstDefense = 0;
     [SerializeField] private PresentationBattlePhase presentationBattlePhase = PresentationBattlePhase.None;
     [Tooltip("Thoại ngay sau khi thắng phòng thủ nhỏ: báo trước số Wave còn lại trước trận Rồng. Nếu để trống, game dùng câu thoại mặc định.")]
@@ -367,7 +367,7 @@ public class CampaignTutorialManager : MonoBehaviour
     /// <summary>
     /// Countdown trận Rồng phải chạy theo mọi Wave thực tế. Trước đây nó chỉ
     /// được gọi khi xây xong công trình, vì vậy bấm Qua Ngày/Wave không làm
-    /// tiến trình 10 Wave thay đổi.
+    /// tiến trình hành quân của Rồng thay đổi.
     /// </summary>
     private void EnsureWaveSubscription()
     {
@@ -663,7 +663,18 @@ public class CampaignTutorialManager : MonoBehaviour
 
             if (outpostTransform != null)
             {
-                UIEnemyWaveButton attackBtnScript = UIEnemyWaveButton.CreateButton(outpostTransform, 2.5f);
+                // Bước 3 của tutorial chỉ là một đoạn chỉ dẫn có camera tự di
+                // chuyển, không có thao tác chọn/điều quân thật. Chuẩn bị đội
+                // Hộ Vệ như đã tới đích trước khi mở trận; nếu chỉ tạo nút ở
+                // trạng thái sẵn sàng thì BattleData vẫn không có lính để mang
+                // sang SceneBattle.
+                PrepareTutorialExpedition();
+                BattleData.AllowTutorialShieldTroopsInCurrentBattle = true;
+
+                // Nút đánh phải được tạo ở trạng thái sẵn sàng; nếu để mặc định
+                // isArrived = false thì UIEnemyWaveButton sẽ luôn từ chối click
+                // và người chơi bị kẹt vĩnh viễn trước trận đầu tiên.
+                UIEnemyWaveButton attackBtnScript = UIEnemyWaveButton.CreateButton(outpostTransform, 2.5f, true);
                 if (attackBtnScript != null)
                 {
                     Button btn = attackBtnScript.GetComponentInChildren<Button>();
@@ -683,6 +694,46 @@ public class CampaignTutorialManager : MonoBehaviour
                 }
             }
         });
+    }
+
+    /// <summary>
+    /// Prologue tự hoàn tất bước hành quân để người chơi có thể vào trận ngay
+    /// sau đoạn camera. BattleData chỉ chuyển những lính đã tới vùng mục tiêu,
+    /// nên phải gắn metadata hành quân cho đội quân vừa huấn luyện.
+    /// </summary>
+    private void PrepareTutorialExpedition()
+    {
+        if (baseZone == null || enemyZone == null) return;
+
+        Vector3 destination = enemyZone.townHallPoint != null
+            ? enemyZone.townHallPoint.position
+            : enemyZone.transform.position;
+        int currentWave = DayNightManager.HasInstance && DayNightManager.Ins != null
+            ? DayNightManager.Ins.CurrentWave
+            : 0;
+        int deployedCount = 0;
+
+        foreach (UnitController unit in Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None))
+        {
+            if (unit == null || !unit.gameObject.activeInHierarchy || unit.isDead ||
+                !unit.IsStationedInZone(baseZone.settlementName))
+            {
+                continue;
+            }
+
+            unit.marchStartPosition = unit.transform.position;
+            unit.marchDestinationPosition = destination;
+            unit.marchStartWave = currentWave;
+            unit.marchWavesToReach = 0;
+            unit.marchTargetWave = currentWave;
+            unit.marchDestinationZoneName = enemyZone.settlementName;
+            unit.marchDestinationTroopSlotIndex = -1;
+            unit.isExpeditionMarching = false;
+            unit.hasReachedExpeditionDestination = true;
+            deployedCount++;
+        }
+
+        Debug.Log($"[CampaignTutorialManager] ⚔️ Đã chuẩn bị {deployedCount} Hộ Vệ cho trận đầu tại {enemyZone.settlementName}.");
     }
 
     public void OnOutpostAttackButtonClicked()
@@ -896,9 +947,9 @@ public class CampaignTutorialManager : MonoBehaviour
     {
         if (presentationBattlePhase == PresentationBattlePhase.FirstDefenseActive && !wasDragonDefense)
         {
-            // Trận Rồng phải hiện ngay sau khi thắng phòng thủ nhỏ. Mốc 10
+            // Trận Rồng phải hiện ngay sau khi thắng phòng thủ nhỏ. Mốc 5
             // Wave là thời gian đoàn Rồng hành quân trên map, không phải chờ
-            // thêm 10 Wave rồi mới cho công trình Rồng xuất hiện.
+            // thêm thời gian chờ rồi mới cho công trình Rồng xuất hiện.
             presentationBattlePhase = PresentationBattlePhase.DragonDefenseActive;
             dragonDefenseWave = -1;
             SavePresentationBattleState();
@@ -906,7 +957,7 @@ public class CampaignTutorialManager : MonoBehaviour
             string msg = $"⚠️ MỤC TIÊU KHẨN: Còn {wavesBeforeDragonDefense} Wave nữa Rồng sẽ dẫn quân tấn công! Hãy chinh phục EVENMOOR để mở Mỏ Đá, chuẩn bị lực lượng Khiên Binh.";
             UIManager.Ins?.ShowWarning(msg);
             Debug.Log($"[CampaignTutorialManager] {msg}");
-            // Khởi động ngay để công trình Rồng và nhãn "Còn 10 Wave" đã
+            // Khởi động ngay để công trình Rồng và nhãn "Còn 5 Wave" đã
             // tồn tại trên map trong lúc lời thoại được hiển thị.
             StartDragonDefenseFromAssignedSpawnPoint();
             DialogueData[] countdownDialogue = dragonCountdownDialogues != null && dragonCountdownDialogues.Length > 0
@@ -1003,8 +1054,8 @@ public class CampaignTutorialManager : MonoBehaviour
 
     private void UpdateDragonDefenseCountdown()
     {
-        // Tương thích save cũ: trước đây DragonCountdown chờ 10 Wave trước
-        // khi hiện Rồng. Luồng mới hiện Rồng ngay và để đoàn quân đi 10 Wave.
+        // Tương thích save cũ: trước đây DragonCountdown chờ 5 Wave trước
+        // khi hiện Rồng. Luồng mới hiện Rồng ngay và để đoàn quân đi 5 Wave.
         if (presentationBattlePhase == PresentationBattlePhase.DragonCountdown)
         {
             presentationBattlePhase = PresentationBattlePhase.DragonDefenseActive;
