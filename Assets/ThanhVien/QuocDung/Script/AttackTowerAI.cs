@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 
 /*
  * AttackTowerAI.cs
@@ -56,17 +57,29 @@ public class AttackTowerAI : MonoBehaviour
     [Tooltip("Kéo phần đầu hoặc thân tháp cần xoay vào đây. Nếu để trống, sẽ xoay toàn bộ tháp.")]
     public Transform partToRotate;
 
+    [Header("Di chuyển trong Scene Battle")]
+    [Tooltip("Cho Tháp Nỏ/Pháo tiến lên đến tầm bắn khi ở SceneBattle. Không ảnh hưởng vị trí công trình ở Map.")]
+    [SerializeField] private bool moveInBattleScene = true;
+    [SerializeField, Min(0.1f)] private float battleMoveSpeed = 3f;
+    [Tooltip("Khoảng cách tối thiểu với địch trước khi dừng. Để 0 sẽ dùng 90% tầm đánh.")]
+    [SerializeField, Min(0f)] private float battleStoppingDistance = 0f;
+    [Tooltip("Ưu tiên NavMeshAgent nếu prefab có sẵn; nếu không có sẽ đi thẳng trên mặt phẳng battle.")]
+    [SerializeField] private bool useNavMeshAgentWhenAvailable = true;
+
     // --- CỔNG KẾT NỐI PUBLIC ĐỂ UIManager ĐỌC DỮ LIỆU (KHÔNG LÀM MẤT PRIVATE BIẾN GỐC) ---
     public float AttackRange => attackRange;
 
     private UpgradeableBuilding upgradeableBuilding;
     private HPTower hpTower;
+    private NavMeshAgent navMeshAgent;
     private Transform currentTarget;
     private float nextFireTime;
 
     private void Awake()
     {
         autoAttack = false;
+        navMeshAgent = GetComponent<NavMeshAgent>();
+        if (navMeshAgent == null) navMeshAgent = GetComponentInParent<NavMeshAgent>();
     }
 
     public bool IsDestroyed()
@@ -193,6 +206,10 @@ public class AttackTowerAI : MonoBehaviour
 
         if (currentTarget == null) return;
 
+        // Tháp chiến đấu là đối tượng di động duy nhất trong SceneBattle. Khi
+        // ngoài tầm, tiến tới mục tiêu; ở Map nó luôn đứng yên như công trình.
+        if (MoveIntoBattleRange()) return;
+
         // Xoay tháp về phía mục tiêu
         RotateTowardsTarget();
 
@@ -263,6 +280,50 @@ public class AttackTowerAI : MonoBehaviour
         if (BattleManager.Ins != null) return true;
         string sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
         return sceneName.ToLower().Contains("battle");
+    }
+
+    private bool MoveIntoBattleRange()
+    {
+        if (!moveInBattleScene || !IsInBattleScene() || currentTarget == null) return false;
+
+        float stoppingDistance = battleStoppingDistance > 0f
+            ? battleStoppingDistance
+            : Mathf.Max(1f, attackRange * 0.9f);
+        Vector3 targetPosition = currentTarget.position;
+        targetPosition.y = transform.position.y;
+
+        if (Vector3.Distance(transform.position, targetPosition) <= stoppingDistance)
+        {
+            StopBattleMovement();
+            return false;
+        }
+
+        if (useNavMeshAgentWhenAvailable && navMeshAgent != null &&
+            navMeshAgent.isActiveAndEnabled && navMeshAgent.isOnNavMesh)
+        {
+            navMeshAgent.speed = battleMoveSpeed;
+            navMeshAgent.stoppingDistance = stoppingDistance;
+            navMeshAgent.isStopped = false;
+            navMeshAgent.SetDestination(targetPosition);
+        }
+        else
+        {
+            transform.position = Vector3.MoveTowards(
+                transform.position,
+                targetPosition,
+                battleMoveSpeed * Time.deltaTime);
+        }
+
+        RotateTowardsTarget();
+        return true;
+    }
+
+    private void StopBattleMovement()
+    {
+        if (navMeshAgent != null && navMeshAgent.isActiveAndEnabled && navMeshAgent.isOnNavMesh)
+        {
+            navMeshAgent.isStopped = true;
+        }
     }
 
     private void RotateTowardsTarget()

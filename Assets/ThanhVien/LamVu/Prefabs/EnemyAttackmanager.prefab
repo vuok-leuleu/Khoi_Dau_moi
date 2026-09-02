@@ -59,7 +59,7 @@ MonoBehaviour:
   warningWavesBeforeSpawn: 10
   cooldownWavesAfterRaid: 4
   dragonRaidSpawnPoint: {fileID: 4559724927577403687}
-  dragonWavesToReachTarget: 5
+  dragonWavesToReachTarget: 10
   currentRaidSpawnPoint: {fileID: 0}
   currentTargetedZone: {fileID: 0}
   isInvasionActive: 0

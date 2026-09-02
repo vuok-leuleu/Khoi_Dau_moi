@@ -75,10 +75,10 @@ public class CampaignTutorialManager : MonoBehaviour
     [SerializeField] private int tutorialEnemyCount = 3;    
 
     [Header("=== KỊCH BẢN 3 TRẬN THUYẾT TRÌNH ===")]
-    [Tooltip("Sau Prologue: phòng thủ nhỏ tại Vaskasia, cảnh báo 5 Wave phải chiếm EVENMOOR, rồi phòng thủ lớn có Rồng đúng một lần.")]
+    [Tooltip("Sau Prologue: phòng thủ nhỏ tại Vaskasia, cảnh báo 10 Wave phải chiếm EVENMOOR, rồi phòng thủ lớn có Rồng đúng một lần.")]
     [SerializeField] private bool enablePresentationBattleSequence = true;
     [SerializeField] private SettlementZone evenmoorZone;
-    [SerializeField, Min(1)] private int wavesBeforeDragonDefense = 5;
+    [SerializeField, Min(1)] private int wavesBeforeDragonDefense = 10;
     [SerializeField, Min(0)] private int warningWavesBeforeFirstDefense = 0;
     [SerializeField] private PresentationBattlePhase presentationBattlePhase = PresentationBattlePhase.None;
     [Tooltip("Thoại ngay sau khi thắng phòng thủ nhỏ: báo trước số Wave còn lại trước trận Rồng. Nếu để trống, game dùng câu thoại mặc định.")]
@@ -119,23 +119,19 @@ public class CampaignTutorialManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Khiên Binh vẫn dùng BarracksSpear có sẵn, nhưng sau Prologue chỉ được
-    /// huấn luyện mới sau khi giải phóng EVENMOOR. Trong Prologue luôn cho phép
-    /// để không làm hỏng bước huấn luyện Hộ Vệ ban đầu.
+    /// Trận phòng thủ trình diễn đầu tiên phải đưa toàn bộ lực lượng người
+    /// chơi đang sở hữu vào SceneBattle, kể cả lính đang đồn trú ở Zeffira.
+    /// </summary>
+    public bool IsFirstTutorialDefenseActive =>
+        presentationBattlePhase == PresentationBattlePhase.FirstDefenseActive;
+
+    /// <summary>
+    /// Khiên Binh vẫn dùng BarracksSpear có sẵn. Việc hiển thị và huấn luyện
+    /// luôn do node nghiên cứu trong ResearchCanvas quyết định.
     /// </summary>
     public static bool IsShieldTroopTrainingUnlocked()
     {
-        if (Ins == null || !Ins.enablePresentationBattleSequence || !Ins.IsTutorialCompleted())
-        {
-            return true;
-        }
-
-        if (PlayerPrefs.GetInt(ShieldTroopUnlockedPrefKey, 0) == 1)
-        {
-            return true;
-        }
-
-        return Ins.evenmoorZone != null && Ins.evenmoorZone.IsConquered;
+        return ResearchUpgradeEffects.ShieldUnlocked;
     }
 
     /// <summary>
@@ -360,6 +356,16 @@ public class CampaignTutorialManager : MonoBehaviour
 
     private void Update()
     {
+        // BuildMapTest không nạp Top_BottomUI, nên cũng không có UILinh để
+        // nhận phím B. Tutorial manager luôn tồn tại trong scene này và dùng
+        // chung đúng luồng reset của UILinh.
+        if (UILinh.Ins == null && Input.GetKeyDown(KeyCode.B))
+        {
+            Debug.Log("[CampaignTutorialManager] [Phím B] Đang tiến hành Hoàn nguyên Scene...");
+            UILinh.ResetActiveGame();
+            return;
+        }
+
         EnsureWaveSubscription();
         UpdateHighlightRingAnimation();
     }
@@ -565,7 +571,7 @@ public class CampaignTutorialManager : MonoBehaviour
     }
 
     // ====================================================================
-    // 0. PROLOGUE - STEP 2: HUẤN LUYỆN 1 HỘ VỆ (GUARD) TẠI ZEFFIRA
+    // 0. PROLOGUE - STEP 2: HUẤN LUYỆN 1 KIẾM SĨ TẠI ZEFFIRA
     // ====================================================================
     public void StartStage2_TrainGuard()
     {
@@ -573,10 +579,10 @@ public class CampaignTutorialManager : MonoBehaviour
 
         PlayDialogueSequence(stage2Dialogues, new DialogueData[]
         {
-            new DialogueData { speakerName = "Trưởng Làng Marcus", message = "Khu vực biên cương lân cận đang bị kẻ địch dòm ngó. Hãy chiêu mộ một Hộ Vệ (Guard) tại Doanh Trại để bảo vệ người dân." }
+            new DialogueData { speakerName = "Trưởng Làng Marcus", message = "Khu vực biên cương lân cận đang bị kẻ địch dòm ngó. Hãy chiêu mộ một Kiếm Sĩ tại Doanh Trại để bảo vệ người dân." }
         }, () =>
         {
-            ShowStepHint(3, "Hãy chọn ô Huấn Luyện Lính tại Zeffira để chiêu mộ Hộ Vệ.");
+            ShowStepHint(3, "Hãy chọn ô Huấn Luyện Lính tại Zeffira để chiêu mộ Kiếm Sĩ.");
             PointAtFirstTrainingSlot();
         });
     }
@@ -603,13 +609,13 @@ public class CampaignTutorialManager : MonoBehaviour
         {
             // Chuyển sang chờ người chơi bấm Qua Ngày để lính tập luyện xong
             SetStage(DemaciaTutorialStage.Stage2_SkipDayTroop);
-            ShowStepHint(3, "Hộ Vệ cần hoàn tất huấn luyện trong lượt kế tiếp. Hãy bấm Qua Ngày.");
+            ShowStepHint(3, "Kiếm Sĩ cần hoàn tất huấn luyện trong lượt kế tiếp. Hãy bấm Qua Ngày.");
             PointAtSkipDayButton();
         }
     }
 
     // ====================================================================
-    // 0. PROLOGUE - STEP 3: DI CHUYỂN QUÂN ĐẾN LÃNH THỔ ĐỊCH PHÍA ĐÔNG ZEFFIRA (VASKASIA)
+    // 0. PROLOGUE - STEP 3: ĐIỀU QUÂN ĐẾN LÃNH THỔ ĐỊCH PHÍA ĐÔNG ZEFFIRA (VASKASIA)
     // ====================================================================
     public void StartStage3_MarchToEnemyEast()
     {
@@ -617,10 +623,10 @@ public class CampaignTutorialManager : MonoBehaviour
 
         PlayDialogueSequence(stage3Dialogues, new DialogueData[]
         {
-            new DialogueData { speakerName = "Trưởng Làng Marcus", message = "Trinh sát báo về: Phía Đông Zeffira có một căn cứ địch đang chiếm đóng vùng đất màu mỡ Vaskasia. Hãy xuất quân tiến về phía Đông!" }
+            new DialogueData { speakerName = "Trưởng Làng Marcus", message = "Trinh sát báo về: Phía Đông Zeffira có một căn cứ địch đang chiếm đóng vùng đất màu mỡ Vaskasia. Hãy điều quân tiến về phía Đông!" }
         }, () =>
         {
-            ShowStepHint(4, "Hãy quan sát và điều chuyển lực lượng đến vùng đất Vaskasia ở phía Đông.");
+            ShowStepHint(4, "Hãy bấm Điều Quân, chọn ô lính và xác nhận điều quân đến Vaskasia ở phía Đông.");
             
             if (enemyZone != null)
             {
@@ -630,16 +636,19 @@ public class CampaignTutorialManager : MonoBehaviour
                 PointHandAt(targetPoint.position + Vector3.up * 2f);
             }
 
-            // Sau khi quan sát hoàn tất -> Hoàn thành Quest 3 và chuyển sang chuẩn bị tấn công
-            Invoke(nameof(FinishMarchStep), 3.5f);
         });
     }
 
-    private void FinishMarchStep()
+    /// <summary>
+    /// Chỉ hoàn tất bước điều quân khi đoàn quân người chơi đã thực sự đến
+    /// Vaskasia. ExpeditionBattleTrigger gọi hàm này ngay lúc nó tạo nút đánh.
+    /// </summary>
+    public void OnTutorialExpeditionArrived(SettlementZone arrivedZone)
     {
-        if (currentStage == DemaciaTutorialStage.Stage3_MarchToEnemyEast)
+        if (currentStage == DemaciaTutorialStage.Stage3_MarchToEnemyEast &&
+            arrivedZone != null && arrivedZone == enemyZone)
         {
-            CompleteQuestObjective(3); // Tick xong Quest 3: Di chuyển quân đến lãnh thổ địch phía Đông
+            CompleteQuestObjective(3);
             StartStage4_AttackEnemyBattle();
         }
     }
@@ -663,77 +672,20 @@ public class CampaignTutorialManager : MonoBehaviour
 
             if (outpostTransform != null)
             {
-                // Bước 3 của tutorial chỉ là một đoạn chỉ dẫn có camera tự di
-                // chuyển, không có thao tác chọn/điều quân thật. Chuẩn bị đội
-                // Hộ Vệ như đã tới đích trước khi mở trận; nếu chỉ tạo nút ở
-                // trạng thái sẵn sàng thì BattleData vẫn không có lính để mang
-                // sang SceneBattle.
-                PrepareTutorialExpedition();
-                BattleData.AllowTutorialShieldTroopsInCurrentBattle = true;
-
-                // Nút đánh phải được tạo ở trạng thái sẵn sàng; nếu để mặc định
-                // isArrived = false thì UIEnemyWaveButton sẽ luôn từ chối click
-                // và người chơi bị kẹt vĩnh viễn trước trận đầu tiên.
-                UIEnemyWaveButton attackBtnScript = UIEnemyWaveButton.CreateButton(outpostTransform, 2.5f, true);
-                if (attackBtnScript != null)
+                // Nút đánh đã được ExpeditionBattleTrigger tạo sau khi người
+                // chơi điều quân tới nơi. Tutorial tuyệt đối không tự đánh dấu
+                // lính là đã đến đích hoặc tự đưa lính vào trận.
+                UIEnemyWaveButton attackBtnScript = outpostTransform.GetComponentInChildren<UIEnemyWaveButton>(true);
+                if (attackBtnScript != null && attackBtnScript.isTroopsArrivedAtTarget)
                 {
-                    Button btn = attackBtnScript.GetComponentInChildren<Button>();
-                    if (btn != null)
-                    {
-                        btn.onClick.AddListener(() =>
-                        {
-                            PlayerPrefs.SetInt("SavedTutorialStage", 4);
-                            PlayerPrefs.Save();
-                        });
-                    }
                     PointHandAtUI(attackBtnScript.transform as RectTransform);
                 }
                 else
                 {
-                    PointHandAt(outpostTransform.position + Vector3.up * 2f);
+                    ShowStepHint(4, "Đoàn quân chưa tới Vaskasia. Hãy hoàn tất điều quân trước khi tấn công.");
                 }
             }
         });
-    }
-
-    /// <summary>
-    /// Prologue tự hoàn tất bước hành quân để người chơi có thể vào trận ngay
-    /// sau đoạn camera. BattleData chỉ chuyển những lính đã tới vùng mục tiêu,
-    /// nên phải gắn metadata hành quân cho đội quân vừa huấn luyện.
-    /// </summary>
-    private void PrepareTutorialExpedition()
-    {
-        if (baseZone == null || enemyZone == null) return;
-
-        Vector3 destination = enemyZone.townHallPoint != null
-            ? enemyZone.townHallPoint.position
-            : enemyZone.transform.position;
-        int currentWave = DayNightManager.HasInstance && DayNightManager.Ins != null
-            ? DayNightManager.Ins.CurrentWave
-            : 0;
-        int deployedCount = 0;
-
-        foreach (UnitController unit in Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None))
-        {
-            if (unit == null || !unit.gameObject.activeInHierarchy || unit.isDead ||
-                !unit.IsStationedInZone(baseZone.settlementName))
-            {
-                continue;
-            }
-
-            unit.marchStartPosition = unit.transform.position;
-            unit.marchDestinationPosition = destination;
-            unit.marchStartWave = currentWave;
-            unit.marchWavesToReach = 0;
-            unit.marchTargetWave = currentWave;
-            unit.marchDestinationZoneName = enemyZone.settlementName;
-            unit.marchDestinationTroopSlotIndex = -1;
-            unit.isExpeditionMarching = false;
-            unit.hasReachedExpeditionDestination = true;
-            deployedCount++;
-        }
-
-        Debug.Log($"[CampaignTutorialManager] ⚔️ Đã chuẩn bị {deployedCount} Hộ Vệ cho trận đầu tại {enemyZone.settlementName}.");
     }
 
     public void OnOutpostAttackButtonClicked()
@@ -947,7 +899,7 @@ public class CampaignTutorialManager : MonoBehaviour
     {
         if (presentationBattlePhase == PresentationBattlePhase.FirstDefenseActive && !wasDragonDefense)
         {
-            // Trận Rồng phải hiện ngay sau khi thắng phòng thủ nhỏ. Mốc 5
+            // Trận Rồng phải hiện ngay sau khi thắng phòng thủ nhỏ. Mốc 10
             // Wave là thời gian đoàn Rồng hành quân trên map, không phải chờ
             // thêm thời gian chờ rồi mới cho công trình Rồng xuất hiện.
             presentationBattlePhase = PresentationBattlePhase.DragonDefenseActive;
@@ -957,7 +909,7 @@ public class CampaignTutorialManager : MonoBehaviour
             string msg = $"⚠️ MỤC TIÊU KHẨN: Còn {wavesBeforeDragonDefense} Wave nữa Rồng sẽ dẫn quân tấn công! Hãy chinh phục EVENMOOR để mở Mỏ Đá, chuẩn bị lực lượng Khiên Binh.";
             UIManager.Ins?.ShowWarning(msg);
             Debug.Log($"[CampaignTutorialManager] {msg}");
-            // Khởi động ngay để công trình Rồng và nhãn "Còn 5 Wave" đã
+            // Khởi động ngay để công trình Rồng và nhãn "Còn 10 Wave" đã
             // tồn tại trên map trong lúc lời thoại được hiển thị.
             StartDragonDefenseFromAssignedSpawnPoint();
             DialogueData[] countdownDialogue = dragonCountdownDialogues != null && dragonCountdownDialogues.Length > 0
@@ -1054,8 +1006,8 @@ public class CampaignTutorialManager : MonoBehaviour
 
     private void UpdateDragonDefenseCountdown()
     {
-        // Tương thích save cũ: trước đây DragonCountdown chờ 5 Wave trước
-        // khi hiện Rồng. Luồng mới hiện Rồng ngay và để đoàn quân đi 5 Wave.
+        // Tương thích save cũ: trước đây DragonCountdown chờ 10 Wave trước
+        // khi hiện Rồng. Luồng mới hiện Rồng ngay và để đoàn quân đi 10 Wave.
         if (presentationBattlePhase == PresentationBattlePhase.DragonCountdown)
         {
             presentationBattlePhase = PresentationBattlePhase.DragonDefenseActive;

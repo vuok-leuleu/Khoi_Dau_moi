@@ -305,33 +305,17 @@ public class ExpeditionBattleTrigger : MonoBehaviour
             return;
         }
 
-        List<UnitController> activeMarchers = new List<UnitController>();
-        foreach (var s in marchingSoldiers)
-        {
-            if (s != null && s.gameObject.activeInHierarchy && s.isExpeditionMarching)
-            {
-                activeMarchers.Add(s);
-            }
-        }
-
-        if (activeMarchers.Count == 0)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
         Vector3 targetPos = enemyTarget.position;
-        int currentWave = (DayNightManager.HasInstance && DayNightManager.Ins != null) ? DayNightManager.Ins.CurrentWave : 1;
         bool allReached = true;
 
-        foreach (var s in activeMarchers)
+        foreach (var s in marchingSoldiers)
         {
-            int remainingWaves = Mathf.Max(0, s.marchTargetWave - currentWave);
-            float distToDest = Vector3.Distance(s.transform.position, s.marchDestinationPosition);
-            float distToCenter = Vector3.Distance(s.transform.position, targetPos);
-
-            // 🔥 Đảm bảo TẤT CẢ lính trong đoàn xuất trận đều đã hoàn thành số wave hành quân và tập kết áp sát mục tiêu
-            if (remainingWaves > 0 || (distToDest > 2.0f && distToCenter > 4.5f))
+            // UnitController tự chuyển isExpeditionMarching thành false khi
+            // đến lượt đích. Vì vậy không thể chỉ theo dõi cờ đang hành quân:
+            // hãy đợi metadata "đã tới đích" của từng lính trong đoàn.
+            if (s == null || !s.gameObject.activeInHierarchy ||
+                !s.hasReachedExpeditionDestination ||
+                Vector3.Distance(s.transform.position, targetPos) > 4.5f)
             {
                 allReached = false;
                 break;
@@ -342,15 +326,6 @@ public class ExpeditionBattleTrigger : MonoBehaviour
         {
             Debug.Log("[ExpeditionBattleTrigger] ⚔️ TẤT CẢ lính đã tập kết đầy đủ tại Căn cứ Địch! Dừng hành quân và hiển thị Nút Tấn Công...");
 
-            // Dừng trạng thái di chuyển hành quân để lính tập kết đứng chờ
-            foreach (var s in activeMarchers)
-            {
-                if (s != null)
-                {
-                    s.isExpeditionMarching = false;
-                }
-            }
-
             // 🔥 Hiển thị Nút Tấn Công (màu xanh lá) trên đầu Căn cứ Địch để người chơi bấm kích hoạt trận đấu
             if (enemyTarget != null)
             {
@@ -359,6 +334,11 @@ public class ExpeditionBattleTrigger : MonoBehaviour
                 {
                     attackBtn.battleSceneName = sceneToLoad;
                 }
+
+                // Prologue chỉ được phép sang bước tấn công sau khi đoàn quân
+                // thực sự đã tới căn cứ địch và nút đánh đã được tạo.
+                CampaignTutorialManager.Ins?.OnTutorialExpeditionArrived(
+                    UIEnemyWaveButton.FindZoneFromTarget(enemyTarget));
             }
 
             Destroy(gameObject);

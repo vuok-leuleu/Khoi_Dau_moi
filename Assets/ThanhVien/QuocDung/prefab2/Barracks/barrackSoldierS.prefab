@@ -227,6 +227,8 @@ MonoBehaviour:
   - {fileID: 5529766660109328545, guid: 6faae46d02eec1b458eaa4f73464be71, type: 3}
   - {fileID: 1999277456456185836, guid: 6f6383d8f0b521f449a9ee5eb68d04cf, type: 3}
   - {fileID: 4430688088267481095, guid: 65837077c6ee41e48b9fe12f3faae8a4, type: 3}
+  - {fileID: 4605438273477018434, guid: ce5427a6e1c4aab4caa3553222a65a19, type: 3}
+  - {fileID: 1204634543905229984, guid: 31044380c4e5d30429fd96772f82534f, type: 3}
   soldierPrefab: {fileID: 0}
   spawnRadius: 2.54
   spawnForwardOffset: 2.5

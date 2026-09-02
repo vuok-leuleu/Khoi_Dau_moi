@@ -88,9 +88,7 @@ public class SpawnSoldier : MonoBehaviour
     }
 
     /// <summary>
-    /// Uses the same research gates as BattleManager. Tutorial exceptions are
-    /// carried by the individual training slot, rather than inferred from the
-    /// global tutorial state when the queue finishes.
+    /// Uses the same research gates as BattleManager.
     /// </summary>
     public static bool IsTroopTrainingUnlocked(BuildingType troopType)
     {
@@ -127,9 +125,9 @@ public class SpawnSoldier : MonoBehaviour
         return unit == null || IsResearchUnlockedForAttackMode(unit.AttackMode);
     }
 
-    private GameObject GetTrainedSoldierPrefab(BuildingType troopType, bool allowResearchBypass = false)
+    private GameObject GetTrainedSoldierPrefab(BuildingType troopType)
     {
-        if (!allowResearchBypass && !IsTroopTrainingUnlocked(troopType)) return null;
+        if (!IsTroopTrainingUnlocked(troopType)) return null;
 
         AttackMode expectedAttackMode;
         switch (troopType)
@@ -161,10 +159,10 @@ public class SpawnSoldier : MonoBehaviour
         return null;
     }
 
-    public bool CanSpawnTrainedSoldier(BuildingType troopType, bool allowResearchBypass = false)
+    public bool CanSpawnTrainedSoldier(BuildingType troopType)
     {
-        return (allowResearchBypass || IsTroopTrainingUnlocked(troopType)) &&
-               GetTrainedSoldierPrefab(troopType, allowResearchBypass) != null;
+        return IsTroopTrainingUnlocked(troopType) &&
+               GetTrainedSoldierPrefab(troopType) != null;
     }
 
     public List<UnitController> GetActiveSoldierControllers()
@@ -323,10 +321,10 @@ public class SpawnSoldier : MonoBehaviour
     /// <summary>
     /// Sinh 1 lính đã hoàn tất huấn luyện tại Doanh Trại này
     /// </summary>
-    public GameObject SpawnOneTrainedSoldier(GameObject customPrefab = null, bool allowResearchBypass = false)
+    public GameObject SpawnOneTrainedSoldier(GameObject customPrefab = null)
     {
         GameObject prefabToUse = customPrefab != null ? customPrefab : GetRandomSoldierPrefab();
-        if (prefabToUse == null || (!allowResearchBypass && !IsResearchUnlockedForPrefab(prefabToUse)))
+        if (prefabToUse == null || !IsResearchUnlockedForPrefab(prefabToUse))
         {
             Debug.LogWarning($"[SpawnSoldier] ⚠️ Lính chưa được mở khóa nghiên cứu hoặc chưa gán prefab cho {gameObject.name}!");
             return null;
@@ -372,16 +370,15 @@ public class SpawnSoldier : MonoBehaviour
         BuildingType troopType,
         int count,
         int troopSlotIndex = -1,
-        string stationedSettlementZoneName = null,
-        bool allowResearchBypass = false)
+        string stationedSettlementZoneName = null)
     {
-        if (!allowResearchBypass && !IsTroopTrainingUnlocked(troopType))
+        if (!IsTroopTrainingUnlocked(troopType))
         {
             Debug.LogWarning($"[SpawnSoldier] {troopType} chưa được mở khóa nghiên cứu, không thể spawn tại {gameObject.name}.");
             return 0;
         }
 
-        GameObject prefabToUse = GetTrainedSoldierPrefab(troopType, allowResearchBypass);
+        GameObject prefabToUse = GetTrainedSoldierPrefab(troopType);
         if (prefabToUse == null)
         {
             Debug.LogWarning($"[SpawnSoldier] Không tìm thấy prefab phù hợp cho {troopType} trên {gameObject.name}.");
@@ -391,7 +388,7 @@ public class SpawnSoldier : MonoBehaviour
         int spawnedCount = 0;
         for (int i = 0; i < count; i++)
         {
-            GameObject spawned = SpawnOneTrainedSoldier(prefabToUse, allowResearchBypass);
+            GameObject spawned = SpawnOneTrainedSoldier(prefabToUse);
             if (spawned != null)
             {
                 UnitController unit = spawned.GetComponent<UnitController>();

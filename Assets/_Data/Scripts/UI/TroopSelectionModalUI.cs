@@ -34,7 +34,7 @@ public class TroopSelectionModalUI : MonoBehaviour
         }
 
         InitListeners();
-        HideUnsupportedTrainingOptions();
+        RefreshResearchAvailability();
     }
 
     private void OnDestroy()
@@ -63,6 +63,18 @@ public class TroopSelectionModalUI : MonoBehaviour
         {
             trainSpearBtn.onClick.RemoveListener(OnClickSpear);
             trainSpearBtn.onClick.AddListener(OnClickSpear);
+        }
+
+        if (trainCrossbowBtn != null)
+        {
+            trainCrossbowBtn.onClick.RemoveListener(OnClickCrossbowTower);
+            trainCrossbowBtn.onClick.AddListener(OnClickCrossbowTower);
+        }
+
+        if (trainCannonBtn != null)
+        {
+            trainCannonBtn.onClick.RemoveListener(OnClickCannonTower);
+            trainCannonBtn.onClick.AddListener(OnClickCannonTower);
         }
 
         if (closeBtn != null)
@@ -104,28 +116,48 @@ public class TroopSelectionModalUI : MonoBehaviour
     private void OnClickMelee() => OnSelectTroop(BuildingType.BarracksMelee);
     private void OnClickArcher() => OnSelectTroop(BuildingType.BarracksArcher);
     private void OnClickSpear() => OnSelectTroop(BuildingType.BarracksSpear);
+    private void OnClickCrossbowTower() => StartDefensiveBuildingPlacement(
+        BuildingType.ArcherTower, ResearchUpgradeEffects.CrossbowTowerUnlocked, "Tháp Nỏ");
+    private void OnClickCannonTower() => StartDefensiveBuildingPlacement(
+        BuildingType.Cannon, ResearchUpgradeEffects.CannonTowerUnlocked, "Pháo");
 
-    private void RefreshResearchAvailability()
+    /// <summary>
+    /// Đồng bộ các mục trong bảng Settlement với research vừa mua. Được gọi
+    /// khi mở modal và ngay sau khi ResearchPanel lưu trạng thái mới.
+    /// </summary>
+    public void RefreshResearchAvailability()
     {
         SetItemAvailability(trainMeleeBtn, true);
         SetItemAvailability(trainArcherBtn, SpawnSoldier.IsTroopTrainingUnlocked(BuildingType.BarracksArcher));
-        bool isTutorialShieldBypass = CampaignTutorialManager.Ins != null &&
-                                      !CampaignTutorialManager.Ins.IsTutorialCompleted();
-        SetItemAvailability(trainSpearBtn,
-            isTutorialShieldBypass ||
-            (SpawnSoldier.IsTroopTrainingUnlocked(BuildingType.BarracksSpear) &&
-             CampaignTutorialManager.IsShieldTroopTrainingUnlocked()));
+        // Hộ Vệ chỉ là một lựa chọn hợp lệ sau khi node Khiên Binh trong
+        // ResearchCanvas được mở. Không để tutorial hay tiến trình map làm
+        // nó xuất hiện trước research.
+        bool shieldUnlocked = SpawnSoldier.IsTroopTrainingUnlocked(BuildingType.BarracksSpear);
+        SetItemVisibility(trainSpearBtn, shieldUnlocked);
+        SetItemAvailability(trainSpearBtn, shieldUnlocked);
 
-        // Nỏ/Pháo là công nghệ mở khóa tháp. Chúng không có BuildingType,
-        // UnitController prefab hay luồng lưu trận tương ứng nên không được
-        // quảng bá nhầm là lính có thể huấn luyện.
-        HideUnsupportedTrainingOptions();
+        // Nỏ/Pháo là công trình phòng thủ. Các nút nằm trong layout Huấn luyện
+        // cũ, nên khi research xong chúng phải sáng và dẫn sang luồng đặt công
+        // trình, thay vì bị disabled vĩnh viễn.
+        SetItemVisibility(trainCrossbowBtn, true);
+        SetItemVisibility(trainCannonBtn, true);
+        SetItemAvailability(trainCrossbowBtn, ResearchUpgradeEffects.CrossbowTowerUnlocked);
+        SetItemAvailability(trainCannonBtn, ResearchUpgradeEffects.CannonTowerUnlocked);
+        SetItemLabel(trainCrossbowBtn, "Xây Tháp Nỏ");
+        SetItemLabel(trainCannonBtn, "Xây Pháo");
     }
 
-    private void HideUnsupportedTrainingOptions()
+    private static void SetItemVisibility(Button button, bool isVisible)
     {
-        if (trainCrossbowBtn != null) trainCrossbowBtn.gameObject.SetActive(false);
-        if (trainCannonBtn != null) trainCannonBtn.gameObject.SetActive(false);
+        if (button != null) button.gameObject.SetActive(isVisible);
+    }
+
+    private static void SetItemLabel(Button button, string label)
+    {
+        if (button == null) return;
+
+        TMP_Text text = button.GetComponentInChildren<TMP_Text>(true);
+        if (text != null) text.text = label;
     }
 
     private static void SetItemAvailability(Button button, bool isUnlocked, bool canSelect = true)
@@ -140,6 +172,24 @@ public class TroopSelectionModalUI : MonoBehaviour
         group.alpha = isUnlocked ? 1f : 0.3f;
         group.interactable = isUnlocked && canSelect;
         group.blocksRaycasts = isUnlocked && canSelect;
+    }
+
+    private void StartDefensiveBuildingPlacement(BuildingType buildingType, bool isUnlocked, string displayName)
+    {
+        if (!isUnlocked)
+        {
+            UIManager.Ins?.ShowWarning($"{displayName} chưa được mở khóa trong Viện Binh.");
+            return;
+        }
+
+        if (BuildingSystem.Ins == null)
+        {
+            Debug.LogWarning($"[TroopSelectionModalUI] Không tìm thấy BuildingSystem để đặt {displayName}.", this);
+            return;
+        }
+
+        CloseModal();
+        BuildingSystem.Ins.StartPlacing(buildingType);
     }
 
     private void OnSelectTroop(BuildingType troopType)

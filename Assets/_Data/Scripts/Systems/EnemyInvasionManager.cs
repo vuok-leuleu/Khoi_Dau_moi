@@ -67,7 +67,7 @@ public class EnemyInvasionManager : MonoBehaviour
     [Tooltip("Kéo một EnemySpawnManager riêng cho trận Rồng vào đây. Điểm này không thuộc 4 hướng Bắc/Đông/Nam/Tây, phải tắt Is Raid Spawn Point, và chỉ hiện khi trận Rồng thật sự bắt đầu.")]
     [SerializeField] private EnemySpawn dragonRaidSpawnPoint;
     [Tooltip("Raid lớn có Rồng sẽ mất đúng số Wave này để áp sát thành. Nhãn trên đường sẽ hiện số này.")]
-    [SerializeField, Min(1)] private int dragonWavesToReachTarget = 5;
+    [SerializeField, Min(1)] private int dragonWavesToReachTarget = 10;
     private string dragonRaidSpawnPointName;
 
     [HideInInspector] public EnemySpawn currentRaidSpawnPoint;

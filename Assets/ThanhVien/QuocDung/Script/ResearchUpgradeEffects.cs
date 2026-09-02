@@ -77,6 +77,11 @@ public class ResearchUpgradeEffects : MonoBehaviour
         // and only received this bonus after entering SceneBattle.
         TroopTrainingManager.Ins?.ApplyFormationBonusToTrainedUnits();
 
+        // Các research mở công trình phải cập nhật ngay UI đang mở; không bắt
+        // người chơi đóng/mở lại Settlement hoặc Shop mới thấy Tháp Nỏ/Pháo.
+        TroopSelectionModalUI.Ins?.RefreshResearchAvailability();
+        BuildingShopUI.Ins?.RefreshAllItems();
+
     }
 
     private static bool IsNodeUnlocked(string nodeId) => ResearchPanel.IsNodeSavedAsUnlocked(nodeId);

@@ -43,6 +43,17 @@ public static class BattleData
         public string prefabName;
     }
 
+    /// <summary>
+    /// Thành phần quân thực tế đang đóng tại vùng bị tấn công. Truyền trực
+    /// tiếp từng loại lính sang SceneBattle thay vì phụ thuộc cache của
+    /// SpawnSoldier tại từng doanh trại.
+    /// </summary>
+    [System.Serializable]
+    public class DefendingSoldierInfo
+    {
+        public AttackMode attackMode = AttackMode.Melee;
+    }
+
     public static bool HasData = false;
     public static int EnemyWaveCount = 1;
     // Danh sách prefab chỉ dùng cho trận chinh phục đang mở. Đây là bản sao dữ liệu
@@ -56,6 +67,7 @@ public static class BattleData
     // Rồng chỉ được bật cho trận phòng thủ lớn do EnemyInvasionManager đánh dấu.
     public static bool SpawnDragonInCurrentBattle = false;
     public static List<BuildingInfo> PlayerBuildings = new List<BuildingInfo>();
+    public static List<DefendingSoldierInfo> DefendingSoldiers = new List<DefendingSoldierInfo>();
     public static int TotalSoldiersInBase = 0;
     public static string MainSceneName = "MainScene";
     public static string TargetedSettlementZoneName = "";
@@ -66,9 +78,6 @@ public static class BattleData
     public static bool SavedIsWaveActive = false;
     public static List<EnemyMarchInfo> SavedEnemyMarches = new List<EnemyMarchInfo>();
     public static List<SoldierMarchInfo> SavedSoldierMarches = new List<SoldierMarchInfo>();
-    // Prologue bắt buộc dùng Hộ Vệ trước khi node research Khiên mở. Cờ này
-    // chỉ tồn tại cho đúng trận tutorial đang chuyển cảnh.
-    public static bool AllowTutorialShieldTroopsInCurrentBattle = false;
 
     // Kết quả trận đấu
     public static bool HasResult = false;
@@ -279,6 +288,7 @@ public static class BattleData
 
         // 3. Lưu tiến trình hành quân của Lính (UnitController) đang xuất trận
         SavedSoldierMarches.Clear();
+        DefendingSoldiers.Clear();
         string defenseZoneName = TargetedSettlementZoneName;
         if (!IsAttackingExpedition && string.IsNullOrEmpty(defenseZoneName) &&
             EnemyInvasionManager.Ins != null && EnemyInvasionManager.Ins.currentTargetedZone != null)
@@ -289,6 +299,9 @@ public static class BattleData
 
         UnitController[] activeUnits = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
         int battleSoldierCount = 0;
+        bool includeAllTutorialDefenders = !IsAttackingExpedition &&
+                                          CampaignTutorialManager.Ins != null &&
+                                          CampaignTutorialManager.Ins.IsFirstTutorialDefenseActive;
         foreach (var u in activeUnits)
         {
             if (u != null && u.gameObject.activeInHierarchy)
@@ -326,9 +339,15 @@ public static class BattleData
                 {
                     // Chỉ lính đang đóng tại vùng bị địch đánh mới được phòng thủ.
                     // Quân ở vùng khác và quân đang hành quân không được kéo vào trận.
-                    if (u.IsStationedInZone(defenseZoneName))
+                    bool isAvailableTutorialDefender = includeAllTutorialDefenders &&
+                                                       !u.isExpeditionMarching;
+                    if (!u.isDead && (isAvailableTutorialDefender || u.IsStationedInZone(defenseZoneName)))
                     {
                         battleSoldierCount++;
+                        DefendingSoldiers.Add(new DefendingSoldierInfo
+                        {
+                            attackMode = u.AttackMode
+                        });
                     }
                 }
             }
@@ -567,6 +586,7 @@ public static class BattleData
         HasData = false;
         EnemyWaveCount = 1;
         PlayerBuildings.Clear();
+        DefendingSoldiers.Clear();
         TotalSoldiersInBase = 0;
         HasResult = false;
         LastBattleWasVictory = false;
@@ -576,7 +596,6 @@ public static class BattleData
         SavedCurrentWave = 0;
         SavedEnemyMarches.Clear();
         SavedSoldierMarches.Clear();
-        AllowTutorialShieldTroopsInCurrentBattle = false;
         ClearBattleParticipants();
         victoryRewardGranted = false;
         EnemyInvasionManager.ClearPendingRaidRestore();
@@ -628,7 +647,6 @@ public static class BattleData
         HasResult = false;
         IsAttackingExpedition = false;
         SpawnDragonInCurrentBattle = false;
-        AllowTutorialShieldTroopsInCurrentBattle = false;
         ClearRaidEnemyComposition();
 
         // Lưu lại trạng thái công trình sau trận đấu vào Save Slot 1

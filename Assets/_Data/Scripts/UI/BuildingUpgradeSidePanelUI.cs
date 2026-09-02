@@ -175,7 +175,7 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
         bool isRuined = targetBuilding.IsRuined;
         bool isUpgrading = targetBuilding.IsUpgrading;
 
-        int woodCost = 0, stoneCost = 0, foodCost = 0;
+        int goldCost = 0, woodCost = 0, stoneCost = 0, foodCost = 0;
         int duration = 1;
 
         if (isRuined)
@@ -188,6 +188,7 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
         else
         {
             var nextCost = targetBuilding.GetNextUpgradeCost();
+            goldCost = nextCost.goldCost;
             woodCost = nextCost.woodCost;
             stoneCost = nextCost.stoneCost;
             foodCost = nextCost.foodCost;
@@ -210,15 +211,16 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
         // Cần Cấp Thủ Đô > Cấp hiện tại của công trình (Trừ chính Nhà Chính)
         bool settlementLevelOk = isTownHall || (targetBuilding.CurrentLevel < settlementLevel);
 
-        bool hasEnoughWood = true, hasEnoughStone = true, hasEnoughFood = true;
+        bool hasEnoughGold = true, hasEnoughWood = true, hasEnoughStone = true, hasEnoughFood = true;
         bool canAfford = true;
 
         if (JsonDataManager.Ins != null)
         {
+            hasEnoughGold = JsonDataManager.Ins.gold >= goldCost;
             hasEnoughWood = JsonDataManager.Ins.wood >= woodCost;
             hasEnoughStone = JsonDataManager.Ins.stone >= stoneCost;
             hasEnoughFood = JsonDataManager.Ins.food >= foodCost;
-            canAfford = JsonDataManager.Ins.HasEnoughResources(woodCost, stoneCost, foodCost);
+            canAfford = JsonDataManager.Ins.HasEnoughResources(woodCost, stoneCost, foodCost, goldCost);
         }
 
         if (warningNoticeTMP != null)
@@ -264,8 +266,10 @@ public class BuildingUpgradeSidePanelUI : MonoBehaviour
 
         if (foodCostTMP != null)
         {
-            foodCostTMP.text = foodCost.ToString();
-            foodCostTMP.color = hasEnoughFood ? affordableColor : unaffordableColor;
+            // Ô thứ ba của các prefab Demacia hiển thị Vàng. Các nâng cấp cũ
+            // không có giá Vàng vẫn hiển thị 0 như trước.
+            foodCostTMP.text = goldCost.ToString();
+            foodCostTMP.color = hasEnoughGold ? affordableColor : unaffordableColor;
         }
 
         if (buildDurationTMP != null)

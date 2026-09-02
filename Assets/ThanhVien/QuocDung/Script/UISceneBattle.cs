@@ -105,6 +105,12 @@ public class UISceneBattle : MonoBehaviour
     public string spearSoldierName = "Thương Thủ";
     public Sprite tankSoldierIcon;
     public string tankSoldierName = "Khiên Binh";
+    [Tooltip("Icon của công trình/đơn vị Nỏ xuất hiện trong SceneBattle.")]
+    public Sprite crossbowTowerIcon;
+    public string crossbowTowerName = "Tháp Nỏ";
+    [Tooltip("Icon của công trình/đơn vị Pháo xuất hiện trong SceneBattle.")]
+    public Sprite cannonTowerIcon;
+    public string cannonTowerName = "Pháo";
     public Sprite defaultSoldierIcon;
 
     [Header("=== 2. KHUNG KẾT QUẢ CHIẾN THẮNG & THẤT BẠI ===")]
@@ -303,6 +309,14 @@ public class UISceneBattle : MonoBehaviour
             else if (objName.ToLower().Contains("tank") || objName.ToLower().Contains("shield") || objName.ToLower().Contains("khiên"))
             {
                 unitKey = tankSoldierName;
+            }
+            else if (objName.ToLower().Contains("crossbow") || objName.ToLower().Contains("nỏ"))
+            {
+                unitKey = crossbowTowerName;
+            }
+            else if (objName.ToLower().Contains("cannon") || objName.ToLower().Contains("pháo"))
+            {
+                unitKey = cannonTowerName;
             }
             else
             {
@@ -723,6 +737,8 @@ public class UISceneBattle : MonoBehaviour
         int archerCount = 0;
         int spearCount = 0;
         int tankCount = 0;
+        int crossbowTowerCount = 0;
+        int cannonTowerCount = 0;
         int otherCount = 0;
 
         foreach (var u in allUnits)
@@ -752,6 +768,19 @@ public class UISceneBattle : MonoBehaviour
             }
         }
 
+        // Nỏ và Pháo không có UnitController nên quét riêng. Chỉ những tháp
+        // còn sống trong SceneBattle mới được đưa vào thanh đội hình.
+        AttackTowerAI[] towers = Object.FindObjectsByType<AttackTowerAI>(FindObjectsSortMode.None);
+        foreach (AttackTowerAI tower in towers)
+        {
+            if (tower == null || !tower.gameObject.activeInHierarchy || tower.IsDestroyed()) continue;
+
+            if (tower.towerType == AttackTowerType.Cannon)
+                cannonTowerCount++;
+            else
+                crossbowTowerCount++;
+        }
+
         if (tankCount > 0)
         {
             result.Add(new UnitDisplayInfo(tankSoldierName, tankSoldierIcon != null ? tankSoldierIcon : defaultSoldierIcon, tankCount));
@@ -767,6 +796,14 @@ public class UISceneBattle : MonoBehaviour
         if (spearCount > 0)
         {
             result.Add(new UnitDisplayInfo(spearSoldierName, spearSoldierIcon != null ? spearSoldierIcon : defaultSoldierIcon, spearCount));
+        }
+        if (crossbowTowerCount > 0)
+        {
+            result.Add(new UnitDisplayInfo(crossbowTowerName, crossbowTowerIcon != null ? crossbowTowerIcon : defaultSoldierIcon, crossbowTowerCount));
+        }
+        if (cannonTowerCount > 0)
+        {
+            result.Add(new UnitDisplayInfo(cannonTowerName, cannonTowerIcon != null ? cannonTowerIcon : defaultSoldierIcon, cannonTowerCount));
         }
         if (otherCount > 0)
         {
