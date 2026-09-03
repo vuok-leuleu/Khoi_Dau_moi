@@ -345,6 +345,9 @@ public class MoveModeController : MonoBehaviour
             : null;
         if (enemyTarget != null && dispatchedSoldiers.Count > 0)
         {
+            // Nếu một nhóm đã tới trước, nút TẤN CÔNG cũ không được phép giữ
+            // trạng thái hợp lệ trong lúc có thêm quân đang hành quân tới đây.
+            UIEnemyWaveButton.RemoveArrivalButton(enemyTarget);
             GameObject runner = new GameObject("ExpeditionBattleTriggerRunner");
             ExpeditionBattleTrigger trigger = runner.AddComponent<ExpeditionBattleTrigger>();
             trigger.StartMonitoring(dispatchedSoldiers, enemyTarget, "SceneBattle");

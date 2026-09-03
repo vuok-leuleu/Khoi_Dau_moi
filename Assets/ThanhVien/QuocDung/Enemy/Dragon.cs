@@ -101,6 +101,19 @@ public class Dragon : MonoBehaviour, IDeathAnimationHandler
         hasLandingGroundPosition = true;
     }
 
+    /// <summary>
+    /// Khóa hướng nhìn ngay khi Dragon xuất hiện. BattleManager gọi hàm này
+    /// cho cả raid lẫn Dragon trong đội hình chinh phục, trước khi vòng Update
+    /// bắt đầu chọn mục tiêu và xoay theo tầm đánh.
+    /// </summary>
+    public void SetFacingDirection(Vector3 worldDirection)
+    {
+        worldDirection.y = 0f;
+        if (worldDirection.sqrMagnitude <= 0.001f) return;
+
+        transform.rotation = Quaternion.LookRotation(worldDirection.normalized, Vector3.up);
+    }
+
     private void Awake()
     {
         // The current prefab accidentally contains this component twice. Keep

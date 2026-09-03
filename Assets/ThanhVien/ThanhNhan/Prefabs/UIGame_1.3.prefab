@@ -51155,8 +51155,8 @@ MonoBehaviour:
       rewardStone: 100
       rewardWheat: 0
   - chapterId: chapter_2
-    chapterName: "Chương II: Phòng Tuyến EVENMOOR"
-    chapterDescription: "Khai thác công nghệ đá, củng cố phòng tuyến và mở đường tới Terbisia."
+    chapterName: "Chương II: Chinh Phạt BROOKHOLLOW"
+    chapterDescription: "Khai thác công nghệ đá, tập hợp Khiên Binh và chinh phục BROOKHOLLOW."
     chapterBanner: {fileID: 0}
     isCompleted: 0
     isRewardClaimed: 0
@@ -51185,22 +51185,13 @@ MonoBehaviour:
       rewardStone: 250
       rewardWheat: 0
     - questId: ch2_train_shields
-      title: "Huấn luyện 3 Khiên Binh phòng thủ Vaskasia"
+      title: "Huấn luyện 3 Khiên Binh cho cuộc chinh phạt"
       isCompleted: 0
       targetProgress: 3
       currentProgress: 0
       rewardGold: 250
       rewardWood: 250
       rewardStone: 0
-      rewardWheat: 0
-    - questId: ch2_defend_invasion
-      title: "Phòng thủ thành công một cuộc xâm lược gồm 3 đợt"
-      isCompleted: 0
-      targetProgress: 1
-      currentProgress: 0
-      rewardGold: 300
-      rewardWood: 0
-      rewardStone: 200
       rewardWheat: 0
     - questId: ch2_conquer_brookhollow
       title: "Chinh phục BROOKHOLLOW để mở đường tới Terbisia"
@@ -51213,7 +51204,7 @@ MonoBehaviour:
       rewardWheat: 0
   - chapterId: chapter_3
     chapterName: "Ch\u01B0\u01A1ng III: V\xF9ng \u0110\u1EA5t Terbisia"
-    chapterDescription: "Mở rộng đến Terbisia và hoàn thiện lực lượng trước trận phòng thủ Rồng."
+    chapterDescription: "Mở rộng đến Terbisia, hoàn thiện lực lượng và chinh phục TYLBURNE."
     chapterBanner: {fileID: 0}
     isCompleted: 0
     isRewardClaimed: 0
@@ -51259,8 +51250,8 @@ MonoBehaviour:
       rewardWood: 0
       rewardStone: 300
       rewardWheat: 0
-    - questId: ch3_defend_dragon
-      title: "Chiến thắng trận phòng thủ Rồng"
+    - questId: ch3_conquer_tylburne
+      title: "Chinh phục TYLBURNE, vùng đất cuối cùng"
       isCompleted: 0
       targetProgress: 1
       currentProgress: 0

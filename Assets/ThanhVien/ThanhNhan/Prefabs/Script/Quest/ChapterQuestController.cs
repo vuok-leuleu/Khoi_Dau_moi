@@ -69,13 +69,11 @@ public class ChapterQuestController : MonoBehaviour
     private const float GameplayObjectiveSyncInterval = 0.5f;
 
     // Tiến độ Chapter Quest phải tồn tại qua SceneBattle; tutorial cũng đổi scene giữa Prologue.
-    // V2 thay đổi thứ tự và điều kiện quest Chương I-III. Không đọc save V1
-    // để tránh một objective cũ bị gán nhầm sang objective mới.
-    private const string QuestProgressSaveKey = "ChapterQuestProgress_V2";
-    private const string HighestUnlockedChapterSaveKey = "ChapterQuestHighestUnlocked_V2";
-    private const string CurrentChapterSaveKey = "ChapterQuestCurrentChapter_V2";
-    private const string NormalDefenseVictorySaveKey = "ChapterQuestNormalDefenseVictory_V1";
-    private const string DragonDefenseVictorySaveKey = "ChapterQuestDragonDefenseVictory_V1";
+    // V3 bỏ objective phòng thủ và thay objective Rồng bằng chinh phục TYLBURNE.
+    // Không đọc save cũ để objective theo index không bị gán nhầm sang quest mới.
+    private const string QuestProgressSaveKey = "ChapterQuestProgress_V3";
+    private const string HighestUnlockedChapterSaveKey = "ChapterQuestHighestUnlocked_V3";
+    private const string CurrentChapterSaveKey = "ChapterQuestCurrentChapter_V3";
 
     // Bảng màu chuẩn
     private readonly string colorActiveQuest = "#4A2E18";   // Nâu đậm nổi bật
@@ -193,8 +191,8 @@ public class ChapterQuestController : MonoBehaviour
         ChapterData ch2 = new ChapterData
         {
             chapterId = "chapter_2",
-            chapterName = "Chương II: Phòng Tuyến EVENMOOR",
-            chapterDescription = "Khai thác công nghệ đá, củng cố phòng tuyến và mở đường tới Terbisia.",
+            chapterName = "Chương II: Chinh Phạt BROOKHOLLOW",
+            chapterDescription = "Khai thác công nghệ đá, tập hợp Khiên Binh và chinh phục BROOKHOLLOW.",
             rewardGold = 500,
             rewardWood = 400,
             rewardStone = 300,
@@ -203,8 +201,7 @@ public class ChapterQuestController : MonoBehaviour
             {
                 new QuestObjective { questId = "ch2_build_stone_storage", title = "Xây Kho Đá tại Vaskasia", isCompleted = false, rewardGold = 200, rewardWood = 200, rewardStone = 0 },
                 new QuestObjective { questId = "ch2_research_shield", title = "Nghiên cứu mở khóa Khiên Binh tại Viện Binh", isCompleted = false, rewardGold = 200, rewardWood = 0, rewardStone = 250 },
-                new QuestObjective { questId = "ch2_train_shields", title = "Huấn luyện 3 Khiên Binh phòng thủ Vaskasia", targetProgress = 3, isCompleted = false, rewardGold = 250, rewardWood = 250, rewardStone = 0 },
-                new QuestObjective { questId = "ch2_defend_invasion", title = "Phòng thủ thành công một cuộc xâm lược gồm 3 đợt", isCompleted = false, rewardGold = 300, rewardWood = 0, rewardStone = 200 },
+                new QuestObjective { questId = "ch2_train_shields", title = "Huấn luyện 3 Khiên Binh cho cuộc chinh phạt", targetProgress = 3, isCompleted = false, rewardGold = 250, rewardWood = 250, rewardStone = 0 },
                 new QuestObjective { questId = "ch2_conquer_brookhollow", title = "Chinh phục BROOKHOLLOW để mở đường tới Terbisia", isCompleted = false, rewardGold = 350, rewardWood = 200, rewardStone = 200 }
             }
         };
@@ -215,7 +212,7 @@ public class ChapterQuestController : MonoBehaviour
         {
             chapterId = "chapter_3",
             chapterName = "Chương III: Vùng Đất Terbisia",
-            chapterDescription = "Mở rộng đến Terbisia và hoàn thiện lực lượng trước trận phòng thủ Rồng.",
+            chapterDescription = "Mở rộng đến Terbisia, hoàn thiện lực lượng và chinh phục TYLBURNE.",
             rewardGold = 1000,
             rewardWood = 800,
             rewardStone = 600,
@@ -226,7 +223,7 @@ public class ChapterQuestController : MonoBehaviour
                 new QuestObjective { questId = "ch3_establish_terbisia", title = "Xây Nhà Chính tại Terbisia", isCompleted = false, rewardGold = 350, rewardWood = 0, rewardStone = 300 },
                 new QuestObjective { questId = "ch3_upgrade_zeffira_level_3", title = "Nâng cấp Nhà Chính Zeffira lên Cấp 3 (Thành Trì)", isCompleted = false, rewardGold = 500, rewardWood = 500, rewardStone = 500 },
                 new QuestObjective { questId = "ch3_research_crossbow_tower", title = "Nghiên cứu mở khóa Tháp Nỏ", isCompleted = false, rewardGold = 300, rewardWood = 0, rewardStone = 300 },
-                new QuestObjective { questId = "ch3_defend_dragon", title = "Chiến thắng trận phòng thủ Rồng", isCompleted = false, rewardGold = 600, rewardWood = 400, rewardStone = 400 }
+                new QuestObjective { questId = "ch3_conquer_tylburne", title = "Chinh phục TYLBURNE, vùng đất cuối cùng", isCompleted = false, rewardGold = 600, rewardWood = 400, rewardStone = 400 }
             }
         };
         chapterList.Add(ch3);
@@ -543,6 +540,10 @@ public class ChapterQuestController : MonoBehaviour
         {
             TryCompleteActiveQuestById("ch3_conquer_terbisia");
         }
+        else if (IsZoneNamed(zone, "TYLBURNE"))
+        {
+            TryCompleteActiveQuestById("ch3_conquer_tylburne");
+        }
     }
 
     /// <summary>
@@ -558,23 +559,6 @@ public class ChapterQuestController : MonoBehaviour
         {
             TryCompleteActiveQuestById("ch3_establish_terbisia");
         }
-    }
-
-    /// <summary>
-    /// Lưu mốc phòng thủ ở cấp gameplay để kết quả vẫn còn sau round-trip từ
-    /// SceneBattle. Raid Rồng và raid thường là hai objective riêng.
-    /// </summary>
-    public static void RecordDefenseVictory(bool defeatedDragon)
-    {
-        PlayerPrefs.SetInt(defeatedDragon ? DragonDefenseVictorySaveKey : NormalDefenseVictorySaveKey, 1);
-        PlayerPrefs.Save();
-        Instance?.ReportRecordedDefenseVictory(defeatedDragon);
-    }
-
-    private void ReportRecordedDefenseVictory(bool defeatedDragon)
-    {
-        TryCompleteActiveQuestById(
-            defeatedDragon ? "ch3_defend_dragon" : "ch2_defend_invasion");
     }
 
     private void SynchronizeCurrentWorldObjective()
@@ -657,19 +641,10 @@ public class ChapterQuestController : MonoBehaviour
             TryCompleteActiveQuestById("ch3_research_crossbow_tower");
         }
 
-        if (IsQuestActive("ch2_defend_invasion") && PlayerPrefs.GetInt(NormalDefenseVictorySaveKey, 0) == 1)
-        {
-            TryCompleteActiveQuestById("ch2_defend_invasion");
-        }
-
-        if (IsQuestActive("ch3_defend_dragon") && PlayerPrefs.GetInt(DragonDefenseVictorySaveKey, 0) == 1)
-        {
-            TryCompleteActiveQuestById("ch3_defend_dragon");
-        }
-
         SynchronizeConquestObjective("ch1_conquer_evenmoor", "EVENMOOR");
         SynchronizeConquestObjective("ch2_conquer_brookhollow", "BROOKHOLLOW");
         SynchronizeConquestObjective("ch3_conquer_terbisia", "TERBISIA");
+        SynchronizeConquestObjective("ch3_conquer_tylburne", "TYLBURNE");
     }
 
     private void SynchronizeConquestObjective(string questId, string settlementName)

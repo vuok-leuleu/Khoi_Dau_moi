@@ -99,7 +99,7 @@ MonoBehaviour:
   attackBoolParam: IsAttack
   shootBoolParam: 
   shieldBoolParam: IsShield
-  attackDamage: 10
+  attackDamage: 30
   researchType: 5
   attackRate: 2
   projectilePrefab: {fileID: 8080310107249123535, guid: fcb8c8cd951a9e449823d3bffca66e5b, type: 3}

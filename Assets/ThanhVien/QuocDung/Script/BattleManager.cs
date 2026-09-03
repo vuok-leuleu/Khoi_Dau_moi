@@ -21,6 +21,21 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private float unitSpacing = 2.0f;
     [SerializeField] private int unitsPerRow = 4;
 
+    [Header("Player Formation Settings")]
+    [Tooltip("Khoảng cách giữa các lính người chơi trong SceneBattle. Tách dàn Nỏ/Pháo lớn để chúng không chồng mô hình.")]
+    [SerializeField, Min(1f)] private float playerFormationSpacing = 3f;
+    [SerializeField, Min(1)] private int maxPlayerFormationColumns = 5;
+    [Tooltip("Dịch đội hình người chơi vào tâm sân để các hàng ngoài không lọt khỏi camera.")]
+    [SerializeField] private float playerFormationLateralBias = 6f;
+
+    [Header("Conquest Dragon Formation")]
+    [Tooltip("Khoảng cách ngang giữa các Dragon trong cùng một trận chinh phục.")]
+    [SerializeField, Min(1f)] private float conquestDragonSpacing = 5f;
+    [Tooltip("Dịch cả nhóm Dragon nhiều con về giữa khung hình; Dragon đơn lẻ vẫn dùng điểm spawn gốc.")]
+    [SerializeField] private float conquestDragonGroupLateralBias = -4f;
+    [Tooltip("Giới hạn lệch ngang so với điểm spawn Enemy để Dragon luôn ở trong khung camera.")]
+    [SerializeField, Min(1f)] private float conquestDragonMaxLateralOffset = 9f;
+
     [Header("Enemy Prefab Settings")]
     [SerializeField] private GameObject enemyPrefab;
     [SerializeField] private GameObject enemyRangedPrefab;
@@ -857,6 +872,15 @@ public class BattleManager : MonoBehaviour
         // older call sites remain explicit no-ops rather than double-spawning.
     }
 
+    private int GetPlayerFormationColumnCount(int unitCount)
+    {
+        if (unitCount <= 0) return 1;
+        return Mathf.Clamp(
+            Mathf.CeilToInt(Mathf.Sqrt(unitCount)),
+            1,
+            Mathf.Max(1, maxPlayerFormationColumns));
+    }
+
     /// <summary>
     /// Spawn toàn bộ Công trình và Lính của Người Chơi ở BÊN TRÁI
     /// </summary>
@@ -876,29 +900,39 @@ public class BattleManager : MonoBehaviour
             foreach (var march in BattleData.SavedSoldierMarches)
             {
                 if (march != null && march.hasReachedExpeditionDestination &&
-                    march.marchDestinationZoneName == BattleData.TargetedSettlementZoneName)
+                    string.Equals(
+                        march.marchDestinationZoneName,
+                        BattleData.TargetedSettlementZoneName,
+                        System.StringComparison.OrdinalIgnoreCase))
                 {
                     expeditionSoldiers.Add(march);
                 }
             }
 
-            // Nếu số lượng lính trong danh sách march chưa đủ TotalSoldiersInBase thì bổ sung
-            while (expeditionSoldiers.Count < BattleData.TotalSoldiersInBase)
+            // Danh sách march là snapshot nguồn duy nhất cho trận chinh phạt.
+            // Không tự thêm lính mặc định: điều đó làm icon/UI khác với prefab
+            // thực tế được sinh ra khi dữ liệu của một đoàn bị thiếu.
+            if (expeditionSoldiers.Count != BattleData.TotalSoldiersInBase)
             {
-                expeditionSoldiers.Add(new BattleData.SoldierMarchInfo());
+                Debug.LogWarning(
+                    $"[BattleManager] Expedition roster mismatch: snapshot={expeditionSoldiers.Count}, " +
+                    $"expected={BattleData.TotalSoldiersInBase}. Using the verified snapshot.");
+                BattleData.TotalSoldiersInBase = expeditionSoldiers.Count;
             }
 
+            int formationColumns = GetPlayerFormationColumnCount(expeditionSoldiers.Count);
             for (int i = 0; i < expeditionSoldiers.Count; i++)
             {
                 BattleData.SoldierMarchInfo soldier = expeditionSoldiers[i];
                 GameObject prefab = GetSoldierPrefabForBattleUnit(soldier.attackMode, soldier.prefabName, true);
                 if (prefab != null)
                 {
-                    int row = soldierTotalSpawned / unitsPerRow;
-                    int col = soldierTotalSpawned % unitsPerRow;
+                    int row = soldierTotalSpawned / formationColumns;
+                    int col = soldierTotalSpawned % formationColumns;
 
-                    float sOffsetZ = (col - (unitsPerRow - 1) * 0.5f) * unitSpacing;
-                    Vector3 soldierPos = soldierFrontOrigin + Vector3.left * (row * unitSpacing) + Vector3.forward * sOffsetZ;
+                    float sOffsetZ = (col - (formationColumns - 1) * 0.5f) * playerFormationSpacing;
+                    Vector3 soldierPos = soldierFrontOrigin + Vector3.left * (row * playerFormationSpacing) +
+                                         Vector3.forward * (playerFormationLateralBias + sOffsetZ);
                     Quaternion soldierRot = Quaternion.Euler(0, 90, 0);
 
                     GameObject spawnedSoldier = Instantiate(prefab, soldierPos, soldierRot);
@@ -941,17 +975,19 @@ public class BattleManager : MonoBehaviour
             while (defendingSoldiers.Count < BattleData.TotalSoldiersInBase)
                 defendingSoldiers.Add(new BattleData.DefendingSoldierInfo());
 
+            int formationColumns = GetPlayerFormationColumnCount(defendingSoldiers.Count);
             for (int i = 0; i < defendingSoldiers.Count; i++)
             {
                 BattleData.DefendingSoldierInfo soldier = defendingSoldiers[i];
                 GameObject prefab = GetSoldierPrefabForBattleUnit(soldier.attackMode, soldier.prefabName, true);
                 if (prefab != null)
                 {
-                    int row = soldierTotalSpawned / unitsPerRow;
-                    int col = soldierTotalSpawned % unitsPerRow;
+                    int row = soldierTotalSpawned / formationColumns;
+                    int col = soldierTotalSpawned % formationColumns;
 
-                    float sOffsetZ = (col - (unitsPerRow - 1) * 0.5f) * unitSpacing;
-                    Vector3 soldierPos = soldierFrontOrigin + Vector3.left * (row * unitSpacing) + Vector3.forward * sOffsetZ;
+                    float sOffsetZ = (col - (formationColumns - 1) * 0.5f) * playerFormationSpacing;
+                    Vector3 soldierPos = soldierFrontOrigin + Vector3.left * (row * playerFormationSpacing) +
+                                         Vector3.forward * (playerFormationLateralBias + sOffsetZ);
                     Quaternion soldierRot = Quaternion.Euler(0, 90, 0);
 
                     GameObject spawnedSoldier = Instantiate(prefab, soldierPos, soldierRot);
@@ -993,6 +1029,29 @@ public class BattleManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Xác định hướng từ một Enemy ở bên phải chiến trường về đội người chơi.
+    /// Không dùng góc Y cố định vì điểm spawn có thể được xoay hoặc dời trong SceneBattle.
+    /// </summary>
+    private Vector3 GetEnemyFacingDirection(Vector3 enemyPosition)
+    {
+        Vector3 direction = leftSpawnPoint != null
+            ? leftSpawnPoint.position - enemyPosition
+            : Vector3.left;
+        direction.y = 0f;
+
+        return direction.sqrMagnitude > 0.001f
+            ? direction.normalized
+            : Vector3.left;
+    }
+
+    private static Dragon FindDragonComponent(GameObject gameObject)
+    {
+        return gameObject != null
+            ? gameObject.GetComponent<Dragon>() ?? gameObject.GetComponentInChildren<Dragon>(true)
+            : null;
+    }
+
+    /// <summary>
     /// Spawn toàn bộ Enemy thuộc Wave ở BÊN PHẢI
     /// </summary>
     private void SpawnEnemySide()
@@ -1020,6 +1079,16 @@ public class BattleManager : MonoBehaviour
         if (useExplicitComposition || enemyPrefab != null)
         {
             Vector3 originRight = rightSpawnPoint.position;
+            int totalConquestDragons = 0;
+            if (useConquestComposition)
+            {
+                foreach (GameObject conquestPrefab in BattleData.ConquestEnemyPrefabs)
+                {
+                    if (FindDragonComponent(conquestPrefab) != null) totalConquestDragons++;
+                }
+            }
+
+            int conquestDragonIndex = 0;
 
             for (int i = 0; i < count; i++)
             {
@@ -1034,11 +1103,41 @@ public class BattleManager : MonoBehaviour
                 int col = i % unitsPerRow;
 
                 Vector3 enemyPos = originRight + Vector3.right * (row * unitSpacing) + Vector3.forward * (col * unitSpacing - 1.5f);
-                Quaternion enemyRot = Quaternion.Euler(0, -90, 0); // Quay mặt về phía bên Trái (Player)
+                Dragon sourceDragon = FindDragonComponent(prefabToSpawn);
+                if (sourceDragon != null && useConquestComposition)
+                {
+                    float centeredDragonIndex = conquestDragonIndex - (totalConquestDragons - 1) * 0.5f;
+                    float groupLateralBias = totalConquestDragons > 1
+                        ? conquestDragonGroupLateralBias
+                        : 0f;
+                    float lateralOffset = Mathf.Clamp(
+                        centeredDragonIndex * conquestDragonSpacing + groupLateralBias,
+                        -conquestDragonMaxLateralOffset,
+                        conquestDragonMaxLateralOffset);
+                    enemyPos = originRight + Vector3.forward * lateralOffset;
+                    conquestDragonIndex++;
+                }
+
+                Vector3 dragonFacingDirection = sourceDragon != null
+                    ? GetEnemyFacingDirection(enemyPos)
+                    : Vector3.left;
+                Quaternion enemyRot = sourceDragon != null
+                    ? Quaternion.LookRotation(dragonFacingDirection)
+                    : Quaternion.Euler(0f, -90f, 0f);
 
                 GameObject spawnedEnemy = Instantiate(prefabToSpawn, enemyPos, enemyRot);
                 spawnedEnemy.name = $"Enemy_WaveUnit_{i + 1}";
                 spawnedEnemyObjects.Add(spawnedEnemy);
+
+                // Dragon ở TERBISIA/TYLBURNE thuộc đội hình chinh phục và đi
+                // qua luồng spawn chung này. Khóa hướng ngay khi tạo để model
+                // luôn quay về đội người chơi, trước cả khi AI tìm mục tiêu.
+                if (sourceDragon != null)
+                {
+                    Dragon conquestDragon = spawnedEnemy.GetComponent<Dragon>() ??
+                                            spawnedEnemy.GetComponentInChildren<Dragon>(true);
+                    conquestDragon?.SetFacingDirection(dragonFacingDirection);
+                }
 
                 // Kích hoạt AI giao tranh cho Enemy nếu có
                 EnemyAI enemyAI = spawnedEnemy.GetComponent<EnemyAI>();
@@ -1049,7 +1148,8 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        // Rồng chỉ xuất hiện ở trận phòng thủ lớn được kịch bản đánh dấu.
+        // Raid Rồng dùng điểm spawn trên cao riêng; Rồng thuộc đội hình chinh
+        // phục đã được tạo và quay hướng đúng trong vòng lặp bên trên.
         if (!useConquestComposition && BattleData.SpawnDragonInCurrentBattle) SpawnDragon();
     }
 
@@ -1077,15 +1177,10 @@ public class BattleManager : MonoBehaviour
             return;
         }
 
-        // Make the model face into the battlefield instead of relying on a
-        // world-axis direction. In the current scene this resolves to Y = -90.
-        Vector3 battleDirection = leftSpawnPoint != null
-            ? leftSpawnPoint.position - dragonHighSpawnPoint.position
-            : Vector3.left;
-        battleDirection.y = 0f;
-        Quaternion dragonRotation = battleDirection.sqrMagnitude > 0.001f
-            ? Quaternion.LookRotation(battleDirection.normalized)
-            : Quaternion.Euler(0f, -90f, 0f);
+        // Hướng nhìn lấy từ hai điểm spawn của chiến trường, không phụ thuộc
+        // vào góc quay hay vị trí world cố định.
+        Vector3 battleDirection = GetEnemyFacingDirection(dragonHighSpawnPoint.position);
+        Quaternion dragonRotation = Quaternion.LookRotation(battleDirection);
         GameObject spawnedDragon = Instantiate(dragonPrefabObject, dragonHighSpawnPoint.position, dragonRotation);
 
         // Bảo đảm vẫn nhìn thấy được nếu prefab được lưu ở trạng thái inactive.
@@ -1095,6 +1190,7 @@ public class BattleManager : MonoBehaviour
         Dragon dragon = spawnedDragon.GetComponent<Dragon>();
         if (dragon != null)
         {
+            dragon.SetFacingDirection(battleDirection);
             // Pivot của model Rồng thấp hơn chân; bù Y để Idle Landing không xuyên mặt đất.
             Vector3 dragonLandingPosition = rightSpawnPoint.position + Vector3.up * dragonLandingHeightOffset;
             dragon.SetLandingGroundPosition(dragonLandingPosition);

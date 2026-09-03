@@ -3177,6 +3177,7 @@ GameObject:
   - component: {fileID: 6990865026657273980}
   - component: {fileID: 726180013}
   - component: {fileID: 2012087881051719403}
+  - component: {fileID: 601582937405719234}
   m_Layer: 9
   m_Name: Dragon
   m_TagString: Enemy
@@ -5267,8 +5268,8 @@ MonoBehaviour:
   moveSpeed: 4
   stoppingDistance: 3
   turnSpeed: 720
-  attackRange: 3
-  attackDamage: 25
+  attackRange: 7
+  attackDamage: 15
   attackCooldown: 1.5
   thirdAttackAreaRadius: 4
   thirdAttackVfxPrefab: {fileID: 100000, guid: 6c0d3a4e98d141c98fa6ab48d7e68f84, type: 3}
@@ -5327,6 +5328,27 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!65 &601582937405719234
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4118137334638840365}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 8, y: 4.5, z: 7}
+  m_Center: {x: 0, y: 2.25, z: 0}
 --- !u!1 &4134755438275651345
 GameObject:
   m_ObjectHideFlags: 0

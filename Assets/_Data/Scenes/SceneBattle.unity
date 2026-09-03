@@ -8705,6 +8705,12 @@ MonoBehaviour:
   buildingSpacing: 4
   unitSpacing: 2
   unitsPerRow: 4
+  playerFormationSpacing: 3
+  maxPlayerFormationColumns: 5
+  playerFormationLateralBias: 6
+  conquestDragonSpacing: 5
+  conquestDragonGroupLateralBias: -4
+  conquestDragonMaxLateralOffset: 9
   enemyPrefab: {fileID: 370480945864454416, guid: 2d56dfb52da6a654ab4fca2a3d449e2d, type: 3}
   enemyRangedPrefab: {fileID: 3322312632539215873, guid: 01a8ddab520123647b95a3ddf60d1b92, type: 3}
   spawnDragonAtBattleStart: 1

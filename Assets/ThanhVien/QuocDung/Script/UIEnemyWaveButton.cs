@@ -110,6 +110,13 @@ public class UIEnemyWaveButton : MonoBehaviour
         if (targetLeadEnemy == null || !isTroopsArrivedAtTarget) return;
 
         SettlementZone targetZone = FindZoneFromTarget(targetLeadEnemy);
+        if (targetZone != null && targetZone.hasEnemyOutpost &&
+            !ExpeditionBattleTrigger.AreAllTargetSoldiersReady(targetLeadEnemy))
+        {
+            UIManager.Ins?.ShowWarning("Đợi toàn bộ quân đã điều tới căn cứ địch rồi mới bắt đầu trận đấu.");
+            return;
+        }
+
         int enemyCount = targetZone != null ? targetZone.GetConquestEnemyCount() : 5;
         if (targetZone != null)
         {
@@ -261,6 +268,18 @@ public class UIEnemyWaveButton : MonoBehaviour
     }
 
     /// <summary>
+    /// Hủy nút TẤN CÔNG đã báo "đã tới" khi người chơi điều thêm quân tới
+    /// cùng căn cứ. Trigger mới sẽ dựng lại nút sau khi toàn bộ đoàn tập kết.
+    /// </summary>
+    public static void RemoveArrivalButton(Transform leadEnemy)
+    {
+        if (leadEnemy == null) return;
+
+        UIEnemyWaveButton existing = leadEnemy.GetComponentInChildren<UIEnemyWaveButton>();
+        if (existing != null) Destroy(existing.gameObject);
+    }
+
+    /// <summary>
     /// Trả về offset đủ cao để Canvas không bị Renderer của công trình che.
     /// </summary>
     public static float GetClearHeightAboveTarget(Transform target, float minimumHeight)
@@ -305,24 +324,7 @@ public class ExpeditionBattleTrigger : MonoBehaviour
             return;
         }
 
-        Vector3 targetPos = enemyTarget.position;
-        bool allReached = true;
-
-        foreach (var s in marchingSoldiers)
-        {
-            // UnitController tự chuyển isExpeditionMarching thành false khi
-            // đến lượt đích. Vì vậy không thể chỉ theo dõi cờ đang hành quân:
-            // hãy đợi metadata "đã tới đích" của từng lính trong đoàn.
-            if (s == null || !s.gameObject.activeInHierarchy ||
-                !s.hasReachedExpeditionDestination ||
-                Vector3.Distance(s.transform.position, targetPos) > 4.5f)
-            {
-                allReached = false;
-                break;
-            }
-        }
-
-        if (allReached)
+        if (AreAllTargetSoldiersReady(enemyTarget))
         {
             Debug.Log("[ExpeditionBattleTrigger] ⚔️ TẤT CẢ lính đã tập kết đầy đủ tại Căn cứ Địch! Dừng hành quân và hiển thị Nút Tấn Công...");
 
@@ -343,5 +345,40 @@ public class ExpeditionBattleTrigger : MonoBehaviour
 
             Destroy(gameObject);
         }
+    }
+
+    /// <summary>
+    /// Một căn cứ có thể nhận quân qua nhiều lệnh điều quân. Không được tạo
+    /// nút TẤN CÔNG chỉ vì nhóm của một trigger đã đến, trong khi nhóm khác
+    /// mang cùng marchDestinationZoneName vẫn đang hành quân.
+    /// </summary>
+    public static bool AreAllTargetSoldiersReady(Transform target)
+    {
+        SettlementZone targetZone = UIEnemyWaveButton.FindZoneFromTarget(target);
+        if (targetZone == null) return false;
+
+        bool hasExpeditionSoldier = false;
+        UnitController[] allUnits = Object.FindObjectsByType<UnitController>(FindObjectsSortMode.None);
+        foreach (UnitController unit in allUnits)
+        {
+            if (unit == null || unit.isDead ||
+                !string.Equals(
+                    unit.marchDestinationZoneName,
+                    targetZone.settlementName,
+                    System.StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            hasExpeditionSoldier = true;
+            if (!unit.gameObject.activeInHierarchy ||
+                !unit.hasReachedExpeditionDestination ||
+                Vector3.Distance(unit.transform.position, target.position) > 4.5f)
+            {
+                return false;
+            }
+        }
+
+        return hasExpeditionSoldier;
     }
 }

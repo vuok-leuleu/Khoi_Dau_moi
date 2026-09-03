@@ -321,7 +321,7 @@ public static class BattleData
                                           CampaignTutorialManager.Ins.IsFirstTutorialDefenseActive;
         foreach (var u in activeUnits)
         {
-            if (u != null && u.gameObject.activeInHierarchy)
+            if (u != null && u.gameObject.activeInHierarchy && !u.isDead)
             {
                 if (u.isExpeditionMarching || u.hasReachedExpeditionDestination)
                 {
@@ -346,7 +346,10 @@ public static class BattleData
                 if (IsAttackingExpedition)
                 {
                     bool isAttackingTarget = u.hasReachedExpeditionDestination &&
-                        u.marchDestinationZoneName == TargetedSettlementZoneName;
+                        string.Equals(
+                            u.marchDestinationZoneName,
+                            TargetedSettlementZoneName,
+                            System.StringComparison.OrdinalIgnoreCase);
                     if (isAttackingTarget)
                     {
                         battleSoldierCount++;
@@ -725,7 +728,10 @@ public static class BattleData
         SettlementZone[] allZones = Object.FindObjectsByType<SettlementZone>(FindObjectsSortMode.None);
         foreach (var z in allZones)
         {
-            if (z != null && z.settlementName == TargetedSettlementZoneName)
+            if (z != null && string.Equals(
+                    z.settlementName,
+                    TargetedSettlementZoneName,
+                    System.StringComparison.OrdinalIgnoreCase))
             {
                 conqueredZone = z;
                 break;
@@ -748,7 +754,10 @@ public static class BattleData
         {
             if (unit != null && unit.gameObject.activeInHierarchy &&
                 unit.hasReachedExpeditionDestination &&
-                unit.marchDestinationZoneName == TargetedSettlementZoneName)
+                string.Equals(
+                    unit.marchDestinationZoneName,
+                    TargetedSettlementZoneName,
+                    System.StringComparison.OrdinalIgnoreCase))
             {
                 unit.CompleteExpeditionMarch();
             }
@@ -768,7 +777,10 @@ public static class BattleData
         {
             if (u != null && u.gameObject.activeInHierarchy &&
                 u.hasReachedExpeditionDestination &&
-                u.marchDestinationZoneName == TargetedSettlementZoneName)
+                string.Equals(
+                    u.marchDestinationZoneName,
+                    TargetedSettlementZoneName,
+                    System.StringComparison.OrdinalIgnoreCase))
             {
                 Object.Destroy(u.gameObject);
             }
