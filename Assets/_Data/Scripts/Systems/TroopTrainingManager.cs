@@ -989,6 +989,10 @@ public class TroopTrainingManager : MonoBehaviour
             Debug.LogWarning($"[TroopTrainingManager] {slot.troopType} chỉ spawn được {spawnedCount}/{requiredCount} lính tại vùng {zoneName}.");
         }
 
+        // Chỉ báo quest sau khi lính thật đã spawn thành công, không dùng trạng
+        // thái của ô UI hay hologram đang huấn luyện.
+        ChapterQuestController.Instance?.ReportTroopsTrained(slot.troopType, spawnedCount, zone);
+
         // Ô huấn luyện giữ nguyên trạng thái ĐÃ HOÀN THÀNH (chứa lính)
         slot.isTraining = false;
         slot.isCompleted = true;

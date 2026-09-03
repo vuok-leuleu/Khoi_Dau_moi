@@ -261,6 +261,7 @@ public class ResearchPanel : MonoBehaviour
         // ResearchPanel thường bị SetActive(false) khi đóng UI, nhưng nâng cấp
         // vừa mua vẫn phải lập tức áp dụng cho lính đang có trên bản đồ.
         ResearchUpgradeEffects.ApplyResearchState(this);
+        ChapterQuestController.Instance?.ReportResearchUnlocked(node.id);
         // Nghiên cứu thành công thì đóng thẻ chi tiết. Bấm một node khác sẽ gọi
         // SelectNode và mở lại DetailPanel như bình thường.
         HideDetails();

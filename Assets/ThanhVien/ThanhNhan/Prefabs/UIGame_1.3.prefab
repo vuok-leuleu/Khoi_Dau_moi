@@ -51097,9 +51097,9 @@ MonoBehaviour:
       rewardWood: 30
       rewardStone: 20
       rewardWheat: 0
-  - chapterId: 
+  - chapterId: chapter_1
     chapterName: "Ch\u01B0\u01A1ng I: Khai Nguy\xEAn"
-    chapterDescription: 
+    chapterDescription: "Củng cố Zeffira, lập đội Cung Thủ và chinh phục EVENMOOR."
     chapterBanner: {fileID: 0}
     isCompleted: 0
     isRewardClaimed: 0
@@ -51109,8 +51109,8 @@ MonoBehaviour:
     keyRewardName: Honorary Crownguard
     keyRewardIcon: {fileID: 0}
     objectives:
-    - questId: 
-      title: "X\xE2y N\xF4ng Tr\u1EA1i Zeffira"
+    - questId: ch1_build_food_storage
+      title: "Xây Kho Lúa tại Zeffira"
       isCompleted: 0
       targetProgress: 1
       currentProgress: 0
@@ -51118,8 +51118,8 @@ MonoBehaviour:
       rewardWood: 150
       rewardStone: 0
       rewardWheat: 0
-    - questId: 
-      title: "Nghi\xEAn c\u1EE9u Cung Th\u1EE7 t\u1EA1i Vi\u1EC7n Binh"
+    - questId: ch1_research_archer
+      title: "Nghiên cứu mở khóa Cung Thủ tại Viện Binh"
       isCompleted: 0
       targetProgress: 1
       currentProgress: 0
@@ -51127,26 +51127,17 @@ MonoBehaviour:
       rewardWood: 0
       rewardStone: 100
       rewardWheat: 0
-    - questId: 
-      title: "Chi\xEAu m\u1ED9 5 Cung Th\u1EE7 b\u1EA3o v\u1EC7 doanh tr\u1EA1i"
+    - questId: ch1_train_archers
+      title: "Huấn luyện 6 Cung Thủ bảo vệ Zeffira"
       isCompleted: 0
-      targetProgress: 1
+      targetProgress: 6
       currentProgress: 0
       rewardGold: 150
       rewardWood: 100
       rewardStone: 0
       rewardWheat: 0
-    - questId: 
-      title: "Ti\xEAu di\u1EC7t 3 b\xE3i qu\xE1i th\xFA bi\xEAn gi\u1EDBi"
-      isCompleted: 0
-      targetProgress: 1
-      currentProgress: 0
-      rewardGold: 150
-      rewardWood: 0
-      rewardStone: 100
-      rewardWheat: 0
-    - questId: 
-      title: "N\xE2ng c\u1EA5p Nh\xE0 Ch\xEDnh Zeffira l\xEAn C\u1EA5p 2"
+    - questId: ch1_upgrade_zeffira_level_2
+      title: "Nâng cấp Nhà Chính Zeffira lên Cấp 2"
       isCompleted: 0
       targetProgress: 1
       currentProgress: 0
@@ -51154,9 +51145,18 @@ MonoBehaviour:
       rewardWood: 200
       rewardStone: 200
       rewardWheat: 0
-  - chapterId: 
-    chapterName: "Ch\u01B0\u01A1ng II: V\u1EF1c S\xE2u Vaskasia"
-    chapterDescription: 
+    - questId: ch1_conquer_evenmoor
+      title: "Chinh phục EVENMOOR để mở khóa công nghệ đá"
+      isCompleted: 0
+      targetProgress: 1
+      currentProgress: 0
+      rewardGold: 150
+      rewardWood: 0
+      rewardStone: 100
+      rewardWheat: 0
+  - chapterId: chapter_2
+    chapterName: "Chương II: Phòng Tuyến EVENMOOR"
+    chapterDescription: "Khai thác công nghệ đá, củng cố phòng tuyến và mở đường tới Terbisia."
     chapterBanner: {fileID: 0}
     isCompleted: 0
     isRewardClaimed: 0
@@ -51166,8 +51166,8 @@ MonoBehaviour:
     keyRewardName: Vanguard Protector
     keyRewardIcon: {fileID: 0}
     objectives:
-    - questId: 
-      title: "M\u1EDF r\u1ED9ng l\xE3nh th\u1ED5 sang m\u1ECF \u0111\xE1 Vaskasia"
+    - questId: ch2_build_stone_storage
+      title: "Xây Kho Đá tại Vaskasia"
       isCompleted: 0
       targetProgress: 1
       currentProgress: 0
@@ -51175,8 +51175,8 @@ MonoBehaviour:
       rewardWood: 200
       rewardStone: 0
       rewardWheat: 0
-    - questId: 
-      title: "X\xE2y d\u1EF1ng M\u1ECF Khai Th\xE1c \u0110\xE1 Vaskasia"
+    - questId: ch2_research_shield
+      title: "Nghiên cứu mở khóa Khiên Binh tại Viện Binh"
       isCompleted: 0
       targetProgress: 1
       currentProgress: 0
@@ -51184,18 +51184,17 @@ MonoBehaviour:
       rewardWood: 0
       rewardStone: 250
       rewardWheat: 0
-    - questId: 
-      title: "X\xE2y d\u1EF1ng 2 Th\xE1p Canh Ph\xF2ng Th\u1EE7"
+    - questId: ch2_train_shields
+      title: "Huấn luyện 3 Khiên Binh phòng thủ Vaskasia"
       isCompleted: 0
-      targetProgress: 1
+      targetProgress: 3
       currentProgress: 0
       rewardGold: 250
       rewardWood: 250
       rewardStone: 0
       rewardWheat: 0
-    - questId: 
-      title: "\u0110\u1EA9y l\xF9i 3 \u0111\u1EE3t qu\xE1i v\u1EADt x\xE2m l\u0103ng
-        bi\xEAn c\u01B0\u01A1ng"
+    - questId: ch2_defend_invasion
+      title: "Phòng thủ thành công một cuộc xâm lược gồm 3 đợt"
       isCompleted: 0
       targetProgress: 1
       currentProgress: 0
@@ -51203,9 +51202,18 @@ MonoBehaviour:
       rewardWood: 0
       rewardStone: 200
       rewardWheat: 0
-  - chapterId: 
+    - questId: ch2_conquer_brookhollow
+      title: "Chinh phục BROOKHOLLOW để mở đường tới Terbisia"
+      isCompleted: 0
+      targetProgress: 1
+      currentProgress: 0
+      rewardGold: 350
+      rewardWood: 200
+      rewardStone: 200
+      rewardWheat: 0
+  - chapterId: chapter_3
     chapterName: "Ch\u01B0\u01A1ng III: V\xF9ng \u0110\u1EA5t Terbisia"
-    chapterDescription: 
+    chapterDescription: "Mở rộng đến Terbisia và hoàn thiện lực lượng trước trận phòng thủ Rồng."
     chapterBanner: {fileID: 0}
     isCompleted: 0
     isRewardClaimed: 0
@@ -51215,8 +51223,8 @@ MonoBehaviour:
     keyRewardName: Demacia Commander
     keyRewardIcon: {fileID: 0}
     objectives:
-    - questId: 
-      title: "Khai ph\xE1 to\xE0n b\u1ED9 v\xF9ng s\u01B0\u01A1ng m\xF9 Terbisia"
+    - questId: ch3_conquer_terbisia
+      title: "Chinh phục TERBISIA"
       isCompleted: 0
       targetProgress: 1
       currentProgress: 0
@@ -51224,9 +51232,8 @@ MonoBehaviour:
       rewardWood: 300
       rewardStone: 0
       rewardWheat: 0
-    - questId: 
-      title: "X\xE2y d\u1EF1ng Tr\u1EA1i R\xE8n & N\xE2ng c\u1EA5p Gi\xE1p Ho\xE0ng
-        Gia"
+    - questId: ch3_establish_terbisia
+      title: "Xây Nhà Chính tại Terbisia"
       isCompleted: 0
       targetProgress: 1
       currentProgress: 0
@@ -51234,15 +51241,32 @@ MonoBehaviour:
       rewardWood: 0
       rewardStone: 300
       rewardWheat: 0
-    - questId: 
-      title: "N\xE2ng c\u1EA5p Nh\xE0 Ch\xEDnh Zeffira l\xEAn C\u1EA5p 3 (Th\xE0nh
-        Tr\xEC)"
+    - questId: ch3_upgrade_zeffira_level_3
+      title: "Nâng cấp Nhà Chính Zeffira lên Cấp 3 (Thành Trì)"
       isCompleted: 0
       targetProgress: 1
       currentProgress: 0
       rewardGold: 500
       rewardWood: 500
       rewardStone: 500
+      rewardWheat: 0
+    - questId: ch3_research_crossbow_tower
+      title: "Nghiên cứu mở khóa Tháp Nỏ"
+      isCompleted: 0
+      targetProgress: 1
+      currentProgress: 0
+      rewardGold: 300
+      rewardWood: 0
+      rewardStone: 300
+      rewardWheat: 0
+    - questId: ch3_defend_dragon
+      title: "Chiến thắng trận phòng thủ Rồng"
+      isCompleted: 0
+      targetProgress: 1
+      currentProgress: 0
+      rewardGold: 600
+      rewardWood: 400
+      rewardStone: 400
       rewardWheat: 0
   showAllChapterObjectives: 0
 --- !u!1 &8479678611533422065

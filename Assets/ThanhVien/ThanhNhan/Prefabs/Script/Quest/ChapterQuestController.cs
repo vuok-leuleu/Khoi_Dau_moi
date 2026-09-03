@@ -65,11 +65,17 @@ public class ChapterQuestController : MonoBehaviour
     private CanvasGroup windowCanvasGroup;
     private Vector2 windowRestPosition;
     private bool hasWindowRestPosition;
+    private float gameplayObjectiveSyncTimer;
+    private const float GameplayObjectiveSyncInterval = 0.5f;
 
     // Tiến độ Chapter Quest phải tồn tại qua SceneBattle; tutorial cũng đổi scene giữa Prologue.
-    private const string QuestProgressSaveKey = "ChapterQuestProgress_V1";
-    private const string HighestUnlockedChapterSaveKey = "ChapterQuestHighestUnlocked_V1";
-    private const string CurrentChapterSaveKey = "ChapterQuestCurrentChapter_V1";
+    // V2 thay đổi thứ tự và điều kiện quest Chương I-III. Không đọc save V1
+    // để tránh một objective cũ bị gán nhầm sang objective mới.
+    private const string QuestProgressSaveKey = "ChapterQuestProgress_V2";
+    private const string HighestUnlockedChapterSaveKey = "ChapterQuestHighestUnlocked_V2";
+    private const string CurrentChapterSaveKey = "ChapterQuestCurrentChapter_V2";
+    private const string NormalDefenseVictorySaveKey = "ChapterQuestNormalDefenseVictory_V1";
+    private const string DragonDefenseVictorySaveKey = "ChapterQuestDragonDefenseVictory_V1";
 
     // Bảng màu chuẩn
     private readonly string colorActiveQuest = "#4A2E18";   // Nâu đậm nổi bật
@@ -102,8 +108,23 @@ public class ChapterQuestController : MonoBehaviour
         if (nextChapterBtn != null) nextChapterBtn.onClick.AddListener(NextChapter);
         if (returnButton != null) returnButton.onClick.AddListener(CloseWindow);
 
+        // Một công trình có thể đã được xây trước khi ChapterQuestController
+        // được tạo lại sau khi quay về từ SceneBattle hoặc tải save.
+        SynchronizeCurrentWorldObjective();
         UpdateTrackerHUD();
         CloseWindowImmediately();
+    }
+
+    private void Update()
+    {
+        // Một vài hệ thống khôi phục UnitController sau Start. Đồng bộ định kỳ
+        // giúp objective đang mở nhận đúng trạng thái world/load-save mà không
+        // phải phụ thuộc vào thứ tự khởi tạo các GameObject.
+        gameplayObjectiveSyncTimer += Time.unscaledDeltaTime;
+        if (gameplayObjectiveSyncTimer < GameplayObjectiveSyncInterval) return;
+
+        gameplayObjectiveSyncTimer = 0f;
+        SynchronizeCurrentWorldObjective();
     }
 
     private void UpdateTrackerHUD()
@@ -150,18 +171,20 @@ public class ChapterQuestController : MonoBehaviour
         // 1. CHƯƠNG I
         ChapterData ch1 = new ChapterData
         {
+            chapterId = "chapter_1",
             chapterName = "Chương I: Khai Nguyên",
+            chapterDescription = "Củng cố Zeffira, lập đội Cung Thủ và chinh phục EVENMOOR.",
             rewardGold = 200,
             rewardWood = 200,
             rewardStone = 200,
             keyRewardName = "Honorary Crownguard",
             objectives = new List<QuestObjective>
             {
-                new QuestObjective { title = "Xây Nông Trại Zeffira", isCompleted = false, rewardGold = 100, rewardWood = 150, rewardStone = 0 },
-                new QuestObjective { title = "Nghiên cứu Cung Thủ tại Viện Binh", isCompleted = false, rewardGold = 100, rewardWood = 0, rewardStone = 100 },
-                new QuestObjective { title = "Chiêu mộ 5 Cung Thủ bảo vệ doanh trại", isCompleted = false, rewardGold = 150, rewardWood = 100, rewardStone = 0 },
-                new QuestObjective { title = "Tiêu diệt 3 bãi quái thú biên giới", isCompleted = false, rewardGold = 150, rewardWood = 0, rewardStone = 100 },
-                new QuestObjective { title = "Nâng cấp Nhà Chính Zeffira lên Cấp 2", isCompleted = false, rewardGold = 300, rewardWood = 200, rewardStone = 200 }
+                new QuestObjective { questId = "ch1_build_food_storage", title = "Xây Kho Lúa tại Zeffira", isCompleted = false, rewardGold = 100, rewardWood = 150, rewardStone = 0 },
+                new QuestObjective { questId = "ch1_research_archer", title = "Nghiên cứu mở khóa Cung Thủ tại Viện Binh", isCompleted = false, rewardGold = 100, rewardWood = 0, rewardStone = 100 },
+                new QuestObjective { questId = "ch1_train_archers", title = "Huấn luyện 6 Cung Thủ bảo vệ Zeffira", targetProgress = 6, isCompleted = false, rewardGold = 150, rewardWood = 100, rewardStone = 0 },
+                new QuestObjective { questId = "ch1_upgrade_zeffira_level_2", title = "Nâng cấp Nhà Chính Zeffira lên Cấp 2", isCompleted = false, rewardGold = 300, rewardWood = 200, rewardStone = 200 },
+                new QuestObjective { questId = "ch1_conquer_evenmoor", title = "Chinh phục EVENMOOR để mở khóa công nghệ đá", isCompleted = false, rewardGold = 150, rewardWood = 0, rewardStone = 100 }
             }
         };
         chapterList.Add(ch1);
@@ -169,17 +192,20 @@ public class ChapterQuestController : MonoBehaviour
         // 2. CHƯƠNG II
         ChapterData ch2 = new ChapterData
         {
-            chapterName = "Chương II: Vực Sâu Vaskasia",
+            chapterId = "chapter_2",
+            chapterName = "Chương II: Phòng Tuyến EVENMOOR",
+            chapterDescription = "Khai thác công nghệ đá, củng cố phòng tuyến và mở đường tới Terbisia.",
             rewardGold = 500,
             rewardWood = 400,
             rewardStone = 300,
             keyRewardName = "Vanguard Protector",
             objectives = new List<QuestObjective>
             {
-                new QuestObjective { title = "Mở rộng lãnh thổ sang mỏ đá Vaskasia", isCompleted = false, rewardGold = 200, rewardWood = 200, rewardStone = 0 },
-                new QuestObjective { title = "Xây dựng Mỏ Khai Thác Đá Vaskasia", isCompleted = false, rewardGold = 200, rewardWood = 0, rewardStone = 250 },
-                new QuestObjective { title = "Xây dựng 2 Tháp Canh Phòng Thủ", isCompleted = false, rewardGold = 250, rewardWood = 250, rewardStone = 0 },
-                new QuestObjective { title = "Đẩy lùi 3 đợt quái vật xâm lăng biên cương", isCompleted = false, rewardGold = 300, rewardWood = 0, rewardStone = 200 }
+                new QuestObjective { questId = "ch2_build_stone_storage", title = "Xây Kho Đá tại Vaskasia", isCompleted = false, rewardGold = 200, rewardWood = 200, rewardStone = 0 },
+                new QuestObjective { questId = "ch2_research_shield", title = "Nghiên cứu mở khóa Khiên Binh tại Viện Binh", isCompleted = false, rewardGold = 200, rewardWood = 0, rewardStone = 250 },
+                new QuestObjective { questId = "ch2_train_shields", title = "Huấn luyện 3 Khiên Binh phòng thủ Vaskasia", targetProgress = 3, isCompleted = false, rewardGold = 250, rewardWood = 250, rewardStone = 0 },
+                new QuestObjective { questId = "ch2_defend_invasion", title = "Phòng thủ thành công một cuộc xâm lược gồm 3 đợt", isCompleted = false, rewardGold = 300, rewardWood = 0, rewardStone = 200 },
+                new QuestObjective { questId = "ch2_conquer_brookhollow", title = "Chinh phục BROOKHOLLOW để mở đường tới Terbisia", isCompleted = false, rewardGold = 350, rewardWood = 200, rewardStone = 200 }
             }
         };
         chapterList.Add(ch2);
@@ -187,16 +213,20 @@ public class ChapterQuestController : MonoBehaviour
         // 3. CHƯƠNG III
         ChapterData ch3 = new ChapterData
         {
+            chapterId = "chapter_3",
             chapterName = "Chương III: Vùng Đất Terbisia",
+            chapterDescription = "Mở rộng đến Terbisia và hoàn thiện lực lượng trước trận phòng thủ Rồng.",
             rewardGold = 1000,
             rewardWood = 800,
             rewardStone = 600,
             keyRewardName = "Demacia Commander",
             objectives = new List<QuestObjective>
             {
-                new QuestObjective { title = "Khai phá toàn bộ vùng sương mù Terbisia", isCompleted = false, rewardGold = 300, rewardWood = 300, rewardStone = 0 },
-                new QuestObjective { title = "Xây dựng Trại Rèn & Nâng cấp Giáp Hoàng Gia", isCompleted = false, rewardGold = 350, rewardWood = 0, rewardStone = 300 },
-                new QuestObjective { title = "Nâng cấp Nhà Chính Zeffira lên Cấp 3 (Thành Trì)", isCompleted = false, rewardGold = 500, rewardWood = 500, rewardStone = 500 }
+                new QuestObjective { questId = "ch3_conquer_terbisia", title = "Chinh phục TERBISIA", isCompleted = false, rewardGold = 300, rewardWood = 300, rewardStone = 0 },
+                new QuestObjective { questId = "ch3_establish_terbisia", title = "Xây Nhà Chính tại Terbisia", isCompleted = false, rewardGold = 350, rewardWood = 0, rewardStone = 300 },
+                new QuestObjective { questId = "ch3_upgrade_zeffira_level_3", title = "Nâng cấp Nhà Chính Zeffira lên Cấp 3 (Thành Trì)", isCompleted = false, rewardGold = 500, rewardWood = 500, rewardStone = 500 },
+                new QuestObjective { questId = "ch3_research_crossbow_tower", title = "Nghiên cứu mở khóa Tháp Nỏ", isCompleted = false, rewardGold = 300, rewardWood = 0, rewardStone = 300 },
+                new QuestObjective { questId = "ch3_defend_dragon", title = "Chiến thắng trận phòng thủ Rồng", isCompleted = false, rewardGold = 600, rewardWood = 400, rewardStone = 400 }
             }
         };
         chapterList.Add(ch3);
@@ -399,6 +429,374 @@ public class ChapterQuestController : MonoBehaviour
         if (chapterIndex < 0 || chapterIndex >= chapterList.Count) return -1;
         return chapterList[chapterIndex].objectives.FindIndex(objective => !objective.isCompleted);
     }
+
+    /// <summary>
+    /// Nhận mốc một công trình đã xây xong từ gameplay. Quest chỉ hoàn thành
+    /// nếu đó đang là objective mở khóa hiện tại.
+    /// </summary>
+    public void ReportBuildingConstructionCompleted(BuildingType buildingType, SettlementZone zone)
+    {
+        if (buildingType == BuildingType.FoodStorage && IsZoneNamed(zone, "ZEFFIRA"))
+        {
+            TryCompleteActiveQuestById("ch1_build_food_storage");
+        }
+
+        // Prefab "Xưởng Đá" đang được khai báo là StoneStorage trong bảng
+        // công trình. Chỉ nhận công trình đã hoàn tất ở đúng Vaskasia.
+        if (buildingType == BuildingType.StoneStorage && IsZoneNamed(zone, "VASKASIA"))
+        {
+            TryCompleteActiveQuestById("ch2_build_stone_storage");
+        }
+    }
+
+    /// <summary>
+    /// Nhận mốc nghiên cứu vừa được mở khóa. Cung Thủ hiện được gameplay mở
+    /// bằng node sword_damage_1 trong ResearchUpgradeEffects.
+    /// </summary>
+    public void ReportResearchUnlocked(string nodeId)
+    {
+        if (string.Equals(nodeId, "sword_damage_1", System.StringComparison.Ordinal) &&
+            ResearchUpgradeEffects.ArcherUnlocked)
+        {
+            TryCompleteActiveQuestById("ch1_research_archer");
+        }
+
+        if (string.Equals(nodeId, "shield_damage_1", System.StringComparison.Ordinal) &&
+            ResearchUpgradeEffects.ShieldUnlocked)
+        {
+            TryCompleteActiveQuestById("ch2_research_shield");
+        }
+
+        if (string.Equals(nodeId, "unlock_crossbow_tower_1", System.StringComparison.Ordinal) &&
+            ResearchUpgradeEffects.CrossbowTowerUnlocked)
+        {
+            TryCompleteActiveQuestById("ch3_research_crossbow_tower");
+        }
+    }
+
+    /// <summary>
+    /// Nhận kết quả huấn luyện sau khi TroopTrainingManager đã spawn các
+    /// UnitController thật. Không đếm ô UI để tránh tính nhầm lính hologram.
+    /// </summary>
+    public void ReportTroopsTrained(BuildingType troopType, int spawnedUnitCount, SettlementZone zone)
+    {
+        if (spawnedUnitCount <= 0) return;
+
+        if (troopType == BuildingType.BarracksArcher &&
+            IsZoneNamed(zone, "ZEFFIRA") &&
+            IsQuestActive("ch1_train_archers"))
+        {
+            int activeObjectiveIndex = GetNextActiveObjectiveIndex(highestUnlockedChapterIndex);
+            AddObjectiveProgress(highestUnlockedChapterIndex, activeObjectiveIndex, spawnedUnitCount);
+        }
+
+        if (troopType == BuildingType.BarracksSpear &&
+            IsZoneNamed(zone, "VASKASIA") &&
+            IsQuestActive("ch2_train_shields"))
+        {
+            int activeObjectiveIndex = GetNextActiveObjectiveIndex(highestUnlockedChapterIndex);
+            AddObjectiveProgress(highestUnlockedChapterIndex, activeObjectiveIndex, spawnedUnitCount);
+        }
+    }
+
+    /// <summary>
+    /// Nhận mốc nâng cấp Nhà Chính đã hoàn tất. Đọc SettlementLevel thay vì
+    /// dữ liệu hiển thị trên UI để cả save cũ và nâng cấp mới đều chính xác.
+    /// </summary>
+    public void ReportBuildingUpgradeCompleted(UpgradeableBuilding building, SettlementZone zone)
+    {
+        if (building == null ||
+            !IsZoneNamed(zone, "ZEFFIRA") ||
+            !SettlementZone.IsTownHallBuilding(building, zone))
+        {
+            return;
+        }
+
+        if (zone.SettlementLevel >= 2 && IsQuestActive("ch1_upgrade_zeffira_level_2"))
+        {
+            TryCompleteActiveQuestById("ch1_upgrade_zeffira_level_2");
+        }
+
+        if (zone.SettlementLevel >= 3 && IsQuestActive("ch3_upgrade_zeffira_level_3"))
+        {
+            TryCompleteActiveQuestById("ch3_upgrade_zeffira_level_3");
+        }
+    }
+
+    /// <summary>
+    /// Nhận vùng đất vừa chinh phục sau khi căn cứ địch đã bị phá hủy. Chỉ
+    /// chấp nhận vùng đang IsConquered để không nhầm với vùng mới chỉ mở khóa.
+    /// </summary>
+    public void ReportSettlementConquered(SettlementZone zone)
+    {
+        if (zone == null || !zone.IsConquered) return;
+
+        if (IsZoneNamed(zone, "EVENMOOR"))
+        {
+            TryCompleteActiveQuestById("ch1_conquer_evenmoor");
+        }
+        else if (IsZoneNamed(zone, "BROOKHOLLOW"))
+        {
+            TryCompleteActiveQuestById("ch2_conquer_brookhollow");
+        }
+        else if (IsZoneNamed(zone, "TERBISIA"))
+        {
+            TryCompleteActiveQuestById("ch3_conquer_terbisia");
+        }
+    }
+
+    /// <summary>
+    /// Nhận mốc lập Nhà Chính cho vùng đất mới. Đây là thao tác người chơi trả
+    /// chi phí và bắt đầu xây Nhà Chính, khác với việc nâng cấp Nhà Chính cũ.
+    /// </summary>
+    public void ReportTownHallEstablished(SettlementZone zone)
+    {
+        if (zone != null &&
+            zone.isTownHallEstablished &&
+            !zone.hasEnemyOutpost &&
+            IsZoneNamed(zone, "TERBISIA"))
+        {
+            TryCompleteActiveQuestById("ch3_establish_terbisia");
+        }
+    }
+
+    /// <summary>
+    /// Lưu mốc phòng thủ ở cấp gameplay để kết quả vẫn còn sau round-trip từ
+    /// SceneBattle. Raid Rồng và raid thường là hai objective riêng.
+    /// </summary>
+    public static void RecordDefenseVictory(bool defeatedDragon)
+    {
+        PlayerPrefs.SetInt(defeatedDragon ? DragonDefenseVictorySaveKey : NormalDefenseVictorySaveKey, 1);
+        PlayerPrefs.Save();
+        Instance?.ReportRecordedDefenseVictory(defeatedDragon);
+    }
+
+    private void ReportRecordedDefenseVictory(bool defeatedDragon)
+    {
+        TryCompleteActiveQuestById(
+            defeatedDragon ? "ch3_defend_dragon" : "ch2_defend_invasion");
+    }
+
+    private void SynchronizeCurrentWorldObjective()
+    {
+        const string foodStorageQuestId = "ch1_build_food_storage";
+        if (IsQuestActive(foodStorageQuestId))
+        {
+            SettlementZone zeffira = FindSettlementByName("ZEFFIRA");
+            if (HasCompletedBuilding(zeffira, BuildingType.FoodStorage))
+            {
+                TryCompleteActiveQuestById(foodStorageQuestId);
+            }
+        }
+
+        // Khôi phục được objective nếu người chơi đã mở research trước khi
+        // controller quest được tạo lại (ví dụ sau khi tải save/đổi Scene).
+        if (IsQuestActive("ch1_research_archer") && ResearchUpgradeEffects.ArcherUnlocked)
+        {
+            TryCompleteActiveQuestById("ch1_research_archer");
+        }
+
+        if (IsQuestActive("ch1_train_archers"))
+        {
+            SettlementZone zeffira = FindSettlementByName("ZEFFIRA");
+            SynchronizeActiveObjectiveProgress(
+                "ch1_train_archers",
+                CountStationedUnitsByResearchType(zeffira, SoldierResearchType.Bow));
+        }
+
+        if (IsQuestActive("ch2_build_stone_storage"))
+        {
+            SettlementZone vaskasia = FindSettlementByName("VASKASIA");
+            if (HasCompletedBuilding(vaskasia, BuildingType.StoneStorage))
+            {
+                TryCompleteActiveQuestById("ch2_build_stone_storage");
+            }
+        }
+
+        if (IsQuestActive("ch2_research_shield") && ResearchUpgradeEffects.ShieldUnlocked)
+        {
+            TryCompleteActiveQuestById("ch2_research_shield");
+        }
+
+        if (IsQuestActive("ch2_train_shields"))
+        {
+            SettlementZone vaskasia = FindSettlementByName("VASKASIA");
+            SynchronizeActiveObjectiveProgress(
+                "ch2_train_shields",
+                CountStationedUnitsByResearchType(vaskasia, SoldierResearchType.Shield));
+        }
+
+        // Quest có thể trở thành objective hiện tại sau khi người chơi đã
+        // nâng cấp Nhà Chính, nên luôn đọc cấp độ settlement đã lưu.
+        SettlementZone zeffiraTownHall = FindSettlementByName("ZEFFIRA");
+        if (zeffiraTownHall != null &&
+            zeffiraTownHall.SettlementLevel >= 2 &&
+            IsQuestActive("ch1_upgrade_zeffira_level_2"))
+        {
+            TryCompleteActiveQuestById("ch1_upgrade_zeffira_level_2");
+        }
+
+        if (zeffiraTownHall != null &&
+            zeffiraTownHall.SettlementLevel >= 3 &&
+            IsQuestActive("ch3_upgrade_zeffira_level_3"))
+        {
+            TryCompleteActiveQuestById("ch3_upgrade_zeffira_level_3");
+        }
+
+        SettlementZone terbisia = FindSettlementByName("TERBISIA");
+        if (IsQuestActive("ch3_establish_terbisia") &&
+            terbisia != null &&
+            terbisia.isTownHallEstablished &&
+            !terbisia.hasEnemyOutpost)
+        {
+            TryCompleteActiveQuestById("ch3_establish_terbisia");
+        }
+
+        if (IsQuestActive("ch3_research_crossbow_tower") && ResearchUpgradeEffects.CrossbowTowerUnlocked)
+        {
+            TryCompleteActiveQuestById("ch3_research_crossbow_tower");
+        }
+
+        if (IsQuestActive("ch2_defend_invasion") && PlayerPrefs.GetInt(NormalDefenseVictorySaveKey, 0) == 1)
+        {
+            TryCompleteActiveQuestById("ch2_defend_invasion");
+        }
+
+        if (IsQuestActive("ch3_defend_dragon") && PlayerPrefs.GetInt(DragonDefenseVictorySaveKey, 0) == 1)
+        {
+            TryCompleteActiveQuestById("ch3_defend_dragon");
+        }
+
+        SynchronizeConquestObjective("ch1_conquer_evenmoor", "EVENMOOR");
+        SynchronizeConquestObjective("ch2_conquer_brookhollow", "BROOKHOLLOW");
+        SynchronizeConquestObjective("ch3_conquer_terbisia", "TERBISIA");
+    }
+
+    private void SynchronizeConquestObjective(string questId, string settlementName)
+    {
+        if (!IsQuestActive(questId)) return;
+
+        SettlementZone zone = FindSettlementByName(settlementName);
+        if (zone != null && zone.IsConquered)
+        {
+            TryCompleteActiveQuestById(questId);
+        }
+    }
+
+    private bool IsQuestActive(string questId)
+    {
+        InitAllFourChapters();
+        if (string.IsNullOrWhiteSpace(questId) ||
+            highestUnlockedChapterIndex < 0 ||
+            highestUnlockedChapterIndex >= chapterList.Count)
+        {
+            return false;
+        }
+
+        ChapterData chapter = chapterList[highestUnlockedChapterIndex];
+        int activeObjectiveIndex = chapter.objectives?.FindIndex(objective => !objective.isCompleted) ?? -1;
+        return activeObjectiveIndex >= 0 &&
+               string.Equals(chapter.objectives[activeObjectiveIndex].questId, questId, System.StringComparison.Ordinal);
+    }
+
+    private bool TryCompleteActiveQuestById(string questId)
+    {
+        if (!IsQuestActive(questId)) return false;
+        return CompleteObjective(highestUnlockedChapterIndex, GetNextActiveObjectiveIndex(highestUnlockedChapterIndex));
+    }
+
+    private void SynchronizeActiveObjectiveProgress(string questId, int observedProgress)
+    {
+        if (!IsQuestActive(questId) || observedProgress <= 0) return;
+
+        int chapterIndex = highestUnlockedChapterIndex;
+        int objectiveIndex = GetNextActiveObjectiveIndex(chapterIndex);
+        QuestObjective objective = chapterList[chapterIndex].objectives[objectiveIndex];
+        objective.targetProgress = Mathf.Max(1, objective.targetProgress);
+
+        int synchronizedProgress = Mathf.Clamp(
+            Mathf.Max(objective.currentProgress, observedProgress),
+            0,
+            objective.targetProgress);
+
+        if (synchronizedProgress == objective.currentProgress) return;
+
+        objective.currentProgress = synchronizedProgress;
+        if (objective.currentProgress >= objective.targetProgress)
+        {
+            CompleteObjective(chapterIndex, objectiveIndex);
+            return;
+        }
+
+        SaveQuestProgress();
+        if (gameObject.activeInHierarchy) DisplayChapter(currentChapterIndex);
+        else UpdateTrackerHUD();
+    }
+
+    private static SettlementZone FindSettlementByName(string settlementName)
+    {
+        if (SettlementManager.Ins != null)
+        {
+            SettlementZone managedZone = SettlementManager.Ins.GetZoneByName(settlementName);
+            if (managedZone != null) return managedZone;
+        }
+
+        SettlementZone[] zones = FindObjectsByType<SettlementZone>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (SettlementZone zone in zones)
+        {
+            if (IsZoneNamed(zone, settlementName)) return zone;
+        }
+
+        return null;
+    }
+
+    private static bool HasCompletedBuilding(SettlementZone zone, BuildingType buildingType)
+    {
+        if (zone == null) return false;
+
+        UpgradeableBuilding[] buildings = zone.GetComponentsInChildren<UpgradeableBuilding>(true);
+        foreach (UpgradeableBuilding building in buildings)
+        {
+            if (building != null &&
+                building.buildingType == buildingType &&
+                !building.IsInitialBuildNeeded &&
+                !building.IsUpgrading)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static int CountStationedUnitsByResearchType(SettlementZone zone, SoldierResearchType researchType)
+    {
+        if (zone == null) return 0;
+
+        int count = 0;
+        UnitController[] units = FindObjectsByType<UnitController>(FindObjectsSortMode.None);
+        foreach (UnitController unit in units)
+        {
+            if (unit == null || unit.isDead || unit.isExpeditionMarching ||
+                unit.ResearchType != researchType)
+            {
+                continue;
+            }
+
+            bool isStationedInZone = unit.IsStationedInZone(zone.settlementName) ||
+                                    unit.GetComponentInParent<SettlementZone>() == zone;
+            if (isStationedInZone) count++;
+        }
+
+        return count;
+    }
+
+    private static bool IsZoneNamed(SettlementZone zone, string expectedName)
+    {
+        return zone != null &&
+               string.Equals(zone.settlementName, expectedName, System.StringComparison.OrdinalIgnoreCase);
+    }
+
     public bool CompleteObjective(int chapterIndex, int objectiveIndex)
     {
         InitAllFourChapters();

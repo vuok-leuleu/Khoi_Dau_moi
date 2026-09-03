@@ -959,6 +959,7 @@ public class SettlementZone : MonoBehaviour
 
         EnemyInvasionManager.Ins?.NotifySettlementConquered(this);
         CampaignTutorialManager.Ins?.OnSettlementConquered(this);
+        ChapterQuestController.Instance?.ReportSettlementConquered(this);
 
         if (SettlementSidePanelUI.Ins != null)
         {
@@ -1023,6 +1024,8 @@ public class SettlementZone : MonoBehaviour
         {
             CampaignTutorialManager.Ins.OnTownHallEstablished(this);
         }
+
+        ChapterQuestController.Instance?.ReportTownHallEstablished(this);
 
         if (SettlementSidePanelUI.Ins != null) SettlementSidePanelUI.Ins.RefreshPanel();
         return true;

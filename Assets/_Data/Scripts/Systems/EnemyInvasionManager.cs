@@ -798,6 +798,8 @@ public class EnemyInvasionManager : MonoBehaviour
         if (UIManager.Ins != null) UIManager.Ins.ShowWarning(msg);
         Debug.Log($"[EnemyInvasionManager] {msg}");
 
+        // Ghi mốc trước khi ResetCurrentRaid xóa cờ phân biệt raid Rồng.
+        ChapterQuestController.RecordDefenseVictory(dragonRaid);
         ResetCurrentRaid();
 
         // Xem chú thích ở TriggerDefenseDefeat: sau round-trip SceneBattle,

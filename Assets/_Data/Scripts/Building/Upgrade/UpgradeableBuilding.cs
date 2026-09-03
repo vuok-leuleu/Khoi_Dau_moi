@@ -476,7 +476,14 @@ public class UpgradeableBuilding : MonoBehaviour
         if (buildingCtrl != null) buildingCtrl.AddProgress(1f);
 
         SettlementZone parentZone = GetComponentInParent<SettlementZone>();
+        if (parentZone == null && SettlementManager.Ins != null)
+        {
+            parentZone = SettlementManager.Ins.CurrentSettlement;
+        }
         if (parentZone != null) parentZone.Update3DSlotVisibility();
+
+        // Báo quest sau khi công trình đã hoàn tất thi công thực tế.
+        ChapterQuestController.Instance?.ReportBuildingConstructionCompleted(buildingType, parentZone);
 
         if (BuildingUpgradeSidePanelUI.Ins != null) BuildingUpgradeSidePanelUI.Ins.RefreshPanel();
         if (SettlementSidePanelUI.Ins != null) SettlementSidePanelUI.Ins.RefreshPanel();
@@ -594,6 +601,8 @@ public class UpgradeableBuilding : MonoBehaviour
             parentZone.settlementLevel = CurrentLevel + 1;
             parentZone.SaveSettlementState();
         }
+
+        ChapterQuestController.Instance?.ReportBuildingUpgradeCompleted(this, parentZone);
 
         var targetUI = BuildingProgressBridge.GetUI(this);
         if (targetUI == null) targetUI = GetComponentInChildren<BuildingProgressBarUI>(true);
