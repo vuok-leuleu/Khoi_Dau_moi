@@ -398,12 +398,24 @@ public class BuildingSystem : Singleton<BuildingSystem>
         JsonDataManager.Ins.SaveGame(slotIndex, saveData);
     }
 
-    public void LoadBuildingsFromSlot(int slotIndex)
+    /// <summary>
+    /// Nạp lại công trình từ save slot. Trả về false khi các manager hoặc file
+    /// save chưa sẵn sàng, để luồng chuyển SceneBattle không ghi đè save bằng
+    /// scene mặc định trước khi dữ liệu được khôi phục xong.
+    /// </summary>
+    public bool TryLoadBuildingsFromSlot(int slotIndex)
     {
-        if (JsonDataManager.Ins == null || BuildingManager.Ins == null) return;
-        var saveData = JsonDataManager.Ins.LoadGame(slotIndex);
+        JsonDataManager dataManager = JsonDataManager.Ins;
+        BuildingManager buildingManager = BuildingManager.Ins;
+        if (dataManager == null || buildingManager == null)
+        {
+            Debug.LogWarning("[BuildingSystem] Chưa đủ manager để nạp công trình.");
+            return false;
+        }
 
-        if (saveData == null) return;
+        var saveData = dataManager.LoadGame(slotIndex);
+
+        if (saveData == null) return false;
 
         DayNightManager dayNightManager = UnityEngine.Object.FindFirstObjectByType<DayNightManager>();
         if (dayNightManager != null)
@@ -419,10 +431,19 @@ public class BuildingSystem : Singleton<BuildingSystem>
                 Mathf.Max(0f, saveData.waveTimer));
         }
 
-        if (saveData.buildings == null || saveData.buildings.Count == 0) return;
+        if (saveData.buildings == null || saveData.buildings.Count == 0)
+        {
+            Debug.Log($"[BuildingSystem] Save slot {slotIndex} không có công trình cần khôi phục.");
+            return true;
+        }
 
-        BuildingManager.Ins.LoadStates(saveData.buildings);
+        buildingManager.LoadStates(saveData.buildings);
+        Debug.Log($"[BuildingSystem] Đã khôi phục {saveData.buildings.Count} công trình từ save slot {slotIndex}.");
+        return true;
     }
+
+    // Giữ API void cũ cho các Button/Event trong Inspector và các script hiện có.
+    public void LoadBuildingsFromSlot(int slotIndex) => TryLoadBuildingsFromSlot(slotIndex);
 
     private GameObject GetGhostPrefab(BuildingType type)
     {

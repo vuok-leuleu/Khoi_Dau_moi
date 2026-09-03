@@ -120,7 +120,7 @@ public class TowerSoundPlayer : MonoBehaviour
     {
         int level = upgradeBuilding != null ? upgradeBuilding.CurrentLevel : 0;
 
-        AudioClip[] clips = (attackAI.towerType == AttackTowerType.Archer)
+        AudioClip[] clips = (attackAI.towerType == AttackTowerType.CrossbowTower)
             ? archerFireClips
             : cannonFireClips;
 

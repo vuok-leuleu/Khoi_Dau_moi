@@ -14,6 +14,21 @@ using TMPro;
 /// </summary>
 public class UISceneBattle : MonoBehaviour
 {
+    /// <summary>
+    /// ID nội bộ cho card roster. Không dùng tên hiển thị làm ID vì designer có
+    /// thể đổi tên hai đơn vị giống nhau, làm card/icon bị dùng chung.
+    /// </summary>
+    public enum RosterUnitKind
+    {
+        Other,
+        Melee,
+        Archer,
+        Spear,
+        Tank,
+        CrossbowTower,
+        CannonTower
+    }
+
     [System.Serializable]
     public class UnitDisplayInfo
     {
@@ -22,14 +37,21 @@ public class UISceneBattle : MonoBehaviour
         public int count = 1;
         public int maxCount = 1;
         public BuildingType unitType = BuildingType.BarracksMelee;
+        public RosterUnitKind rosterKind = RosterUnitKind.Other;
 
         public UnitDisplayInfo() { }
-        public UnitDisplayInfo(string name, Sprite icon, int count, int maxCount = 0)
+        public UnitDisplayInfo(
+            string name,
+            Sprite icon,
+            int count,
+            int maxCount = 0,
+            RosterUnitKind kind = RosterUnitKind.Other)
         {
             this.unitName = name;
             this.unitIcon = icon;
             this.count = count;
             this.maxCount = maxCount > 0 ? maxCount : count;
+            this.rosterKind = kind;
         }
     }
 
@@ -108,6 +130,8 @@ public class UISceneBattle : MonoBehaviour
     [Tooltip("Icon của công trình/đơn vị Nỏ xuất hiện trong SceneBattle.")]
     public Sprite crossbowTowerIcon;
     public string crossbowTowerName = "Tháp Nỏ";
+    [Tooltip("Prefab model Tháp Nỏ dùng trong SceneBattle. Gán Archers.prefab (dàn nỏ), không phải Archer.prefab (Cung Thủ).")]
+    public GameObject crossbowTowerBattlePrefab;
     [Tooltip("Icon của công trình/đơn vị Pháo xuất hiện trong SceneBattle.")]
     public Sprite cannonTowerIcon;
     public string cannonTowerName = "Pháo";
@@ -238,7 +262,7 @@ public class UISceneBattle : MonoBehaviour
         }
 
         SetupContainerLayout();
-        CollectPreExistingCards();
+        HidePreExistingCards();
         RefreshArmyUnitsRoster();
         CheckAndShowBattleDataResult();
     }
@@ -278,54 +302,20 @@ public class UISceneBattle : MonoBehaviour
     }
 
     /// <summary>
-    /// Thu thập các Card đã có sẵn trong Hierarchy từ trước để tái sử dụng, không spawn đè
+    /// SceneBattle có các card mẫu với tên chung (UnitCardPrefab, ...). Chúng
+    /// không mang loại lính đáng tin cậy và có thể giữ lại icon cũ (ví dụ Cung
+    /// Thủ x0). Ẩn chúng; roster runtime chỉ tạo card theo RosterUnitKind.
     /// </summary>
-    private void CollectPreExistingCards()
+    private void HidePreExistingCards()
     {
         Transform container = armyUnitContainer != null ? armyUnitContainer : (armyRosterPanel != null ? armyRosterPanel.transform : null);
         if (container == null) return;
 
         foreach (Transform child in container)
         {
-            if (child == null) continue;
-            string objName = child.gameObject.name;
-
-            UnitCardUI cardUI = BuildCardUIFromObject(child.gameObject);
-            
-            // Xác định tên loại lính dựa theo tên GameObject
-            string unitKey = "";
-            if (objName.ToLower().Contains("kiếm") || objName.ToLower().Contains("melee") || objName.ToLower().Contains("soldier"))
+            if (child != null)
             {
-                unitKey = meleeSoldierName;
-            }
-            else if (objName.ToLower().Contains("cung") || objName.ToLower().Contains("archer"))
-            {
-                unitKey = archerSoldierName;
-            }
-            else if (objName.ToLower().Contains("thương") || objName.ToLower().Contains("spear"))
-            {
-                unitKey = spearSoldierName;
-            }
-            else if (objName.ToLower().Contains("tank") || objName.ToLower().Contains("shield") || objName.ToLower().Contains("khiên"))
-            {
-                unitKey = tankSoldierName;
-            }
-            else if (objName.ToLower().Contains("crossbow") || objName.ToLower().Contains("nỏ"))
-            {
-                unitKey = crossbowTowerName;
-            }
-            else if (objName.ToLower().Contains("cannon") || objName.ToLower().Contains("pháo"))
-            {
-                unitKey = cannonTowerName;
-            }
-            else
-            {
-                unitKey = objName.Replace("Card_", "").Trim();
-            }
-
-            if (!string.IsNullOrEmpty(unitKey) && !cachedCards.ContainsKey(unitKey))
-            {
-                cachedCards[unitKey] = cardUI;
+                child.gameObject.SetActive(false);
             }
         }
     }
@@ -502,18 +492,19 @@ public class UISceneBattle : MonoBehaviour
             return;
         }
 
-        HashSet<string> currentActiveNames = new HashSet<string>();
+        HashSet<string> currentActiveKeys = new HashSet<string>();
 
         for (int i = 0; i < units.Count; i++)
         {
             UnitDisplayInfo unit = units[i];
-            currentActiveNames.Add(unit.unitName);
+            string cardKey = GetCardCacheKey(unit);
+            currentActiveKeys.Add(cardKey);
 
             UnitCardUI cardUI;
-            if (!cachedCards.TryGetValue(unit.unitName, out cardUI) || cardUI == null || cardUI.rootObject == null)
+            if (!cachedCards.TryGetValue(cardKey, out cardUI) || cardUI == null || cardUI.rootObject == null)
             {
                 cardUI = CreateCardUI(container, unit);
-                cachedCards[unit.unitName] = cardUI;
+                cachedCards[cardKey] = cardUI;
             }
 
             if (cardUI.rootObject != null)
@@ -522,7 +513,10 @@ public class UISceneBattle : MonoBehaviour
                 cardUI.rootObject.SetActive(true);
             }
 
-            Sprite iconToSet = unit.unitIcon != null ? unit.unitIcon : defaultSoldierIcon;
+            // Icon được lấy lại theo loại nội bộ ngay lúc hiển thị. Vì vậy dù
+            // card được tái sử dụng hay tên hiển thị bị đổi, Tháp Nỏ không thể
+            // nhận nhầm icon của Cung Thủ.
+            Sprite iconToSet = GetRosterIcon(unit);
             if (cardUI.iconImage != null && iconToSet != null)
             {
                 if (cardUI.iconImage.sprite != iconToSet)
@@ -547,7 +541,7 @@ public class UISceneBattle : MonoBehaviour
 
         foreach (var kvp in cachedCards)
         {
-            if (!currentActiveNames.Contains(kvp.Key) && kvp.Value != null && kvp.Value.rootObject != null)
+            if (!currentActiveKeys.Contains(kvp.Key) && kvp.Value != null && kvp.Value.rootObject != null)
             {
                 kvp.Value.rootObject.SetActive(false);
             }
@@ -557,6 +551,43 @@ public class UISceneBattle : MonoBehaviour
         {
             lastVisibleCardCount = units.Count;
             AdjustBackgroundSize(units.Count);
+        }
+    }
+
+    private static string GetCardCacheKey(UnitDisplayInfo unit)
+    {
+        if (unit == null) return "roster_null";
+
+        return GetCardCacheKey(unit.rosterKind, unit.unitName);
+    }
+
+    private static string GetCardCacheKey(RosterUnitKind rosterKind, string unitName)
+    {
+        return rosterKind != RosterUnitKind.Other
+            ? $"roster_{rosterKind}"
+            : $"roster_other_{unitName}";
+    }
+
+    private Sprite GetRosterIcon(UnitDisplayInfo unit)
+    {
+        if (unit == null) return defaultSoldierIcon;
+
+        switch (unit.rosterKind)
+        {
+            case RosterUnitKind.Melee:
+                return meleeSoldierIcon != null ? meleeSoldierIcon : (unit.unitIcon != null ? unit.unitIcon : defaultSoldierIcon);
+            case RosterUnitKind.Archer:
+                return archerSoldierIcon != null ? archerSoldierIcon : (unit.unitIcon != null ? unit.unitIcon : defaultSoldierIcon);
+            case RosterUnitKind.Spear:
+                return spearSoldierIcon != null ? spearSoldierIcon : (unit.unitIcon != null ? unit.unitIcon : defaultSoldierIcon);
+            case RosterUnitKind.Tank:
+                return tankSoldierIcon != null ? tankSoldierIcon : (unit.unitIcon != null ? unit.unitIcon : defaultSoldierIcon);
+            case RosterUnitKind.CrossbowTower:
+                return crossbowTowerIcon != null ? crossbowTowerIcon : (unit.unitIcon != null ? unit.unitIcon : defaultSoldierIcon);
+            case RosterUnitKind.CannonTower:
+                return cannonTowerIcon != null ? cannonTowerIcon : (unit.unitIcon != null ? unit.unitIcon : defaultSoldierIcon);
+            default:
+                return unit.unitIcon != null ? unit.unitIcon : defaultSoldierIcon;
         }
     }
 
@@ -648,7 +679,7 @@ public class UISceneBattle : MonoBehaviour
         iconLE.preferredHeight = 52f;
 
         Image iconImg = iconObj.GetComponent<Image>();
-        Sprite spr = unit.unitIcon != null ? unit.unitIcon : defaultSoldierIcon;
+        Sprite spr = GetRosterIcon(unit);
         iconImg.sprite = spr;
         iconImg.preserveAspect = true;
         cardUI.iconImage = iconImg;
@@ -746,7 +777,14 @@ public class UISceneBattle : MonoBehaviour
             if (u == null || !u.gameObject.activeInHierarchy || u.isDead) continue;
 
             string objName = u.gameObject.name.ToLower();
-            if (u.AttackMode == AttackMode.Tank || objName.Contains("tank") || objName.Contains("shield") || objName.Contains("khiên"))
+            // Archers.prefab là dàn Tháp Nỏ nhưng có UnitController với
+            // AttackMode.Ranged. Nhận diện theo prefab trước để nó không bị
+            // đưa nhầm vào nhóm Cung Thủ.
+            if (IsCrossbowTowerUnit(u))
+            {
+                crossbowTowerCount++;
+            }
+            else if (u.AttackMode == AttackMode.Tank || objName.Contains("tank") || objName.Contains("shield") || objName.Contains("khiên"))
             {
                 tankCount++;
             }
@@ -775,35 +813,39 @@ public class UISceneBattle : MonoBehaviour
         {
             if (tower == null || !tower.gameObject.activeInHierarchy || tower.IsDestroyed()) continue;
 
-            if (tower.towerType == AttackTowerType.Cannon)
-                cannonTowerCount++;
-            else
+            if (tower.towerType == AttackTowerType.CrossbowTower)
+            {
                 crossbowTowerCount++;
+            }
+            else if (tower.towerType == AttackTowerType.Cannon)
+            {
+                cannonTowerCount++;
+            }
         }
 
         if (tankCount > 0)
         {
-            result.Add(new UnitDisplayInfo(tankSoldierName, tankSoldierIcon != null ? tankSoldierIcon : defaultSoldierIcon, tankCount));
+            result.Add(new UnitDisplayInfo(tankSoldierName, tankSoldierIcon, tankCount, 0, RosterUnitKind.Tank));
         }
         if (meleeCount > 0)
         {
-            result.Add(new UnitDisplayInfo(meleeSoldierName, meleeSoldierIcon != null ? meleeSoldierIcon : defaultSoldierIcon, meleeCount));
+            result.Add(new UnitDisplayInfo(meleeSoldierName, meleeSoldierIcon, meleeCount, 0, RosterUnitKind.Melee));
         }
         if (archerCount > 0)
         {
-            result.Add(new UnitDisplayInfo(archerSoldierName, archerSoldierIcon != null ? archerSoldierIcon : defaultSoldierIcon, archerCount));
+            result.Add(new UnitDisplayInfo(archerSoldierName, archerSoldierIcon, archerCount, 0, RosterUnitKind.Archer));
         }
         if (spearCount > 0)
         {
-            result.Add(new UnitDisplayInfo(spearSoldierName, spearSoldierIcon != null ? spearSoldierIcon : defaultSoldierIcon, spearCount));
+            result.Add(new UnitDisplayInfo(spearSoldierName, spearSoldierIcon, spearCount, 0, RosterUnitKind.Spear));
         }
         if (crossbowTowerCount > 0)
         {
-            result.Add(new UnitDisplayInfo(crossbowTowerName, crossbowTowerIcon != null ? crossbowTowerIcon : defaultSoldierIcon, crossbowTowerCount));
+            result.Add(new UnitDisplayInfo(crossbowTowerName, crossbowTowerIcon, crossbowTowerCount, 0, RosterUnitKind.CrossbowTower));
         }
         if (cannonTowerCount > 0)
         {
-            result.Add(new UnitDisplayInfo(cannonTowerName, cannonTowerIcon != null ? cannonTowerIcon : defaultSoldierIcon, cannonTowerCount));
+            result.Add(new UnitDisplayInfo(cannonTowerName, cannonTowerIcon, cannonTowerCount, 0, RosterUnitKind.CannonTower));
         }
         if (otherCount > 0)
         {
@@ -812,10 +854,33 @@ public class UISceneBattle : MonoBehaviour
 
         if (result.Count == 0 && BattleData.TotalSoldiersInBase > 0)
         {
-            result.Add(new UnitDisplayInfo(meleeSoldierName, meleeSoldierIcon != null ? meleeSoldierIcon : defaultSoldierIcon, BattleData.TotalSoldiersInBase));
+            result.Add(new UnitDisplayInfo(meleeSoldierName, meleeSoldierIcon, BattleData.TotalSoldiersInBase, 0, RosterUnitKind.Melee));
         }
 
         return result;
+    }
+
+    private bool IsCrossbowTowerUnit(UnitController unit)
+    {
+        if (unit == null || crossbowTowerBattlePrefab == null) return false;
+
+        string spawnedName = NormalizeRuntimePrefabName(unit.gameObject.name);
+        string crossbowPrefabName = NormalizeRuntimePrefabName(crossbowTowerBattlePrefab.name);
+
+        // BattleManager đổi tên lính sau khi Instantiate theo mẫu
+        // "Player_Soldier_<số>_<PrefabName>". Vì vậy so sánh tuyệt đối sẽ
+        // không nhận ra Archers và nó bị rơi xuống nhóm AttackMode.Ranged
+        // (Cung Thủ). So sánh cả hậu tố, thay vì Contains, để Archer và
+        // Archers vẫn là hai prefab riêng biệt.
+        return string.Equals(spawnedName, crossbowPrefabName, System.StringComparison.OrdinalIgnoreCase)
+            || spawnedName.EndsWith("_" + crossbowPrefabName, System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeRuntimePrefabName(string objectName)
+    {
+        return string.IsNullOrEmpty(objectName)
+            ? string.Empty
+            : objectName.Replace("(Clone)", string.Empty).Trim();
     }
 
     #endregion
@@ -950,6 +1015,15 @@ public class UISceneBattle : MonoBehaviour
         {
             if (participant == null || participant.count <= 0) continue;
 
+            if (IsCrossbowTowerParticipant(participant))
+            {
+                participants.Add(new UnitLostItem(
+                    crossbowTowerIcon != null ? crossbowTowerIcon : defaultSoldierIcon,
+                    crossbowTowerName,
+                    participant.count));
+                continue;
+            }
+
             Sprite icon;
             string unitName;
             switch (participant.attackMode)
@@ -992,31 +1066,57 @@ public class UISceneBattle : MonoBehaviour
         {
             if (participant == null || participant.count <= 0) continue;
 
+            if (IsCrossbowTowerParticipant(participant))
+            {
+                participants.Add(new UnitDisplayInfo(
+                    crossbowTowerName,
+                    crossbowTowerIcon != null ? crossbowTowerIcon : defaultSoldierIcon,
+                    participant.count,
+                    0,
+                    RosterUnitKind.CrossbowTower));
+                continue;
+            }
+
             switch (participant.attackMode)
             {
                 case AttackMode.Ranged:
                     participants.Add(new UnitDisplayInfo(
                         archerSoldierName,
                         archerSoldierIcon != null ? archerSoldierIcon : defaultSoldierIcon,
-                        participant.count));
+                        participant.count,
+                        0,
+                        RosterUnitKind.Archer));
                     break;
                 case AttackMode.Tank:
                     participants.Add(new UnitDisplayInfo(
                         tankSoldierName,
                         tankSoldierIcon != null ? tankSoldierIcon : defaultSoldierIcon,
-                        participant.count));
+                        participant.count,
+                        0,
+                        RosterUnitKind.Tank));
                     break;
                 case AttackMode.Melee:
                 default:
                     participants.Add(new UnitDisplayInfo(
                         meleeSoldierName,
                         meleeSoldierIcon != null ? meleeSoldierIcon : defaultSoldierIcon,
-                        participant.count));
+                        participant.count,
+                        0,
+                        RosterUnitKind.Melee));
                     break;
             }
         }
 
         return participants;
+    }
+
+    private bool IsCrossbowTowerParticipant(BattleData.BattleParticipantInfo participant)
+    {
+        if (participant == null || crossbowTowerBattlePrefab == null) return false;
+
+        string participantPrefabName = NormalizeRuntimePrefabName(participant.sourcePrefabName);
+        string crossbowPrefabName = NormalizeRuntimePrefabName(crossbowTowerBattlePrefab.name);
+        return string.Equals(participantPrefabName, crossbowPrefabName, System.StringComparison.OrdinalIgnoreCase);
     }
 
     private void PopulateRewards(List<RewardItem> rewards)

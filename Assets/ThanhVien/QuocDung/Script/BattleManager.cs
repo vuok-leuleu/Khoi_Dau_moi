@@ -904,7 +904,7 @@ public class BattleManager : MonoBehaviour
                     GameObject spawnedSoldier = Instantiate(prefab, soldierPos, soldierRot);
                     spawnedSoldier.name = $"Player_Soldier_{soldierTotalSpawned + 1}_{NormalizePrefabName(prefab.name)}";
                     spawnedPlayerObjects.Add(spawnedSoldier);
-                    RegisterSpawnedPlayerUnit(spawnedSoldier);
+                    RegisterSpawnedPlayerUnit(spawnedSoldier, prefab);
                 }
                 soldierTotalSpawned++;
             }
@@ -957,7 +957,7 @@ public class BattleManager : MonoBehaviour
                     GameObject spawnedSoldier = Instantiate(prefab, soldierPos, soldierRot);
                     spawnedSoldier.name = $"Player_Soldier_{soldierTotalSpawned + 1}_{NormalizePrefabName(prefab.name)}";
                     spawnedPlayerObjects.Add(spawnedSoldier);
-                    RegisterSpawnedPlayerUnit(spawnedSoldier);
+                    RegisterSpawnedPlayerUnit(spawnedSoldier, prefab);
                 }
                 soldierTotalSpawned++;
             }
@@ -974,7 +974,7 @@ public class BattleManager : MonoBehaviour
         }
     }
 
-    private static void RegisterSpawnedPlayerUnit(GameObject spawnedSoldier)
+    private static void RegisterSpawnedPlayerUnit(GameObject spawnedSoldier, GameObject sourcePrefab)
     {
         if (spawnedSoldier == null) return;
 
@@ -983,7 +983,8 @@ public class BattleManager : MonoBehaviour
 
         if (unit != null)
         {
-            BattleData.RegisterBattleParticipant(unit.AttackMode);
+            string sourcePrefabName = sourcePrefab != null ? NormalizePrefabName(sourcePrefab.name) : string.Empty;
+            BattleData.RegisterBattleParticipant(unit.AttackMode, sourcePrefabName);
         }
         else
         {

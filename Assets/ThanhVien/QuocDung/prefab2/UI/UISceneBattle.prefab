@@ -352,6 +352,11 @@ MonoBehaviour:
   spearSoldierName: 
   tankSoldierIcon: {fileID: 64042085, guid: bae282ac14f77c542b26124e94904b24, type: 3}
   tankSoldierName: "H\u1ED9 v\u1EC7"
+  crossbowTowerIcon: {fileID: -1953538444, guid: 50df2ec0bcbe05f44be9a87947edbceb, type: 3}
+  crossbowTowerName: "Th\xE1p N\u1ECF"
+  crossbowTowerBattlePrefab: {fileID: 4605438273477018434, guid: ce5427a6e1c4aab4caa3553222a65a19, type: 3}
+  cannonTowerIcon: {fileID: -2072698059, guid: b9abc381c7f427f4d91b5db599ed21c1, type: 3}
+  cannonTowerName: "Ph\xE1o"
   defaultSoldierIcon: {fileID: 0}
   victoryPanel: {fileID: 2620503972342377012}
   victoryBackgroundImage: {fileID: 3221415377803287795}
@@ -389,6 +394,9 @@ MonoBehaviour:
     count: 0
   - icon: {fileID: 1078555329, guid: ee9d8faceab48b040b5ee6a71f451304, type: 3}
     unitName: "Cung th\u1EE7"
+    count: 0
+  - icon: {fileID: -1953538444, guid: 50df2ec0bcbe05f44be9a87947edbceb, type: 3}
+    unitName: "Th\xE1p N\u1ECF"
     count: 0
   - icon: {fileID: 64042085, guid: bae282ac14f77c542b26124e94904b24, type: 3}
     unitName: "H\u1ED9 v\u1EC7"
@@ -786,7 +794,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &3257456611174969153
 RectTransform:
   m_ObjectHideFlags: 0

@@ -10,7 +10,9 @@ using UnityEngine.AI;
  * đồng thời mở cổng property "AttackRange" để UIManager.cs bóc tách dữ liệu UI chuẩn xác.
  */
 
-public enum AttackTowerType { Archer, Cannon }
+// Giá trị 0 được giữ nguyên để các prefab/save cũ có `towerType: 0` tiếp tục
+// hoạt động, nhưng tên enum phải là Tháp Nỏ để không bị lẫn với Cung Thủ.
+public enum AttackTowerType { CrossbowTower = 0, Cannon = 1 }
 
 public class AttackTowerAI : MonoBehaviour
 {
@@ -349,9 +351,9 @@ public class AttackTowerAI : MonoBehaviour
 
         PlayAttackAnimation();
 
-        if (towerType == AttackTowerType.Archer)
+        if (towerType == AttackTowerType.CrossbowTower)
         {
-            Debug.Log($"[ArcherTower] 🏹 Bắn cung vào mục tiêu: {currentTarget.name} (Tọa độ: {currentTarget.position})");
+            Debug.Log($"[CrossbowTower] 🏹 Tháp Nỏ bắn vào mục tiêu: {currentTarget.name} (Tọa độ: {currentTarget.position})");
             SpawnArrow();
         }
         else if (towerType == AttackTowerType.Cannon)
@@ -546,7 +548,7 @@ public class AttackTowerAI : MonoBehaviour
             arrowComp.SetLauncher(gameObject);
             arrowComp.SetDamage(damage);
             
-            if (level == 2 && towerType == AttackTowerType.Archer)
+            if (level == 2 && towerType == AttackTowerType.CrossbowTower)
             {
                 arrowComp.SetFireArrow(true, burnRadius, burnDamagePerSec, burnDuration, fireVfxPrefab);
             }

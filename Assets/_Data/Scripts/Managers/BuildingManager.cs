@@ -205,6 +205,19 @@ public class BuildingManager : Singleton<BuildingManager>
             Vector3 targetPos = state.position.ToVector3();
             SettlementZone targetZone = FindClosestZone(targetPos);
             UpgradeableBuilding targetUb = null;
+            bool isTownHallState = IsTownHallState(state, targetZone);
+
+            // Tự nâng cấp save cũ: những công trình thường từng không có
+            // slotIndex sẽ được xác định lại từ vị trí của slot. Lần Save kế
+            // tiếp sẽ ghi index chuẩn, nên không còn bị nhầm với Nhà Chính.
+            if (!isTownHallState && state.slotIndex < 0 && targetZone != null)
+            {
+                int inferredSlotIndex = targetZone.GetSlotIndexAtPosition(targetPos);
+                if (inferredSlotIndex >= 0)
+                {
+                    state.slotIndex = inferredSlotIndex;
+                }
+            }
 
             // 1. Nếu là công trình trong slot (slotIndex >= 0): Ưu tiên khớp theo slotIndex trong Vùng đất tương ứng
             if (targetZone != null && state.slotIndex >= 0)
@@ -212,8 +225,11 @@ public class BuildingManager : Singleton<BuildingManager>
                 targetUb = targetZone.GetBuildingAtSlot(state.slotIndex);
             }
 
-            // 2. Nếu là Nhà Chính (slotIndex < 0): Khớp thẳng với Nhà Chính của Vùng đất tương ứng
-            if (targetUb == null && state.slotIndex < 0 && targetZone != null)
+            // 2. Nếu là Nhà Chính: khớp thẳng với Nhà Chính của Vùng đất tương ứng.
+            // Không được dùng riêng slotIndex < 0 ở đây: các save cũ và một
+            // số công trình có sẵn trước đây chưa được gán slotIndex, khiến
+            // chúng bị nạp nhầm đè lên Nhà Chính sau khi quay từ SceneBattle.
+            if (targetUb == null && isTownHallState)
             {
                 if (targetZone.townHallBuilding != null)
                 {
@@ -377,6 +393,28 @@ public class BuildingManager : Singleton<BuildingManager>
             SettlementSidePanelUI.Ins.UpdateHeaderVisual();
             SettlementSidePanelUI.Ins.RefreshPanel();
         }
+    }
+
+    /// <summary>
+    /// Nhận diện bản ghi Nhà Chính theo vị trí thực, thay vì suy luận tất cả
+    /// slotIndex âm đều là Nhà Chính. Cách này vẫn đọc đúng các file save cũ
+    /// chưa lưu index cho công trình thường.
+    /// </summary>
+    private static bool IsTownHallState(BuildingState state, SettlementZone zone)
+    {
+        if (state == null || zone == null || state.slotIndex >= 0) return false;
+
+        Vector3 savedPosition = state.position.ToVector3();
+
+        if (zone.townHallBuilding != null &&
+            Vector3.Distance(savedPosition, zone.townHallBuilding.transform.position) < 4.5f)
+        {
+            return true;
+        }
+
+        Transform townHallAnchor = zone.townHallPoint != null ? zone.townHallPoint : zone.transform;
+        return state.buildingType == BuildingType.House && townHallAnchor != null &&
+               Vector3.Distance(savedPosition, townHallAnchor.position) < 4.5f;
     }
 
     /// <summary>Phá hủy toàn bộ công trình hiện có – chỉ gọi trước LoadStates().</summary>

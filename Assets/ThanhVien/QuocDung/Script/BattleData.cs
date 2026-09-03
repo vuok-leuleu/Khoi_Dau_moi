@@ -91,12 +91,16 @@ public static class BattleData
     public class BattleParticipantInfo
     {
         public AttackMode attackMode;
+        // AttackMode không đủ để phân biệt Archer với Archers (dàn ballista),
+        // vì cả hai đều dùng Ranged.
+        public string sourcePrefabName;
         public int count;
 
-        public BattleParticipantInfo(AttackMode attackMode, int count = 1)
+        public BattleParticipantInfo(AttackMode attackMode, int count = 1, string sourcePrefabName = "")
         {
             this.attackMode = attackMode;
             this.count = count;
+            this.sourcePrefabName = sourcePrefabName ?? string.Empty;
         }
     }
 
@@ -115,6 +119,11 @@ public static class BattleData
     /// Dùng cho UILinh.ResetGame() để reset về trạng thái gốc của Scene.
     /// </summary>
     public static bool SkipAutoLoadOnNextSceneLoad = false;
+
+    // Chỉ được bật khi map thực sự vừa chuyển sang SceneBattle. Cờ này ngăn
+    // callback sceneLoaded nạp save trên mọi scene khác (Menu/Open/Load) và
+    // chỉ cho phép khôi phục đúng một lần khi quay về map.
+    public static bool IsReturnRestorePending { get; private set; }
 
     public static void SetConquestEnemyComposition(SettlementZone zone)
     {
@@ -177,18 +186,20 @@ public static class BattleData
         victoryRewardGranted = false;
     }
 
-    public static void RegisterBattleParticipant(AttackMode attackMode)
+    public static void RegisterBattleParticipant(AttackMode attackMode, string sourcePrefabName = "")
     {
+        string normalizedPrefabName = sourcePrefabName ?? string.Empty;
         foreach (BattleParticipantInfo participant in BattleParticipants)
         {
-            if (participant.attackMode == attackMode)
+            if (participant.attackMode == attackMode &&
+                string.Equals(participant.sourcePrefabName ?? string.Empty, normalizedPrefabName, System.StringComparison.OrdinalIgnoreCase))
             {
                 participant.count++;
                 return;
             }
         }
 
-        BattleParticipants.Add(new BattleParticipantInfo(attackMode));
+        BattleParticipants.Add(new BattleParticipantInfo(attackMode, 1, normalizedPrefabName));
     }
 
     public static void ConfigureVictoryRewards(int woodReward, int goldReward)
@@ -206,18 +217,22 @@ public static class BattleData
 
     private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name != "SceneBattle")
+        if (scene.name == "SceneBattle") return;
+
+        if (SkipAutoLoadOnNextSceneLoad)
         {
-            if (SkipAutoLoadOnNextSceneLoad)
-            {
-                // Reset về trạng thái gốc: không load file Save, để Scene chạy tự nhiên từ dữ liệu ban đầu
-                SkipAutoLoadOnNextSceneLoad = false;
-                Debug.Log("[BattleData] ⏩ Bỏ qua auto-load Save (Reset Scene được yêu cầu).");
-            }
-            else
-            {
-                BattleReturnRestoreRunner.RestoreWhenSceneReady();
-            }
+            // Reset về trạng thái gốc: không load file Save, để Scene chạy tự nhiên từ dữ liệu ban đầu.
+            SkipAutoLoadOnNextSceneLoad = false;
+            IsReturnRestorePending = false;
+            Debug.Log("[BattleData] ⏩ Bỏ qua auto-load Save (Reset Scene được yêu cầu).");
+            return;
+        }
+
+        // Không chạy auto-load trên những scene không liên quan. Nếu chạy quá
+        // sớm, save có thể bị ghi đè bằng các object mặc định của scene mới.
+        if (IsReturnRestorePending && scene.name == MainSceneName)
+        {
+            BattleReturnRestoreRunner.RestoreWhenSceneReady();
         }
     }
 
@@ -395,6 +410,7 @@ public static class BattleData
 
         TotalSoldiersInBase = battleSoldierCount;
         HasData = true;
+        IsReturnRestorePending = true;
         Debug.Log($"[BattleData] Đã lưu dữ liệu Trận Đấu: MainScene = {MainSceneName}, CurrentWave = {SavedCurrentWave}, Enemy Wave Count = {EnemyWaveCount}, Quái hành quân = {SavedEnemyMarches.Count}, Lính xuất trận = {SavedSoldierMarches.Count}");
     }
 
@@ -587,6 +603,7 @@ public static class BattleData
     public static void ResetData()
     {
         HasData = false;
+        IsReturnRestorePending = false;
         EnemyWaveCount = 1;
         PlayerBuildings.Clear();
         DefendingSoldiers.Clear();
@@ -602,6 +619,11 @@ public static class BattleData
         ClearBattleParticipants();
         victoryRewardGranted = false;
         EnemyInvasionManager.ClearPendingRaidRestore();
+    }
+
+    internal static void CompleteReturnRestore()
+    {
+        IsReturnRestorePending = false;
     }
 
     public static bool IsAttackingExpedition = false; // true = Xâm Chiếm / Chinh Phạt | false = Phòng Thủ Căn Cứ Nhà
@@ -826,6 +848,7 @@ internal sealed class BattleReturnRestoreRunner : MonoBehaviour
 {
     private static BattleReturnRestoreRunner instance;
     private bool restoreQueued;
+    private const float ManagersReadyTimeoutSeconds = 15f;
 
     public static void RestoreWhenSceneReady()
     {
@@ -844,16 +867,53 @@ internal sealed class BattleReturnRestoreRunner : MonoBehaviour
 
     private System.Collections.IEnumerator RestoreAfterSceneInitialization()
     {
-        yield return null;
+        // Game UI/map systems are spawned after sceneLoaded in this project.
+        // Waiting just one frame used to miss BuildingSystem, then the battle
+        // result saved the default map back to disk and erased built structures.
+        float deadline = Time.unscaledTime + ManagersReadyTimeoutSeconds;
+        BuildingSystem buildingSystem = null;
+        bool restoreSucceeded = false;
 
-        BuildingSystem buildingSystem = Object.FindFirstObjectByType<BuildingSystem>();
-        if (buildingSystem != null)
+        while (Time.unscaledTime < deadline)
         {
-            buildingSystem.LoadBuildingsFromSlot(1);
+            if (!BattleData.IsReturnRestorePending ||
+                SceneManager.GetActiveScene().name != BattleData.MainSceneName)
+            {
+                restoreQueued = false;
+                yield break;
+            }
+
+            BuildingManager buildingManager = Object.FindFirstObjectByType<BuildingManager>();
+            ConstructionManager constructionManager = Object.FindFirstObjectByType<ConstructionManager>();
+            JsonDataManager dataManager = Object.FindFirstObjectByType<JsonDataManager>();
+
+            if (buildingManager != null && constructionManager != null && dataManager != null)
+            {
+                // BuildingSystem là một singleton service và có thể không nằm
+                // sẵn trong hierarchy của BuildMapTest sau khi unload scene.
+                // Lấy qua Ins để tạo service hợp lệ thay vì Find... rồi bỏ qua
+                // khôi phục như lỗi cũ.
+                buildingSystem = BuildingSystem.Ins;
+
+                // Cho các BuildingCtrl vừa tạo trong scene hoàn tất Awake/Start
+                // trước khi LoadStates đối chiếu các slot và prefab.
+                yield return new WaitForEndOfFrame();
+
+                if (buildingSystem.TryLoadBuildingsFromSlot(1))
+                {
+                    restoreSucceeded = true;
+                    break;
+                }
+            }
+
+            yield return null;
         }
-        else
+
+        if (!restoreSucceeded)
         {
-            Debug.LogWarning("[BattleData] Không tìm thấy BuildingSystem để khôi phục công trình sau Battle.");
+            Debug.LogError("[BattleData] Không thể khôi phục công trình sau Battle vì manager/save chưa sẵn sàng. Không áp dụng kết quả trận để tránh ghi đè save.");
+            restoreQueued = false;
+            yield break;
         }
 
         BattleData.RestoreWaveAndMarchProgress();
@@ -869,6 +929,7 @@ internal sealed class BattleReturnRestoreRunner : MonoBehaviour
         // Sau khi đã áp dụng kết quả, phải xóa nó để lần tải scene sau không bị
         // hiểu nhầm là vẫn đang quay về từ trận cũ.
         BattleData.LastBattleWasVictory = false;
+        BattleData.CompleteReturnRestore();
 
         restoreQueued = false;
     }

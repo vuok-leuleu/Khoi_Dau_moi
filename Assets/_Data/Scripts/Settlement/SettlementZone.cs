@@ -792,6 +792,9 @@ public class SettlementZone : MonoBehaviour
                 UpgradeableBuilding ub = obj.GetComponent<UpgradeableBuilding>();
                 if (ub != null)
                 {
+                    // Lưu index ngay từ lúc sinh để save/load có thể ghép lại
+                    // đúng công trình ở đúng ô sau khi qua SceneBattle.
+                    ub.slotIndex = i;
                     ub.IsInitialBuildNeeded = false;
                     RegisterBuilding(ub);
                     if (BuildingManager.Ins != null) BuildingManager.Ins.AddBuilding(ub.GetComponent<BuildingCtrl>());
