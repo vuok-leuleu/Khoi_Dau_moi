@@ -19058,6 +19058,14 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -55
       objectReference: {fileID: 0}
+    - target: {fileID: 2280809140822463864, guid: 403e01dfbe010d64b9ef59ccd026d3f9, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: -1645862920, guid: 65edb9839cc46dc4e82f6728ae9e3be5, type: 3}
+    - target: {fileID: 2280809140822463864, guid: 403e01dfbe010d64b9ef59ccd026d3f9, type: 3}
+      propertyPath: m_Color.a
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5541870655427372799, guid: 403e01dfbe010d64b9ef59ccd026d3f9, type: 3}
       propertyPath: m_Name
       value: BattleCanvas
